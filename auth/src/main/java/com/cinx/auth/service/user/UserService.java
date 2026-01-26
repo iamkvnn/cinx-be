@@ -57,6 +57,8 @@ public class UserService implements IUserService {
     @Override
     public User updateUser(String id, User user) {
         User existingUser = findById(id);
+        existingUser.setEmail(user.getEmail() != null ? user.getEmail() : existingUser.getEmail());
+        existingUser.setPassword(user.getPassword() != null ? user.getPassword() : existingUser.getPassword());
         existingUser.setName(user.getName() != null ? user.getName() : existingUser.getName());
         existingUser.setGender(user.getGender() != null ? user.getGender() : existingUser.getGender());
         existingUser.setOtp(user.getOtp() != null ? user.getOtp() : existingUser.getOtp());

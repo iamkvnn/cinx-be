@@ -50,13 +50,25 @@ public class AuthenticationService implements IAuthenticationService {
     @Override
     public void verifyOtp(VerifyOtpDto request) {
         User user = userService.findByEmail(request.email());
-        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
-        }
         if (!user.getOtp().equals(request.otp())) {
             throw new BadRequestException("Invalid OTP");
         }
+        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired");
+        }
         userService.updateUser(user.getId(), User.builder().isVerified(true).otp(null).otpExpireAt(null).build());
+    }
+
+    @Override
+    public void resetPassword(ForgetPasswordRequest request) {
+        User user = userService.findByEmail(request.email());
+        if (!user.getOtp().equals(request.otp())) {
+            throw new BadRequestException("Invalid OTP");
+        }
+        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired");
+        }
+        userService.updateUser(user.getId(), User.builder().password(passwordEncoder.encode(request.newPassword())).otp(null).otpExpireAt(null).build());
     }
 
     @Override
@@ -70,7 +82,7 @@ public class AuthenticationService implements IAuthenticationService {
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
         TokenResponseDto tokens = generateTokens(payload);
-        return new AuthResponse(tokens, new UserDto(user.getId(), user.getEmail(), user.getName(), user.getRole(), user.getGender()));
+        return new AuthResponse(tokens, new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender()));
     }
 
     @Override

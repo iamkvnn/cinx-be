@@ -55,13 +55,23 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/resend-otp")
+    @PostMapping("/send-otp")
     public ResponseEntity<ApiResponse> resendOtp(
             @RequestBody ResendOtpDto request
     ) {
         authenticationService.sendOtp(request.email());
         return ResponseEntity.ok(
                 new ApiResponse(true, "Otp send successfully", null)
+        );
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<ApiResponse> forgetPassword(
+            @RequestBody ForgetPasswordRequest request
+    ) {
+        authenticationService.resetPassword(request);
+        return ResponseEntity.ok(
+                new ApiResponse(true, "User password reset successfully", null)
         );
     }
 }
