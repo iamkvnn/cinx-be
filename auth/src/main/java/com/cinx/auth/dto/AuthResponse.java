@@ -1,4 +1,4 @@
 package com.cinx.auth.dto;
 
-public record AuthResponse(String token, UserDto user) {
+public record AuthResponse(TokenResponseDto token, UserDto user) {
 }

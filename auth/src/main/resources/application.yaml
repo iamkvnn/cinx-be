@@ -10,5 +10,25 @@ spring:
       ddl-auto: update
     show-sql: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: shinyjewelry39@gmail.com
+    password: juxx vpev tszm nrlf
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
 server:
-    port: 8888
+  port: 8888
+
+jwt:
+  access:
+    secret: mysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
+    expire: 86400
+  refresh:
+    secret: myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
+    expire: 86400

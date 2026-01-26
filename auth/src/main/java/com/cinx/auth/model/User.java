@@ -8,6 +8,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -23,4 +25,7 @@ public class User {
     private String name;
     private Role role;
     private Gender gender;
+    private Boolean isVerified;
+    private String otp;
+    private LocalDateTime otpExpireAt;
 }

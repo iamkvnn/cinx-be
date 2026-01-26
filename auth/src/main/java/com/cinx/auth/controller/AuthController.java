@@ -1,20 +1,11 @@
 package com.cinx.auth.controller;
 
-import com.cinx.auth.dto.ApiResponse;
-import com.cinx.auth.dto.AuthRequestDto;
-import com.cinx.auth.dto.RegisterDto;
-import com.cinx.auth.dto.UserDto;
+import com.cinx.auth.dto.*;
 import com.cinx.auth.model.User;
+import com.cinx.auth.service.auth.IAuthenticationService;
 import com.cinx.auth.service.user.IUserService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.context.SecurityContext;
-import org.springframework.security.core.context.SecurityContextHolder;
-import org.springframework.security.web.context.HttpSessionSecurityContextRepository;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
@@ -24,7 +15,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class AuthController {
     private final IUserService userService;
-    private final AuthenticationManager authenticationManager;
+    private final IAuthenticationService authenticationService;
 
     @PostMapping("/register")
     public ResponseEntity<ApiResponse> register(@RequestBody RegisterDto registerDto) {
@@ -36,27 +27,31 @@ public class AuthController {
 
     @PostMapping("/login")
     public ResponseEntity<ApiResponse> login(
-            @RequestBody AuthRequestDto request,
-            HttpServletRequest httpRequest
+            @RequestBody AuthRequestDto request
     ) {
-        UsernamePasswordAuthenticationToken authToken =
-                new UsernamePasswordAuthenticationToken(
-                        request.email(),
-                        request.password()
-                );
-        Authentication auth = authenticationManager.authenticate(authToken);
-        User user = userService.findByEmail(request.email());
-        SecurityContext context = SecurityContextHolder.createEmptyContext();
-        context.setAuthentication(auth);
-        SecurityContextHolder.setContext(context);
-        httpRequest.getSession(true)
-                .setAttribute(
-                        HttpSessionSecurityContextRepository.SPRING_SECURITY_CONTEXT_KEY,
-                        context
-                );
+        AuthResponse authResponse = authenticationService.authenticate(request);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User logged in successfully", new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender()))
+                new ApiResponse(true, "User logged in successfully", authResponse)
         );
     }
 
+    @PostMapping("/verify-otp")
+    public ResponseEntity<ApiResponse> verifyOtp(
+            @RequestBody VerifyOtpDto request
+    ) {
+        authenticationService.verifyOtp(request);
+        return ResponseEntity.ok(
+                new ApiResponse(true, "User verified successfully", null)
+        );
+    }
+
+    @PostMapping("/resend-otp")
+    public ResponseEntity<ApiResponse> resendOtp(
+            @RequestBody ResendOtpDto request
+    ) {
+        authenticationService.sendOtp(request.email());
+        return ResponseEntity.ok(
+                new ApiResponse(true, "Otp send successfully", null)
+        );
+    }
 }
