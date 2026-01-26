@@ -1,6 +1,7 @@
 package com.cinx.auth.service.auth;
 
 import com.cinx.auth.dto.*;
+import com.cinx.auth.exception.BadRequestException;
 import com.cinx.auth.model.User;
 import com.cinx.auth.service.mail.EmailQueueService;
 import com.cinx.auth.service.user.IUserService;
@@ -50,10 +51,10 @@ public class AuthenticationService implements IAuthenticationService {
     public void verifyOtp(VerifyOtpDto request) {
         User user = userService.findByEmail(request.email());
         if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new IllegalArgumentException("OTP has expired");
+            throw new BadRequestException("OTP has expired");
         }
         if (!user.getOtp().equals(request.otp())) {
-            throw new IllegalArgumentException("Invalid OTP");
+            throw new BadRequestException("Invalid OTP");
         }
         userService.updateUser(user.getId(), User.builder().isVerified(true).otp(null).otpExpireAt(null).build());
     }
@@ -62,10 +63,10 @@ public class AuthenticationService implements IAuthenticationService {
     public AuthResponse authenticate(AuthRequestDto request) {
         User user = userService.findByEmail(request.email());
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new IllegalArgumentException("Invalid email or password");
+            throw new BadRequestException("Invalid email or password");
         }
         if (user.getIsVerified() == null || !user.getIsVerified()) {
-            throw new IllegalArgumentException("User email is not verified");
+            throw new BadRequestException("User email is not verified");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
         TokenResponseDto tokens = generateTokens(payload);
@@ -79,7 +80,7 @@ public class AuthenticationService implements IAuthenticationService {
                 .subject(payload.userId())
                 .issueTime(new Date())
                 .expirationTime(new Date(
-                        Instant.now().plus(accessExpirationTime, ChronoUnit.SECONDS).toEpochMilli()
+                        Instant.now().plus(accessExpirationTime, ChronoUnit.HOURS).toEpochMilli()
                 ))
                 .claim("scope", payload.role())
                 .build();
@@ -90,7 +91,7 @@ public class AuthenticationService implements IAuthenticationService {
                 .subject(payload.userId())
                 .issueTime(new Date())
                 .expirationTime(new Date(
-                        Instant.now().plus(refreshExpirationTime, ChronoUnit.SECONDS).toEpochMilli()
+                        Instant.now().plus(refreshExpirationTime, ChronoUnit.DAYS).toEpochMilli()
                 ))
                 .build();
         Payload refreshJwtPayload = new Payload(refreshClaimsSet.toJSONObject());
@@ -109,19 +110,20 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public TokenResponseDto refreshToken(String refreshToken) {
+    public AuthResponse refreshToken(String refreshToken) {
         try {
             JWSVerifier verifier = new MACVerifier(refreshKey.getBytes());
             SignedJWT signedJWT = SignedJWT.parse(refreshToken);
             Date expirationDate = signedJWT.getJWTClaimsSet().getExpirationTime();
             boolean verified = signedJWT.verify(verifier);
             if (!verified || expirationDate.before(new Date())) {
-                throw new IllegalArgumentException("Invalid or expired refresh token");
+                throw new BadRequestException("Invalid or expired refresh token");
             }
             String userId = signedJWT.getJWTClaimsSet().getSubject();
             User user = userService.findById(userId);
             JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
-            return generateTokens(payload);
+            TokenResponseDto tokens = generateTokens(payload);
+            return new AuthResponse(tokens, new UserDto(user.getId(), user.getEmail(), user.getName(), user.getRole(), user.getGender()));
         }
         catch (JOSEException | ParseException e) {
             throw new RuntimeException(e);

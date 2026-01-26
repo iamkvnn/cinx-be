@@ -28,7 +28,7 @@ server:
 jwt:
   access:
     secret: mysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
-    expire: 86400
+    expire: 1
   refresh:
     secret: myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
-    expire: 86400
+    expire: 7

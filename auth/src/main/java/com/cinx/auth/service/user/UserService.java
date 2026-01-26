@@ -4,11 +4,11 @@ import com.cinx.auth.consts.Role;
 import com.cinx.auth.dto.EmailRequest;
 import com.cinx.auth.dto.RegisterDto;
 import com.cinx.auth.exception.AlreadyExistException;
+import com.cinx.auth.exception.NotFoundException;
 import com.cinx.auth.model.User;
 import com.cinx.auth.repository.UserRepository;
 import com.cinx.auth.service.mail.EmailQueueService;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -24,12 +24,12 @@ public class UserService implements IUserService {
 
     @Override
     public User findById(String id) {
-        return userRepository.findById(id).orElseThrow(() -> new UsernameNotFoundException("User not found"));
+        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
     }
 
     @Override
     public User findByEmail(String email) {
-        return userRepository.findByEmail(email).orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
+        return userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User not found with email: " + email));
     }
 
     @Override

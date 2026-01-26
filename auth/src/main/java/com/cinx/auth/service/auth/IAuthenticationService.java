@@ -7,5 +7,5 @@ public interface IAuthenticationService {
     void verifyOtp(VerifyOtpDto request);
     AuthResponse authenticate(AuthRequestDto request);
     TokenResponseDto generateTokens(JWTPayload payload);
-    TokenResponseDto refreshToken(String refreshToken);
+    AuthResponse refreshToken(String refreshToken);
 }

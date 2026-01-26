@@ -20,7 +20,7 @@ public class UserController {
 
     @GetMapping("/me")
     public ResponseEntity<ApiResponse> getCurrentUser(Principal principal) {
-        User user = userService.findByEmail(principal.getName());
+        User user = userService.findById(principal.getName());
         return ResponseEntity.ok().body(
                 new ApiResponse(true, "Current user fetched successfully",
                         new UserDto(user.getId(), user.getName(), user.getName(), user.getRole(), user.getGender())

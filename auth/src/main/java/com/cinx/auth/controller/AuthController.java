@@ -35,6 +35,16 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/refresh-token")
+    public ResponseEntity<ApiResponse> refreshToken(
+            @RequestBody RefreshTokenRequest request
+    ) {
+        AuthResponse authResponse = authenticationService.refreshToken(request.token());
+        return ResponseEntity.ok(
+                new ApiResponse(true, "Refresh token successfully", authResponse)
+        );
+    }
+
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse> verifyOtp(
             @RequestBody VerifyOtpDto request
