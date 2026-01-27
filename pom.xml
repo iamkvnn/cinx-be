@@ -18,6 +18,7 @@
 
     <modules>
         <module>auth</module>
+        <module>common</module>
         <module>user</module>
         <module>course</module>
         <module>cart</module>
