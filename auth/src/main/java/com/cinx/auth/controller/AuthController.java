@@ -20,7 +20,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterDto registerDto) {
         User user = userService.createUser(registerDto);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User registered successfully", new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender()))
+                new ApiResponse(true, "User registered successfully", new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender(), user.getAvatarUrl()))
         );
     }
 

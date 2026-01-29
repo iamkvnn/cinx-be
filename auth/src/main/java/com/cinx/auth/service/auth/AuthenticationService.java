@@ -109,7 +109,7 @@ public class AuthenticationService implements IAuthenticationService {
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
         TokenResponseDto tokens = generateTokens(payload);
-        return new AuthResponse(tokens, new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender()));
+        return new AuthResponse(tokens, new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender(), user.getAvatarUrl()));
     }
 
     @Override
@@ -162,7 +162,7 @@ public class AuthenticationService implements IAuthenticationService {
             User user = userService.findById(userId);
             JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
             TokenResponseDto tokens = generateTokens(payload);
-            return new AuthResponse(tokens, new UserDto(user.getId(), user.getEmail(), user.getName(), user.getRole(), user.getGender()));
+            return new AuthResponse(tokens, new UserDto(user.getId(), user.getEmail(), user.getName(), user.getRole(), user.getGender(), user.getAvatarUrl()));
         }
         catch (JOSEException | ParseException e) {
             throw new RuntimeException(e);

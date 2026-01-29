@@ -28,4 +28,5 @@ public class User {
     private Boolean isVerified;
     private String otp;
     private LocalDateTime otpExpireAt;
+    private String avatarUrl;
 }

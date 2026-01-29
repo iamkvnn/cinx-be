@@ -12,8 +12,17 @@ import com.cinx.auth.service.mail.EmailQueueService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
+import java.util.UUID;
+
 import static com.cinx.auth.utils.OtpGenerator.generateOtp;
 
 @Service
@@ -65,13 +74,43 @@ public class UserService implements IUserService {
         existingUser.setOtp(user.getOtp() != null ? user.getOtp() : existingUser.getOtp());
         existingUser.setIsVerified(user.getIsVerified() != null ? user.getIsVerified() : existingUser.getIsVerified());
         existingUser.setOtpExpireAt(user.getOtpExpireAt() != null ? user.getOtpExpireAt() : existingUser.getOtpExpireAt());
+        existingUser.setAvatarUrl(user.getAvatarUrl() != null ? user.getAvatarUrl() : existingUser.getAvatarUrl());
         return userRepository.save(existingUser);
     }
 
     @Override
-    public User updateProfile(String id, UpdateProifileDto dto) {
-        User existingUser = findById(id);
+    public User updateProfile(String id, UpdateProifileDto dto, MultipartFile avatar) {
+        if (avatar != null) {
+            try {
+                Path uploadPath = Paths.get("uploads/avatars/");
+                if (!Files.exists(uploadPath)) {
+                    Files.createDirectories(uploadPath);
+                }
+                String fileName = avatar.getOriginalFilename();
+                assert fileName != null;
+                String extension = getFileExtension(fileName);
+                fileName = UUID.randomUUID() + "." + extension;
+                Path filePath = uploadPath.resolve(fileName);
+                Files.copy(avatar.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
 
-        return null;
+                return updateUser(id, User.builder()
+                        .name(dto.name())
+                        .gender(dto.gender())
+                        .avatarUrl("http://localhost:8888/api/v1/users/avatars/" + fileName)
+                        .build());
+            } catch (IOException e) {
+                throw new RuntimeException(e.getMessage());
+            }
+        }
+        else {
+            return updateUser(id, User.builder()
+                    .name(dto.name())
+                    .gender(dto.gender())
+                    .build());
+        }
+    }
+
+    private String getFileExtension(String fileName) {
+        return fileName.split("\\.")[fileName.split("\\.").length - 1];
     }
 }
