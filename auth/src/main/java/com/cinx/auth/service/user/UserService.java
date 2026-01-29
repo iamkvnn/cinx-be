@@ -3,6 +3,7 @@ package com.cinx.auth.service.user;
 import com.cinx.auth.consts.Role;
 import com.cinx.auth.dto.EmailRequest;
 import com.cinx.auth.dto.RegisterDto;
+import com.cinx.auth.dto.UpdateProifileDto;
 import com.cinx.auth.exception.AlreadyExistException;
 import com.cinx.auth.exception.NotFoundException;
 import com.cinx.auth.model.User;
@@ -65,5 +66,12 @@ public class UserService implements IUserService {
         existingUser.setIsVerified(user.getIsVerified() != null ? user.getIsVerified() : existingUser.getIsVerified());
         existingUser.setOtpExpireAt(user.getOtpExpireAt() != null ? user.getOtpExpireAt() : existingUser.getOtpExpireAt());
         return userRepository.save(existingUser);
+    }
+
+    @Override
+    public User updateProfile(String id, UpdateProifileDto dto) {
+        User existingUser = findById(id);
+
+        return null;
     }
 }

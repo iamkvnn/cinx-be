@@ -6,6 +6,8 @@ public interface IAuthenticationService {
     void sendOtp(String email);
     void verifyOtp(VerifyOtpDto request);
     void resetPassword(ForgetPasswordRequest request);
+    void changePassword(ChangePasswordRequest request);
+    void changeEmail(ChangeEmailRequest request);
     AuthResponse authenticate(AuthRequestDto request);
     TokenResponseDto generateTokens(JWTPayload payload);
     AuthResponse refreshToken(String refreshToken);

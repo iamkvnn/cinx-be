@@ -74,4 +74,44 @@ public class AuthController {
                 new ApiResponse(true, "User password reset successfully", null)
         );
     }
+
+        @PostMapping("/send-change-password-otp")
+    public ResponseEntity<ApiResponse> sendChangePasswordOtp(
+            @Valid @RequestBody ResendOtpDto request
+    ) {
+        authenticationService.sendOtp(request.email());
+        return ResponseEntity.ok(
+                new ApiResponse(true, "Otp for change password sent successfully", null)
+        );
+    }
+
+    @PostMapping("/change-password")
+    public ResponseEntity<ApiResponse> changePassword(
+            @Valid @RequestBody ChangePasswordRequest request
+    ) {
+        authenticationService.changePassword(request);
+        return ResponseEntity.ok(
+                new ApiResponse(true, "User password changed successfully", null)
+        );
+    }
+
+    @PostMapping("/send-change-email-otp")
+    public ResponseEntity<ApiResponse> sendChangeEmailOtp(
+            @Valid @RequestBody ResendOtpDto request
+    ) {
+        authenticationService.sendOtp(request.email());
+        return ResponseEntity.ok(
+                new ApiResponse(true, "Otp for change email sent successfully", null)
+        );
+    }
+
+    @PostMapping("/change-email")
+    public ResponseEntity<ApiResponse> changeEmail(
+            @Valid @RequestBody ChangeEmailRequest request
+    ) {
+        authenticationService.changeEmail(request);
+        return ResponseEntity.ok(
+                new ApiResponse(true, "User email changed successfully", null)
+        );
+    }
 }

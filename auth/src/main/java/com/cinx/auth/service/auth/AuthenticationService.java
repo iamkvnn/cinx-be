@@ -72,6 +72,33 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
+    public void changePassword(ChangePasswordRequest request) {
+        User user = userService.findByEmail(request.email());
+        if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
+            throw new BadRequestException("Invalid password");
+        }
+        if (!user.getOtp().equals(request.otp())) {
+            throw new BadRequestException("Invalid OTP");
+        }
+        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired");
+        }
+        userService.updateUser(user.getId(), User.builder().password(passwordEncoder.encode(request.newPassword())).build());
+    }
+
+    @Override
+    public void changeEmail(ChangeEmailRequest request) {
+        User user = userService.findByEmail(request.oldEmail());
+        if (!user.getOtp().equals(request.otp())) {
+            throw new BadRequestException("Invalid OTP");
+        }
+        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired");
+        }
+        userService.updateUser(user.getId(), User.builder().email(request.newEmail()).build());
+    }
+
+    @Override
     public AuthResponse authenticate(AuthRequestDto request) {
         User user = userService.findByEmail(request.email());
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
