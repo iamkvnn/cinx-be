@@ -12,6 +12,8 @@
 	<artifactId>course</artifactId>
 	<name>course</name>
 	<description>course service</description>
+	<version>1.0</version>
+
 	<dependencies>
 		<dependency>
 			<groupId>org.springframework.boot</groupId>

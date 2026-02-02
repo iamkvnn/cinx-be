@@ -1,6 +1,6 @@
 package com.cinx.auth.config;
 
-import com.cinx.auth.dto.ApiResponse;
+import com.cinx.common.dto.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

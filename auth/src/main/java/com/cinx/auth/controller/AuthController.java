@@ -1,9 +1,10 @@
 package com.cinx.auth.controller;
 
-import com.cinx.auth.dto.*;
-import com.cinx.auth.model.User;
+import com.cinx.auth.dto.request.*;
+import com.cinx.auth.dto.response.TokenResponseDto;
 import com.cinx.auth.service.auth.IAuthenticationService;
 import com.cinx.auth.service.user.IUserService;
+import com.cinx.common.dto.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -13,14 +14,14 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
 public class AuthController {
-    private final IUserService userService;
     private final IAuthenticationService authenticationService;
+    private final IUserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterDto registerDto) {
-        User user = userService.createUser(registerDto);
+    public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
+        userService.createUser(registerRequest);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User registered successfully", new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender(), user.getAvatarUrl()))
+                new ApiResponse(true, "User registered successfully", null)
         );
     }
 
@@ -28,8 +29,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse> login(
             @Valid @RequestBody AuthRequestDto request
     ) {
-        System.out.println(request);
-        AuthResponse authResponse = authenticationService.authenticate(request);
+        TokenResponseDto authResponse = authenticationService.authenticate(request);
         return ResponseEntity.ok(
                 new ApiResponse(true, "User logged in successfully", authResponse)
         );
@@ -39,7 +39,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
-        AuthResponse authResponse = authenticationService.refreshToken(request.token());
+        TokenResponseDto authResponse = authenticationService.refreshToken(request.token());
         return ResponseEntity.ok(
                 new ApiResponse(true, "Refresh token successfully", authResponse)
         );
@@ -47,9 +47,9 @@ public class AuthController {
 
     @PostMapping("/verify-otp")
     public ResponseEntity<ApiResponse> verifyOtp(
-            @Valid @RequestBody VerifyOtpDto request
+            @Valid @RequestBody VerifyEmailRequest request
     ) {
-        authenticationService.verifyOtp(request);
+        userService.verifyEmail(request);
         return ResponseEntity.ok(
                 new ApiResponse(true, "User verified successfully", null)
         );
@@ -57,29 +57,29 @@ public class AuthController {
 
     @PostMapping("/send-otp")
     public ResponseEntity<ApiResponse> resendOtp(
-            @Valid @RequestBody ResendOtpDto request
+            @Valid @RequestBody SendOtpRequest request
     ) {
-        authenticationService.sendOtp(request.email());
+        authenticationService.sendVerifyOtp(request.email());
         return ResponseEntity.ok(
                 new ApiResponse(true, "Otp send successfully", null)
         );
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<ApiResponse> forgetPassword(
-            @Valid @RequestBody ForgetPasswordRequest request
+    public ResponseEntity<ApiResponse> resetPassword(
+            @Valid @RequestBody ResetPasswordRequest request
     ) {
-        authenticationService.resetPassword(request);
+        userService.resetPassword(request);
         return ResponseEntity.ok(
                 new ApiResponse(true, "User password reset successfully", null)
         );
     }
 
-        @PostMapping("/send-change-password-otp")
+    @PostMapping("/send-change-password-otp")
     public ResponseEntity<ApiResponse> sendChangePasswordOtp(
-            @Valid @RequestBody ResendOtpDto request
+            @Valid @RequestBody SendOtpRequest request
     ) {
-        authenticationService.sendOtp(request.email());
+        authenticationService.sendChangePasswordOtp(request.email());
         return ResponseEntity.ok(
                 new ApiResponse(true, "Otp for change password sent successfully", null)
         );
@@ -89,7 +89,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse> changePassword(
             @Valid @RequestBody ChangePasswordRequest request
     ) {
-        authenticationService.changePassword(request);
+        userService.changePassword(request);
         return ResponseEntity.ok(
                 new ApiResponse(true, "User password changed successfully", null)
         );
@@ -97,9 +97,9 @@ public class AuthController {
 
     @PostMapping("/send-change-email-otp")
     public ResponseEntity<ApiResponse> sendChangeEmailOtp(
-            @Valid @RequestBody ResendOtpDto request
+            @Valid @RequestBody SendOtpRequest request
     ) {
-        authenticationService.sendOtp(request.email());
+        authenticationService.sendChangeEmailOtp(request.email());
         return ResponseEntity.ok(
                 new ApiResponse(true, "Otp for change email sent successfully", null)
         );
@@ -109,7 +109,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse> changeEmail(
             @Valid @RequestBody ChangeEmailRequest request
     ) {
-        authenticationService.changeEmail(request);
+        userService.changeEmail(request);
         return ResponseEntity.ok(
                 new ApiResponse(true, "User email changed successfully", null)
         );

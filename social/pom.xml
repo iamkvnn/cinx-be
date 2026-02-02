@@ -12,6 +12,7 @@
 	<artifactId>social</artifactId>
 	<name>social</name>
 	<description>social service</description>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>

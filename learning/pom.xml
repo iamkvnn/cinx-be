@@ -12,6 +12,7 @@
 	<artifactId>learning</artifactId>
 	<name>learning</name>
 	<description>learning service</description>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>

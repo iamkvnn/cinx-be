@@ -12,6 +12,7 @@
 	<artifactId>notification</artifactId>
 	<name>notification</name>
 	<description>notification service</description>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>

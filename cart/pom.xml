@@ -12,6 +12,7 @@
 	<artifactId>cart</artifactId>
 	<name>cart</name>
 	<description>cart service</description>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>

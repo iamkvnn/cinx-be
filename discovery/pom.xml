@@ -12,6 +12,7 @@
 	<artifactId>discovery</artifactId>
 	<name>discovery</name>
 	<description>discovery service</description>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>

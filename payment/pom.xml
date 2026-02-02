@@ -12,6 +12,7 @@
 	<artifactId>payment</artifactId>
 	<name>payment</name>
 	<description>payment service</description>
+	<version>1.0</version>
 
 	<dependencies>
 		<dependency>

@@ -1,6 +1,6 @@
 package com.cinx.auth.service.mail;
 
-import com.cinx.auth.dto.EmailRequest;
+import com.cinx.auth.dto.request.EmailRequest;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;

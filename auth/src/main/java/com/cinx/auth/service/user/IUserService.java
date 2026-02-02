@@ -1,14 +1,15 @@
 package com.cinx.auth.service.user;
 
-import com.cinx.auth.dto.RegisterDto;
-import com.cinx.auth.dto.UpdateProifileDto;
+import com.cinx.auth.dto.request.*;
 import com.cinx.auth.model.User;
-import org.springframework.web.multipart.MultipartFile;
 
 public interface IUserService {
     User findById(String id);
     User findByEmail(String email);
-    User createUser(RegisterDto user);
-    User updateUser(String id, User user);
-    User updateProfile(String id, UpdateProifileDto dto, MultipartFile avatar);
+    void createUser(RegisterRequest user);
+    String generateOtp(String email);
+    void verifyEmail(VerifyEmailRequest request);
+    void resetPassword(ResetPasswordRequest request);
+    void changePassword(ChangePasswordRequest request);
+    void changeEmail(ChangeEmailRequest request);
 }

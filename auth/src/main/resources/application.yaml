@@ -2,7 +2,7 @@ spring:
   application:
     name: auth
   datasource:
-    url: jdbc:mysql://localhost:3306/cinx
+    url: jdbc:mysql://localhost:3306/authdb
     username: root
     password: taolao123
   jpa:
@@ -38,3 +38,8 @@ jwt:
   refresh:
     secret: myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
     expire: 7
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: http://localhost:8761/eureka/

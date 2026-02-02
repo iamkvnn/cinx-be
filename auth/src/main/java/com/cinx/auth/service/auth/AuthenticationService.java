@@ -1,10 +1,12 @@
 package com.cinx.auth.service.auth;
 
 import com.cinx.auth.dto.*;
-import com.cinx.auth.exception.BadRequestException;
+import com.cinx.auth.dto.request.*;
+import com.cinx.auth.dto.response.TokenResponseDto;
+import com.cinx.auth.service.user.IUserService;
+import com.cinx.common.exception.BadRequestException;
 import com.cinx.auth.model.User;
 import com.cinx.auth.service.mail.EmailQueueService;
-import com.cinx.auth.service.user.IUserService;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -17,11 +19,8 @@ import org.springframework.stereotype.Service;
 
 import java.text.ParseException;
 import java.time.Instant;
-import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
-
-import static com.cinx.auth.utils.OtpGenerator.generateOtp;
 
 @Service
 @RequiredArgsConstructor
@@ -40,66 +39,31 @@ public class AuthenticationService implements IAuthenticationService {
     private final EmailQueueService emailQueueService;
 
     @Override
-    public void sendOtp(String email) {
-        User user = userService.findByEmail(email);
-        String otp = generateOtp();
-        userService.updateUser(user.getId(), User.builder().otp(otp).otpExpireAt(LocalDateTime.now().plusSeconds(90)).build());
-        emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Mã xác nhận OTP", "Mã OTP của bạn là: " + otp));
+    public void sendVerifyOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Mã xác nhận OTP", "Mã OTP của bạn là: " + otp));
     }
 
     @Override
-    public void verifyOtp(VerifyOtpDto request) {
-        User user = userService.findByEmail(request.email());
-        if (!user.getOtp().equals(request.otp())) {
-            throw new BadRequestException("Invalid OTP");
-        }
-        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
-        }
-        userService.updateUser(user.getId(), User.builder().isVerified(true).otp(null).otpExpireAt(null).build());
+    public void sendForgotPasswordOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu quên mật khẩu", "Mã OTP của bạn là: " + otp));
     }
 
     @Override
-    public void resetPassword(ForgetPasswordRequest request) {
-        User user = userService.findByEmail(request.email());
-        if (!user.getOtp().equals(request.otp())) {
-            throw new BadRequestException("Invalid OTP");
-        }
-        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
-        }
-        userService.updateUser(user.getId(), User.builder().password(passwordEncoder.encode(request.newPassword())).otp(null).otpExpireAt(null).build());
+    public void sendChangePasswordOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu đổi mật khẩu", "Mã OTP của bạn là: " + otp));
     }
 
     @Override
-    public void changePassword(ChangePasswordRequest request) {
-        User user = userService.findByEmail(request.email());
-        if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
-            throw new BadRequestException("Invalid password");
-        }
-        if (!user.getOtp().equals(request.otp())) {
-            throw new BadRequestException("Invalid OTP");
-        }
-        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
-        }
-        userService.updateUser(user.getId(), User.builder().password(passwordEncoder.encode(request.newPassword())).build());
+    public void sendChangeEmailOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu đổi email", "Mã OTP của bạn là: " + otp));
     }
 
     @Override
-    public void changeEmail(ChangeEmailRequest request) {
-        User user = userService.findByEmail(request.oldEmail());
-        if (!user.getOtp().equals(request.otp())) {
-            throw new BadRequestException("Invalid OTP");
-        }
-        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
-        }
-        userService.updateUser(user.getId(), User.builder().email(request.newEmail()).build());
-    }
-
-    @Override
-    public AuthResponse authenticate(AuthRequestDto request) {
+    public TokenResponseDto authenticate(AuthRequestDto request) {
         User user = userService.findByEmail(request.email());
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BadRequestException("Invalid email or password");
@@ -108,8 +72,7 @@ public class AuthenticationService implements IAuthenticationService {
             throw new BadRequestException("User email is not verified");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
-        TokenResponseDto tokens = generateTokens(payload);
-        return new AuthResponse(tokens, new UserDto(user.getId(), user.getName(), user.getEmail(), user.getRole(), user.getGender(), user.getAvatarUrl()));
+        return generateTokens(payload);
     }
 
     @Override
@@ -149,7 +112,7 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public AuthResponse refreshToken(String refreshToken) {
+    public TokenResponseDto refreshToken(String refreshToken) {
         try {
             JWSVerifier verifier = new MACVerifier(refreshKey.getBytes());
             SignedJWT signedJWT = SignedJWT.parse(refreshToken);
@@ -161,8 +124,7 @@ public class AuthenticationService implements IAuthenticationService {
             String userId = signedJWT.getJWTClaimsSet().getSubject();
             User user = userService.findById(userId);
             JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
-            TokenResponseDto tokens = generateTokens(payload);
-            return new AuthResponse(tokens, new UserDto(user.getId(), user.getEmail(), user.getName(), user.getRole(), user.getGender(), user.getAvatarUrl()));
+            return generateTokens(payload);
         }
         catch (JOSEException | ParseException e) {
             throw new RuntimeException(e);

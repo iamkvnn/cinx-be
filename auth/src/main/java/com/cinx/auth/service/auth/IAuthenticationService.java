@@ -1,14 +1,15 @@
 package com.cinx.auth.service.auth;
 
 import com.cinx.auth.dto.*;
+import com.cinx.auth.dto.request.*;
+import com.cinx.auth.dto.response.TokenResponseDto;
 
 public interface IAuthenticationService {
-    void sendOtp(String email);
-    void verifyOtp(VerifyOtpDto request);
-    void resetPassword(ForgetPasswordRequest request);
-    void changePassword(ChangePasswordRequest request);
-    void changeEmail(ChangeEmailRequest request);
-    AuthResponse authenticate(AuthRequestDto request);
+    void sendVerifyOtp(String email);
+    void sendForgotPasswordOtp(String email);
+    void sendChangePasswordOtp(String email);
+    void sendChangeEmailOtp(String email);
+    TokenResponseDto authenticate(AuthRequestDto request);
     TokenResponseDto generateTokens(JWTPayload payload);
-    AuthResponse refreshToken(String refreshToken);
+    TokenResponseDto refreshToken(String refreshToken);
 }

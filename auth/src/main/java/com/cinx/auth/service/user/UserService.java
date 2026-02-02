@@ -1,34 +1,27 @@
 package com.cinx.auth.service.user;
 
 import com.cinx.auth.consts.Role;
-import com.cinx.auth.dto.EmailRequest;
-import com.cinx.auth.dto.RegisterDto;
-import com.cinx.auth.dto.UpdateProifileDto;
-import com.cinx.auth.exception.AlreadyExistException;
-import com.cinx.auth.exception.NotFoundException;
+import com.cinx.auth.dto.request.*;
 import com.cinx.auth.model.User;
 import com.cinx.auth.repository.UserRepository;
 import com.cinx.auth.service.mail.EmailQueueService;
+import com.cinx.auth.service.userProfile.IUserProfileService;
+import com.cinx.auth.utils.OtpGenerator;
+import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.time.LocalDateTime;
-import java.util.UUID;
-
-import static com.cinx.auth.utils.OtpGenerator.generateOtp;
+import java.util.Objects;
 
 @Service
 @RequiredArgsConstructor
 public class UserService implements IUserService {
     private final UserRepository userRepository;
+    private final IUserProfileService userProfileService;
     private final PasswordEncoder passwordEncoder;
     private final EmailQueueService emailQueueService;
 
@@ -43,74 +36,88 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User createUser(RegisterDto user) {
-        if (userRepository.existsByEmail(user.email())) {
-            throw new AlreadyExistException("User already exists with email: " + user.email());
+    public void createUser(RegisterRequest dto) {
+        if (userRepository.existsByEmail(dto.email())) {
+            throw new AlreadyExistException("User already exists with email: " + dto.email());
         }
 
-        String otp = generateOtp();
-        emailQueueService.enqueue(new EmailRequest(user.email(), "Xác nhận đăng ký tài khoản", "Mã xác nhận của bạn là: " + otp));
+        String otp = OtpGenerator.generateOtp();
+        emailQueueService.enqueue(new EmailRequest(dto.email(), "Ma Xac Nhan OTP", otp));
 
-        return userRepository.save(User
+        User user = userRepository.save(User
                 .builder()
-                .email(user.email())
-                .name(user.name())
-                .password(passwordEncoder.encode(user.password()))
+                .email(dto.email())
+                .password(passwordEncoder.encode(dto.password()))
                 .role(Role.USER)
-                .gender(user.gender())
-                .otp(otp)
                 .isVerified(false)
+                .otp(otp)
                 .otpExpireAt(LocalDateTime.now().plusSeconds(90))
                 .build());
+        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.gender()));
     }
 
     @Override
-    public User updateUser(String id, User user) {
-        User existingUser = findById(id);
-        existingUser.setEmail(user.getEmail() != null ? user.getEmail() : existingUser.getEmail());
-        existingUser.setPassword(user.getPassword() != null ? user.getPassword() : existingUser.getPassword());
-        existingUser.setName(user.getName() != null ? user.getName() : existingUser.getName());
-        existingUser.setGender(user.getGender() != null ? user.getGender() : existingUser.getGender());
-        existingUser.setOtp(user.getOtp() != null ? user.getOtp() : existingUser.getOtp());
-        existingUser.setIsVerified(user.getIsVerified() != null ? user.getIsVerified() : existingUser.getIsVerified());
-        existingUser.setOtpExpireAt(user.getOtpExpireAt() != null ? user.getOtpExpireAt() : existingUser.getOtpExpireAt());
-        existingUser.setAvatarUrl(user.getAvatarUrl() != null ? user.getAvatarUrl() : existingUser.getAvatarUrl());
-        return userRepository.save(existingUser);
+    public String generateOtp(String email) {
+        User user = findByEmail(email);
+        String otp = OtpGenerator.generateOtp();
+        user.setOtp(otp);
+        user.setOtpExpireAt(LocalDateTime.now().plusSeconds(90));
+        userRepository.save(user);
+        return otp;
     }
 
     @Override
-    public User updateProfile(String id, UpdateProifileDto dto, MultipartFile avatar) {
-        if (avatar != null) {
-            try {
-                Path uploadPath = Paths.get("uploads/avatars/");
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-                String fileName = avatar.getOriginalFilename();
-                assert fileName != null;
-                String extension = getFileExtension(fileName);
-                fileName = UUID.randomUUID() + "." + extension;
-                Path filePath = uploadPath.resolve(fileName);
-                Files.copy(avatar.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-                return updateUser(id, User.builder()
-                        .name(dto.name())
-                        .gender(dto.gender())
-                        .avatarUrl("http://localhost:8888/api/v1/users/avatars/" + fileName)
-                        .build());
-            } catch (IOException e) {
-                throw new RuntimeException(e.getMessage());
-            }
-        }
-        else {
-            return updateUser(id, User.builder()
-                    .name(dto.name())
-                    .gender(dto.gender())
-                    .build());
-        }
+    public void verifyEmail(VerifyEmailRequest request) {
+        User user = findByEmail(request.email());
+        verifyOtp(user, request.otp());
+        user.setIsVerified(true);
+        user.setOtp(null);
+        user.setOtpExpireAt(null);
+        userRepository.save(user);
     }
 
-    private String getFileExtension(String fileName) {
-        return fileName.split("\\.")[fileName.split("\\.").length - 1];
+    @Override
+    public void resetPassword(ResetPasswordRequest request) {
+        User user = findByEmail(request.email());
+        verifyOtp(user, request.otp());
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setOtp(null);
+        user.setOtpExpireAt(null);
+        userRepository.save(user);
+    }
+
+    @Override
+    public void changePassword(ChangePasswordRequest request) {
+        User user = findByEmail(request.email());
+        if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
+            throw new BadRequestException("Invalid password");
+        }
+        verifyOtp(user, request.otp());
+        user.setPassword(passwordEncoder.encode(request.newPassword()));
+        user.setOtp(null);
+        user.setOtpExpireAt(null);
+        userRepository.save(user);
+    }
+
+    @Override
+    public void changeEmail(ChangeEmailRequest request) {
+        User user = findByEmail(request.oldEmail());
+        verifyOtp(user, request.otp());
+        if (userRepository.existsByEmail(request.newEmail())) {
+            throw new AlreadyExistException("User already exists with email: " + request.newEmail());
+        }
+        user.setEmail(request.newEmail());
+        user.setOtp(null);
+        user.setOtpExpireAt(null);
+        userRepository.save(user);
+    }
+
+    private void verifyOtp(User user, String otp) {
+        if (Objects.isNull(user.getOtp()) || !user.getOtp().equals(otp)) {
+            throw new BadRequestException("Invalid OTP");
+        }
+        if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
+            throw new BadRequestException("OTP has expired");
+        }
     }
 }

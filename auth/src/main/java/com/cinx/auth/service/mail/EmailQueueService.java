@@ -1,6 +1,6 @@
 package com.cinx.auth.service.mail;
 
-import com.cinx.auth.dto.EmailRequest;
+import com.cinx.auth.dto.request.EmailRequest;
 import org.springframework.stereotype.Service;
 
 import java.util.concurrent.BlockingQueue;
