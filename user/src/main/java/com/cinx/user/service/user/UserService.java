@@ -4,6 +4,8 @@ import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProifileRequest;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.user.dto.UserDto;
+import com.cinx.user.mapper.UserMapper;
 import com.cinx.user.model.User;
 import com.cinx.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
@@ -15,35 +17,52 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.Objects;
 import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
 public class UserService implements IUserService {
     private final UserRepository userRepository;
+    private final UserMapper userMapper;
 
-    @Override
-    public User findById(String id) {
-        return userRepository.findById(id).orElseThrow(() -> new NotFoundException("User not found"));
+    private User getOrThrowById(String id) {
+        return userRepository.findById(id)
+                .orElseThrow(() -> new NotFoundException("User not found"));
+    }
+
+    private User getOrThrowByEmail(String email) {
+        return userRepository.findByEmail(email)
+                .orElseThrow(() -> new NotFoundException("User not found with email: " + email));
+    }
+
+    private User getOrThrowByUserId(String userId) {
+        return userRepository.findByUserId(userId)
+                .orElseThrow(() -> new NotFoundException("User not found with userId: " + userId));
     }
 
     @Override
-    public User findByEmail(String email) {
-        return userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User not found with email: " + email));
+    public UserDto findById(String id) {
+        return userMapper.toDto(getOrThrowById(id));
     }
 
     @Override
-    public User findByUserId(String userId) {
-        return userRepository.findByUserId(userId).orElseThrow(() -> new NotFoundException("User not found with userId: " + userId));
+    public UserDto findByEmail(String email) {
+        return userMapper.toDto(getOrThrowByEmail(email));
     }
 
     @Override
-    public User createUser(CreateUserRequest user) {
+    public UserDto findByUserId(String userId) {
+        return userMapper.toDto(getOrThrowByUserId(userId));
+    }
+
+    @Override
+    public void createUser(CreateUserRequest user) {
         if (userRepository.existsByEmail(user.email())) {
             throw new AlreadyExistException("User already exists with email: " + user.email());
         }
 
-        return userRepository.save(User
+        userRepository.save(User
                 .builder()
                 .userId(user.userId())
                 .email(user.email())
@@ -53,18 +72,15 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public User updateUser(String id, User user) {
-        User existingUser = findById(id);
-        existingUser.setEmail(user.getEmail() != null ? user.getEmail() : existingUser.getEmail());
-        existingUser.setName(user.getName() != null ? user.getName() : existingUser.getName());
-        existingUser.setGender(user.getGender() != null ? user.getGender() : existingUser.getGender());
-        existingUser.setAvatarUrl(user.getAvatarUrl() != null ? user.getAvatarUrl() : existingUser.getAvatarUrl());
-        return userRepository.save(existingUser);
+    public void updateUser(String id, UpdateProifileRequest dto) {
+        User existingUser = getOrThrowByUserId(id);
+        userMapper.partialUpdate(existingUser, dto);
+        userRepository.save(existingUser);
     }
 
     @Override
-    public User updateProfile(String id, UpdateProifileRequest dto, MultipartFile avatar) {
-        if (avatar != null) {
+    public void updateProfile(String id, UpdateProifileRequest dto, MultipartFile avatar) {
+        if (Objects.nonNull(avatar) && !avatar.isEmpty()) {
             try {
                 Path uploadPath = Paths.get("uploads/avatars/");
                 if (!Files.exists(uploadPath)) {
@@ -76,22 +92,11 @@ public class UserService implements IUserService {
                 fileName = UUID.randomUUID() + "." + extension;
                 Path filePath = uploadPath.resolve(fileName);
                 Files.copy(avatar.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-
-                return updateUser(id, User.builder()
-                        .name(dto.name())
-                        .gender(dto.gender())
-                        .avatarUrl("http://localhost:8089/api/v1/users/avatars/" + fileName)
-                        .build());
             } catch (IOException e) {
                 throw new RuntimeException(e.getMessage());
             }
         }
-        else {
-            return updateUser(id, User.builder()
-                    .name(dto.name())
-                    .gender(dto.gender())
-                    .build());
-        }
+        updateUser(id, dto);
     }
 
     private String getFileExtension(String fileName) {

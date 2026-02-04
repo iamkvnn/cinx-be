@@ -3,12 +3,23 @@ package com.cinx.course.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.dto.PaginatedMetadata;
+import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.service.course.ICourseService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
+import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/courses")
@@ -17,19 +28,33 @@ public class CourseController {
     private final ICourseService courseService;
 
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<?>> getAllCourses(@RequestParam(value = "page", defaultValue = "1") int page,
-                                                              @RequestParam(value = "size", defaultValue = "10") int size,
-                                                              @RequestParam(value = "query", required = false) String query) {
-        Page<CourseResponse> courses = courseService.getAllCourses(page, size, query);
+    public ResponseEntity<PaginatedApiResponse<CourseResponse>> getAllCourses(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
+    ) throws JsonProcessingException {
+        int pageIndex = Math.max(page - 1, 0);
+        Sort s = Sort.unsorted();
+        if (sort != null && !sort.isBlank()) {
+            ObjectMapper mapper = new ObjectMapper();
+            Map<String, String> sortMap = mapper.readValue(sort, new TypeReference<>() {});
+            s = sortMap.entrySet().stream()
+                    .map(e -> new Sort.Order(Sort.Direction.fromString(e.getValue()), e.getKey()))
+                    .collect(Collectors.collectingAndThen(Collectors.toList(), Sort::by));
+        }
+
+        Pageable pageable = PageRequest.of(pageIndex, size, s);
+        Page<CourseResponse> courses = courseService.getAllCourses(query, pageable);
         return ResponseEntity.ok().body(
-                new PaginatedApiResponse<>(true, "Courses fetched successfully", courses.getContent(), new PaginatedMetadata(courses.getNumber(), courses.getSize(), courses.getTotalElements(), courses.getTotalPages()))
+                PaginationWrapper.wrap(courses)
         );
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse> getCourseById(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
         return ResponseEntity.ok().body(
-                new ApiResponse(true, "Course fetched successfully", courseService.getCourseById(courseId))
+                new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(courseId))
         );
     }
 }

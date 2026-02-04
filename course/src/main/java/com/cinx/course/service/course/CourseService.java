@@ -11,6 +11,7 @@ import com.cinx.course.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -27,8 +28,8 @@ public class CourseService implements ICourseService {
     }
 
     @Override
-    public Page<CourseResponse> getAllCourses(int page, int size, String query) {
-        Page<Course> courses = courseRepository.findAll(query, PageRequest.of(page - 1, size));
+    public Page<CourseResponse> getAllCourses(String query, Pageable pageable) {
+        Page<Course> courses = courseRepository.findAll(query, pageable);
         return courses.map(courseMapper::toDto);
     }
 

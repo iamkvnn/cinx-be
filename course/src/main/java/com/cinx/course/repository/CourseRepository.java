@@ -14,7 +14,8 @@ public interface CourseRepository extends JpaRepository<Course, String> {
         FROM Course c
         WHERE
             (:query IS NULL OR
-                c.title LIKE %:query%)
+                c.title LIKE %:query%
+                OR c.description LIKE %:query%)
     """)
     Page<Course> findAll(
             @Param("query") String query,

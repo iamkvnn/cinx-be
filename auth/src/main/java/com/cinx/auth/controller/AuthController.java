@@ -18,100 +18,100 @@ public class AuthController {
     private final IUserService userService;
 
     @PostMapping("/register")
-    public ResponseEntity<ApiResponse> register(@Valid @RequestBody RegisterRequest registerRequest) {
+    public ResponseEntity<ApiResponse<?>> register(@Valid @RequestBody RegisterRequest registerRequest) {
         userService.createUser(registerRequest);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User registered successfully", null)
+                new ApiResponse<>(true, "User registered successfully", null)
         );
     }
 
     @PostMapping("/login")
-    public ResponseEntity<ApiResponse> login(
+    public ResponseEntity<ApiResponse<TokenResponseDto>> login(
             @Valid @RequestBody AuthRequestDto request
     ) {
         TokenResponseDto authResponse = authenticationService.authenticate(request);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User logged in successfully", authResponse)
+                new ApiResponse<>(true, "User logged in successfully", authResponse)
         );
     }
 
     @PostMapping("/refresh-token")
-    public ResponseEntity<ApiResponse> refreshToken(
+    public ResponseEntity<ApiResponse<TokenResponseDto>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request
     ) {
         TokenResponseDto authResponse = authenticationService.refreshToken(request.token());
         return ResponseEntity.ok(
-                new ApiResponse(true, "Refresh token successfully", authResponse)
+                new ApiResponse<>(true, "Refresh token successfully", authResponse)
         );
     }
 
     @PostMapping("/verify-otp")
-    public ResponseEntity<ApiResponse> verifyOtp(
+    public ResponseEntity<ApiResponse<?>> verifyOtp(
             @Valid @RequestBody VerifyEmailRequest request
     ) {
         userService.verifyEmail(request);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User verified successfully", null)
+                new ApiResponse<>(true, "User verified successfully", null)
         );
     }
 
     @PostMapping("/send-otp")
-    public ResponseEntity<ApiResponse> resendOtp(
+    public ResponseEntity<ApiResponse<?>> resendOtp(
             @Valid @RequestBody SendOtpRequest request
     ) {
         authenticationService.sendVerifyOtp(request.email());
         return ResponseEntity.ok(
-                new ApiResponse(true, "Otp send successfully", null)
+                new ApiResponse<>(true, "Otp send successfully", null)
         );
     }
 
     @PostMapping("/reset-password")
-    public ResponseEntity<ApiResponse> resetPassword(
+    public ResponseEntity<ApiResponse<?>> resetPassword(
             @Valid @RequestBody ResetPasswordRequest request
     ) {
         userService.resetPassword(request);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User password reset successfully", null)
+                new ApiResponse<>(true, "User password reset successfully", null)
         );
     }
 
     @PostMapping("/send-change-password-otp")
-    public ResponseEntity<ApiResponse> sendChangePasswordOtp(
+    public ResponseEntity<ApiResponse<?>> sendChangePasswordOtp(
             @Valid @RequestBody SendOtpRequest request
     ) {
         authenticationService.sendChangePasswordOtp(request.email());
         return ResponseEntity.ok(
-                new ApiResponse(true, "Otp for change password sent successfully", null)
+                new ApiResponse<>(true, "Otp for change password sent successfully", null)
         );
     }
 
     @PostMapping("/change-password")
-    public ResponseEntity<ApiResponse> changePassword(
+    public ResponseEntity<ApiResponse<?>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request
     ) {
         userService.changePassword(request);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User password changed successfully", null)
+                new ApiResponse<>(true, "User password changed successfully", null)
         );
     }
 
     @PostMapping("/send-change-email-otp")
-    public ResponseEntity<ApiResponse> sendChangeEmailOtp(
+    public ResponseEntity<ApiResponse<?>> sendChangeEmailOtp(
             @Valid @RequestBody SendOtpRequest request
     ) {
         authenticationService.sendChangeEmailOtp(request.email());
         return ResponseEntity.ok(
-                new ApiResponse(true, "Otp for change email sent successfully", null)
+                new ApiResponse<>(true, "Otp for change email sent successfully", null)
         );
     }
 
     @PostMapping("/change-email")
-    public ResponseEntity<ApiResponse> changeEmail(
+    public ResponseEntity<ApiResponse<?>> changeEmail(
             @Valid @RequestBody ChangeEmailRequest request
     ) {
         userService.changeEmail(request);
         return ResponseEntity.ok(
-                new ApiResponse(true, "User email changed successfully", null)
+                new ApiResponse<>(true, "User email changed successfully", null)
         );
     }
 }

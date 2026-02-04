@@ -1,5 +1,6 @@
 package com.cinx.course.model;
 
+import com.cinx.common.model.BaseEntity;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -12,16 +13,18 @@ import java.util.Set;
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Course {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+public class Course extends BaseEntity {
     private String title;
     @Column(length = 2000)
     private String description;
     private Long duration;
     private String imageUrl;
     private Long price;
+    private Long discountedPrice;
+    private Double rating;
+    private Long enrollmentCount;
+    private Boolean isPublished;
+    private Boolean isInSubscription;
 
     @ManyToOne
     private Category category;

@@ -5,6 +5,9 @@ public record CreateCourseRequest (
         String description,
         String categoryId,
         Long price,
+        Long discountPrice,
+        Boolean isPublished,
+        Boolean isInSubscription,
         Long duration
 ) {
 }
