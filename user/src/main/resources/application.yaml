@@ -2,9 +2,9 @@ spring:
   application:
     name: user
   datasource:
-    url: jdbc:mysql://localhost:3306/userdb
-    username: root
-    password: taolao123
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/userdb}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:taolao123}
   jpa:
     hibernate:
       ddl-auto: update
@@ -29,4 +29,4 @@ jwt:
 eureka:
   client:
     serviceUrl:
-      defaultZone: http://localhost:8761/eureka/
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}

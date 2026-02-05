@@ -1,6 +1,14 @@
-version: "3.9"
-
 services:
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+      - "3300:3306"
+    networks:
+      - cinx-network
+
   cart-service:
     build:
         context: ./cart
@@ -8,9 +16,10 @@ services:
     container_name: cart-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cart_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cartdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
@@ -21,9 +30,10 @@ services:
     container_name: course-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/course_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/coursedb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
@@ -35,6 +45,22 @@ services:
     networks:
         - cinx-network
 
+  eureka-server:
+    build:
+      context: ./eureka
+      dockerfile: Dockerfile
+    container_name: eureka-server
+    networks:
+      - cinx-network
+
+  gateway:
+    build:
+      context: ./gateway
+      dockerfile: Dockerfile
+    container_name: gateway
+    networks:
+      - cinx-network
+
   learning-service:
     build:
         context: ./learning
@@ -42,22 +68,24 @@ services:
     container_name: learning-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/learning_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/learningdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
   media-service:
     build:
-        context: ./media
+        context: ./enrollment
         dockerfile: Dockerfile
     container_name: media-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/media_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/mediadb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
@@ -68,9 +96,10 @@ services:
     container_name: notification-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/notification_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/notificationdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
@@ -81,9 +110,10 @@ services:
     container_name: payment-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/payment_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
@@ -94,9 +124,10 @@ services:
     container_name: social-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/social_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/socialdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
@@ -107,9 +138,10 @@ services:
     container_name: user-service
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/user_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
         - cinx-network
 
