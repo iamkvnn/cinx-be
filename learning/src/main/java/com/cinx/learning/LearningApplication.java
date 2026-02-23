@@ -2,8 +2,10 @@ package com.cinx.learning;
 
 import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
+import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
-@SpringBootApplication
+@SpringBootApplication(scanBasePackages = {"com.cinx.learning", "com.cinx.common"})
+@EnableDiscoveryClient
 public class LearningApplication {
 
 	public static void main(String[] args) {
