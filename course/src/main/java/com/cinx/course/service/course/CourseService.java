@@ -36,8 +36,8 @@ public class CourseService implements ICourseService {
     }
 
     @Override
-    public Page<CourseResponse> getAllCourses(String query, Pageable pageable) {
-        Page<Course> courses = courseRepository.findAll(query, pageable);
+    public Page<CourseResponse> getAllCourses(String query, String categoryId, Pageable pageable) {
+        Page<Course> courses = courseRepository.findAll(query, categoryId, pageable);
         return courses.map(courseMapper::toDto);
     }
 
@@ -50,6 +50,12 @@ public class CourseService implements ICourseService {
                 .description(request.description())
                 .category(category)
                 .price(request.price())
+                .discountedPrice(request.discountPrice())
+                .discountRate((long) ((request.price() - request.discountPrice()) / (double) request.price() * 100))
+                .rating(0.0)
+                .enrollmentCount(0L)
+                .isPublished(request.isPublished())
+                .isInSubscription(request.isInSubscription())
                 .duration(request.duration())
                 .build());
         return courseMapper.toDto(course);

@@ -21,6 +21,7 @@ public class Course extends BaseEntity {
     private String imageUrl;
     private Long price;
     private Long discountedPrice;
+    private Long discountRate;
     private Double rating;
     private Long enrollmentCount;
     private Boolean isPublished;

@@ -33,6 +33,7 @@ public class CourseController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
+            @RequestParam(required = false) String categoryId,
             @RequestParam(required = false) String sort
     ) throws JsonProcessingException {
         int pageIndex = Math.max(page - 1, 0);
@@ -46,7 +47,7 @@ public class CourseController {
         }
 
         Pageable pageable = PageRequest.of(pageIndex, size, s);
-        Page<CourseResponse> courses = courseService.getAllCourses(query, pageable);
+        Page<CourseResponse> courses = courseService.getAllCourses(query, categoryId, pageable);
         return ResponseEntity.ok().body(
                 PaginationWrapper.wrap(courses)
         );

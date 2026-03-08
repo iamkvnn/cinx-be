@@ -9,6 +9,7 @@ public record CourseResponse (
         String category,
         Double price,
         Long discountedPrice,
+        Long discountRate,
         Double rating,
         Long enrollmentCount,
         Boolean isPublished,

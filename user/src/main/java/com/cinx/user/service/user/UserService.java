@@ -57,36 +57,41 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public void createUser(CreateUserRequest user) {
-        if (userRepository.existsByEmail(user.email())) {
-            throw new AlreadyExistException("User already exists with email: " + user.email());
+    public UserDto createUser(CreateUserRequest request) {
+        if (userRepository.existsByEmail(request.email())) {
+            throw new AlreadyExistException("User already exists with email: " + request.email());
         }
-
-        userRepository.save(User
+        User user = userRepository.save(User
                 .builder()
-                .userId(user.userId())
-                .email(user.email())
-                .name(user.name())
-                .gender(user.gender())
+                .userId(request.userId())
+                .email(request.email())
+                .name(request.name())
+                .gender(request.gender())
                 .build());
+        return userMapper.toDto(user);
     }
 
     @Override
-    public void updateUser(String id, UpdateProifileRequest dto) {
+    public UserDto updateUser(String id, UpdateProifileRequest dto, String avatarUrl) {
         User existingUser = getOrThrowByUserId(id);
         userMapper.partialUpdate(existingUser, dto);
-        userRepository.save(existingUser);
+        if (avatarUrl != null) {
+            existingUser.setAvatarUrl(avatarUrl);
+        }
+        User user = userRepository.save(existingUser);
+        return userMapper.toDto(user);
     }
 
     @Override
-    public void updateProfile(String id, UpdateProifileRequest dto, MultipartFile avatar) {
+    public UserDto updateProfile(String id, UpdateProifileRequest dto, MultipartFile avatar) {
+        String fileName = null;
         if (Objects.nonNull(avatar) && !avatar.isEmpty()) {
             try {
                 Path uploadPath = Paths.get("uploads/avatars/");
                 if (!Files.exists(uploadPath)) {
                     Files.createDirectories(uploadPath);
                 }
-                String fileName = avatar.getOriginalFilename();
+                fileName = avatar.getOriginalFilename();
                 assert fileName != null;
                 String extension = getFileExtension(fileName);
                 fileName = UUID.randomUUID() + "." + extension;
@@ -96,7 +101,8 @@ public class UserService implements IUserService {
                 throw new RuntimeException(e.getMessage());
             }
         }
-        updateUser(id, dto);
+        String avatarUrl = fileName != null ? "http://localhost:9090/api/v1/users/avatars/" + fileName : null;
+        return updateUser(id, dto, avatarUrl);
     }
 
     private String getFileExtension(String fileName) {

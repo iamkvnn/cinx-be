@@ -9,7 +9,9 @@ public interface IUserService {
     UserDto findById(String id);
     UserDto findByEmail(String email);
     UserDto findByUserId(String userId);
-    void createUser(CreateUserRequest user);
-    void updateUser(String id, UpdateProifileRequest dto);
-    void updateProfile(String id, UpdateProifileRequest dto, MultipartFile avatar);
+    UserDto createUser(CreateUserRequest user);
+
+    UserDto updateUser(String id, UpdateProifileRequest dto, String avatarUrl);
+
+    UserDto updateProfile(String id, UpdateProifileRequest dto, MultipartFile avatar);
 }

@@ -11,7 +11,7 @@ import java.util.List;
 public interface ICourseService {
     CourseResponse getCourseById(String courseId);
     List<CourseResponse> getCourseByIds(List<String> courseIds);
-    Page<CourseResponse> getAllCourses(String query, Pageable pageable);
+    Page<CourseResponse> getAllCourses(String query, String categoryId, Pageable pageable);
     CourseResponse createCourse(CreateCourseRequest course);
     Course updateCourse(String courseId, Course courseDetails);
     void deleteCourse(String courseId);

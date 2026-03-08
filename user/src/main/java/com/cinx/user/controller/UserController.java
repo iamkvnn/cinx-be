@@ -36,18 +36,16 @@ public class UserController {
 
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createUser(@RequestBody CreateUserRequest registerDto) {
-        userService.createUser(registerDto);
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User created successfully", null)
+                new ApiResponse<>(true, "User created successfully", userService.createUser(registerDto))
         );
     }
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> updateUser(@PathVariable("id") String id, @Valid @RequestPart("user") UpdateProifileRequest dto, @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
-        userService.updateProfile(id, dto, avatar);
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User updated successfully", null)
+                new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto, avatar))
         );
     }
 
