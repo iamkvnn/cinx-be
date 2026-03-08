@@ -2,6 +2,7 @@ package com.cinx.enrollment.service.order;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.dto.request.CartItemDto;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
 import com.cinx.enrollment.dto.response.*;
@@ -21,6 +22,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
 @Service
@@ -33,13 +36,17 @@ public class OrderService implements IOrderService {
     private final CartService cartService;
 
     @Override
-    public Page<OrderResponse> getOrdersByUserId(String userId, int page, int size) {
-        return orderRepository.findAllByUserId(userId, PageRequest.of(page - 1, size))
-                .map(order -> {
-                    order.setItems(orderItemRepository.findAllByOrderId(order.getId()));
-                    return order;
-                })
-                .map(orderMapper::toDto);
+    public Page<OrderDetailResponse> getOrdersByUserId(int page, int size) {
+        String userId = AuthenticationUtil.extractUserId();
+        Page<Order> orders = orderRepository.findAllByUserId(userId, PageRequest.of(page - 1, size));
+        List<String> orderIds = orders.stream().map(Order::getId).toList();
+        Map<String, PaymentResponse> payments = paymentService.getPaymentByIds(orderIds).data().stream()
+                .collect(Collectors.toMap(PaymentResponse::orderId, p -> p));
+        return orders.map(order -> {
+            order.setItems(orderItemRepository.findAllByOrderId(order.getId()));
+            PaymentResponse payment = payments.get(order.getId());
+            return orderMapper.toDetailDto(new OrderAggregate(order, payment));
+        });
     }
 
     @Override
@@ -65,7 +72,8 @@ public class OrderService implements IOrderService {
 
     @Transactional
     @Override
-    public void createOrder(String userId, CreateOrderRequest request) {
+    public OrderResponse createOrder(CreateOrderRequest request) {
+        String userId = AuthenticationUtil.extractUserId();
         validateCreateOrderRequest(request);
         List<OrderItem> orderItems = createOrderItems(request);
         Long totalPrice = orderItems.stream().mapToLong(OrderItem::getPrice).sum();
@@ -80,8 +88,10 @@ public class OrderService implements IOrderService {
                         .build()
         );
         orderItems.forEach(item -> item.setOrderId(order.getId()));
+        order.setItems(orderItems);
         orderItemRepository.saveAll(orderItems);
-        cartService.removeAllFromCartByIds(userId, request.cartItems().stream().map(CartItemDto::id).toList());
+        cartService.removeAllFromCartByIds(request.cartItems().stream().map(CartItemDto::id).toList());
+        return orderMapper.toDto(order);
     }
 
     private void validateCreateOrderRequest(CreateOrderRequest request) {

@@ -17,12 +17,12 @@ public class EnrollmentController {
     private final IEnrollmentService enrollmentService;
 
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<?>> getEnrolledCourses(@RequestHeader("X-User-Id") String userId, @RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(enrollmentService.getEnrolledCourses(userId, page, size)));
+    public ResponseEntity<PaginatedApiResponse<?>> getEnrolledCourses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+        return ResponseEntity.ok(PaginationWrapper.wrap(enrollmentService.getEnrolledCourses(page, size)));
     }
 
     @PostMapping("/check")
-    public ResponseEntity<ApiResponse<?>> checkEnrollmentStatus(@RequestHeader("X-User-Id") String userId, @RequestBody List<String> courseIds) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "", enrollmentService.checkEnrollmentStatus(userId, courseIds)));
+    public ResponseEntity<ApiResponse<?>> checkEnrollmentStatus(@RequestBody List<String> courseIds) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "", enrollmentService.checkEnrollmentStatus(courseIds)));
     }
 }

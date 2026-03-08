@@ -35,7 +35,8 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(
                         auth -> auth
-                                .anyRequest().permitAll()
+                                .requestMatchers("/api/v1/payments/IPN", "/api/v1/payments/momo-callback").permitAll()
+                                .anyRequest().authenticated()
                 )
                 .oauth2ResourceServer(oauth2 -> oauth2
                         .jwt(jwt -> jwt.decoder(jwtDecoder())

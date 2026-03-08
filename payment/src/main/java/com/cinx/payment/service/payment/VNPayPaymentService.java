@@ -49,6 +49,13 @@ public class VNPayPaymentService extends PaymentTemplate {
     }
 
     @Override
+    public List<PaymentResponse> getPaymentByIds(List<String> paymentIds) {
+        return vnPayPaymentRepository.findAllById(paymentIds).stream()
+                .map(paymentMapper::toDto)
+                .toList();
+    }
+
+    @Override
     public VNPayPayment createPayment(OrderResponse order) {
         VNPayPayment payment = VNPayPayment.builder()
                 .orderId(order.id())

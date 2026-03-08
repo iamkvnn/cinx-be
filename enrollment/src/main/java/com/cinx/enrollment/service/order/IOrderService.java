@@ -6,7 +6,7 @@ import com.cinx.enrollment.dto.response.OrderResponse;
 import org.springframework.data.domain.Page;
 
 public interface IOrderService {
-    Page<OrderResponse> getOrdersByUserId(String userId, int page, int size);
+    Page<OrderDetailResponse> getOrdersByUserId(int page, int size);
     OrderDetailResponse getOrderById(String orderId);
-    void createOrder(String userId, CreateOrderRequest request);
+    OrderResponse createOrder(CreateOrderRequest request);
 }

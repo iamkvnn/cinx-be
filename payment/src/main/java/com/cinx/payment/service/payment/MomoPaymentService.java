@@ -2,6 +2,7 @@ package com.cinx.payment.service.payment;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.payment.config.MomoPaymentConfig;
 import com.cinx.payment.consts.PaymentMethod;
 import com.cinx.payment.consts.PaymentStatus;
@@ -21,6 +22,7 @@ import org.springframework.stereotype.Service;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 
@@ -49,6 +51,13 @@ public class MomoPaymentService extends PaymentTemplate {
     }
 
     @Override
+    public List<PaymentResponse> getPaymentByIds(List<String> orderIds) {
+        return momoPaymentRepository.findAllByOrderIds(orderIds).stream()
+                .map(paymentMapper::toDto)
+                .toList();
+    }
+
+    @Override
     public MomoPayment createPayment(OrderResponse order) {
         MomoPayment payment = MomoPayment.builder()
                 .orderId(order.id())
@@ -62,16 +71,16 @@ public class MomoPaymentService extends PaymentTemplate {
 
     @Override
     public String getPaymentUrl(String orderId) {
-        OrderResponse order = enrollmentService.getOrderById("123", orderId).data();
-        System.out.println("Order: " + order);
+        String userId = AuthenticationUtil.extractUserId();
+        OrderResponse order = enrollmentService.getOrderById(orderId).data();
         MomoPayment momoPayment = momoPaymentRepository
                 .findByOrderId(orderId)
                 .orElseGet(() -> createPayment(order));
         if (momoPayment.getPaymentUrl() != null && momoPayment.getUrlExpireTime().isAfter(LocalDateTime.now())) {
             return momoPayment.getPaymentUrl();
         }
-        String returnUrl = feBaseUrl + "/checkouts/thank-you/" + orderId;
-        String notifyUrl = "https://318d-117-5-143-58.ngrok-free.app/api/v1/payments/momo-callback";
+        String returnUrl = "exp://192.168.1.101:8083/--/payment-success";
+        String notifyUrl = "https://5bfa-117-5-143-58.ngrok-free.app/api/v1/payments/momo-callback";
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),

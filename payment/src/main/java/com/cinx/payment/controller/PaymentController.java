@@ -12,6 +12,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -23,7 +24,13 @@ public class PaymentController {
     @GetMapping
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod) {
         PaymentResponse response = factory.getPaymentService(paymentMethod).getPaymentByOrderId(orderId);
-        System.out.println("PaymentController.getPayment: " + response);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
+    }
+
+    @GetMapping("/ids")
+    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentByOrderIds(@RequestParam List<String> orderIds) {
+        List<PaymentResponse> response = factory.getPaymentService(PaymentMethod.MOMO).getPaymentByIds(orderIds);
+        System.out.println(response);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
     }
 

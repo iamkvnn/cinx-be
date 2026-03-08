@@ -4,6 +4,7 @@ import com.cinx.payment.dto.response.OrderResponse;
 import com.cinx.payment.dto.response.PaymentResponse;
 import com.cinx.payment.model.Payment;
 
+import java.util.List;
 import java.util.Map;
 
 public interface IPaymentStrategyService {
@@ -12,4 +13,5 @@ public interface IPaymentStrategyService {
     String getPaymentUrl(String orderId);
     boolean handleCallback(Map<String, String> callbackData);
     Payment validateCallback(Map<String, String> callbackData);
+    List<PaymentResponse> getPaymentByIds(List<String> orderIds);
 }

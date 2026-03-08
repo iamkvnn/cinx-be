@@ -36,7 +36,7 @@ public class SecurityConfig {
         http.csrf(AbstractHttpConfigurer::disable)
              .authorizeHttpRequests(
                 auth -> auth
-                    .anyRequest().permitAll()
+                    .anyRequest().authenticated()
              )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.decoder(jwtDecoder())
