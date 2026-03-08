@@ -25,3 +25,18 @@ eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
+VNPay:
+  vnp_Version: 2.1.0
+  vnp_Command: pay
+  vnp_TmnCode: YAECLV2E
+  vnp_HashSecret: XWQ7OO6P3LE601JZGCMIC6HM4AU4EAB0
+  vnp_Url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
+
+MoMo:
+  url: https://test-payment.momo.vn/v2/gateway/api/create
+  partnerCode: MOMOBKUN20180529
+  accessKey: klm05TvNBzhg7h7j
+  secret: at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa
+
+FE_BASE_URL: https://shinyjewelry.shop

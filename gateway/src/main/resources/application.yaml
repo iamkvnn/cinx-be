@@ -10,6 +10,14 @@ spring:
               uri: lb://auth
               predicates:
                 - Path=/api/v1/auth/**
+            - id: cart-service
+              uri: lb://cart
+              predicates:
+                - Path=/api/v1/cart/**
+            - id: discovery-service
+              uri: lb://discovery
+              predicates:
+                - Path=/api/v1/discovery/**
             - id: user-service
               uri: lb://user
               predicates:
@@ -18,7 +26,26 @@ spring:
               uri: lb://course
               predicates:
                 - Path=/api/v1/courses/**,/api/v1/categories/**
-
+            - id: enrollment-service
+              uri: lb://enrollment
+              predicates:
+                - Path=/api/v1/enrollments/**, /api/v1/orders/**
+            - id: payment-service
+              uri: lb://payment
+              predicates:
+                - Path=/api/v1/payments/**
+            - id: learning-service
+              uri: lb://learning
+              predicates:
+                - Path=/api/v1/learning/**
+            - id: notification-service
+              uri: lb://notification
+              predicates:
+                - Path=/api/v1/notifications/**
+            - id: social-service
+              uri: lb://social
+              predicates:
+                - Path=/api/v1/social/**
 
 server:
     port: 9090

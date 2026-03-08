@@ -18,6 +18,7 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
@@ -55,6 +56,13 @@ public class CourseController {
     public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(courseId))
+        );
+    }
+
+    @GetMapping("/ids")
+    public ResponseEntity<ApiResponse<List<CourseResponse>>> getCourseById(@RequestParam("ids") List<String> courseIds) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseByIds(courseIds))
         );
     }
 }

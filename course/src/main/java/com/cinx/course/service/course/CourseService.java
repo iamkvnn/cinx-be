@@ -14,6 +14,8 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 
+import java.util.List;
+
 @Service
 @RequiredArgsConstructor
 public class CourseService implements ICourseService {
@@ -25,6 +27,12 @@ public class CourseService implements ICourseService {
     public CourseResponse getCourseById(String courseId) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         return courseMapper.toDto(course);
+    }
+
+    @Override
+    public List<CourseResponse> getCourseByIds(List<String> courseIds) {
+        List<Course> courses = courseRepository.findAllById(courseIds);
+        return courses.stream().map(courseMapper::toDto).toList();
     }
 
     @Override
