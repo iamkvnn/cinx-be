@@ -1,8 +1,8 @@
-package com.cinx.course.dto.response;
+package com.cinx.social.dto.response;
 
 import java.time.LocalDateTime;
 
-public record CourseResponse (
+public record CourseResponse(
         String id,
         String title,
         String description,

@@ -43,7 +43,11 @@ public class UserController {
 
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<?>> updateUser(@PathVariable("id") String id, @Valid @RequestPart("user") UpdateProifileRequest dto, @RequestPart(value = "avatar", required = false) MultipartFile avatar) {
+    public ResponseEntity<ApiResponse<?>> updateUser(
+            @PathVariable("id") String id,
+            @Valid @RequestPart("user") UpdateProifileRequest dto,
+            @RequestPart(value = "avatar", required = false) MultipartFile avatar
+    ) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto, avatar))
         );

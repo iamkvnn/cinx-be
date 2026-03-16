@@ -79,8 +79,8 @@ public class MomoPaymentService extends PaymentTemplate {
         if (momoPayment.getPaymentUrl() != null && momoPayment.getUrlExpireTime().isAfter(LocalDateTime.now())) {
             return momoPayment.getPaymentUrl();
         }
-        String returnUrl = "exp://10.100.100.227:8083/--/payment-success";
-        String notifyUrl = "https://34bf-27-65-59-126.ngrok-free.app/api/v1/payments/momo-callback";
+        String returnUrl = "exp://196.169.6.155:8090/--/payment-success";
+        String notifyUrl = "https://ae99-14-187-47-36.ngrok-free.app/api/v1/payments/momo-callback";
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),

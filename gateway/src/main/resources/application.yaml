@@ -45,7 +45,7 @@ spring:
             - id: social-service
               uri: lb://social
               predicates:
-                - Path=/api/v1/social/**
+                - Path=/api/v1/wishlist/**, /api/v1/reviews/**
 
 server:
     port: 9090
