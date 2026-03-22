@@ -1,4 +1,11 @@
 package com.cinx.course.dto.request;
 
-public class CreateLectureRequest {
+import com.cinx.course.consts.LectureType;
+
+public record CreateLectureRequest (
+        String title,
+        Long duration,
+        Integer orderIndex,
+        LectureType lectureType
+) {
 }

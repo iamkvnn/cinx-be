@@ -9,9 +9,9 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue orderQueue() {
-        return QueueBuilder.durable("order.queue")
+        return QueueBuilder.durable("notification.order.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
-                .withArgument("x-dead-letter-routing-key", "order.dead")
+                .withArgument("x-dead-letter-routing-key", "notification.order.dead")
                 .withArgument("x-message-ttl", 60000)          // 60s TTL
                 .withArgument("x-max-length", 10000)           // backpressure
                 .build();
@@ -19,12 +19,12 @@ public class RabbitMQConfig {
 
     @Bean
     public Queue deadLetterQueue() {
-        return QueueBuilder.durable("order.dead.queue").build();
+        return QueueBuilder.durable("notification.order.dead.queue").build();
     }
 
     @Bean
     public TopicExchange orderExchange() {
-        return ExchangeBuilder.topicExchange("order.exchange")
+        return ExchangeBuilder.topicExchange("order.events.exchange")
                 .durable(true)
                 .build();
     }
@@ -40,13 +40,13 @@ public class RabbitMQConfig {
     public Binding orderBinding() {
         return BindingBuilder.bind(orderQueue())
                 .to(orderExchange())
-                .with("order.#");
+                .with("order.order.#");
     }
 
     @Bean
     public Binding deadLetterBinding() {
         return BindingBuilder.bind(deadLetterQueue())
                 .to(deadLetterExchange())
-                .with("order.dead");
+                .with("notification.order.dead");
     }
 }

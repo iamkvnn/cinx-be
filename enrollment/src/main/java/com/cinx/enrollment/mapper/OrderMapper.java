@@ -3,6 +3,7 @@ package com.cinx.enrollment.mapper;
 import com.cinx.enrollment.dto.response.OrderAggregate;
 import com.cinx.enrollment.dto.response.OrderDetailResponse;
 import com.cinx.enrollment.dto.response.OrderResponse;
+import com.cinx.enrollment.messaging.event.OrderEvent;
 import com.cinx.enrollment.model.Order;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
@@ -19,4 +20,5 @@ public interface OrderMapper {
     OrderDetailResponse toDetailDto(OrderAggregate aggregate);
 
     OrderResponse toDto(Order order);
+    OrderEvent toEvent(Order order);
 }

@@ -7,6 +7,7 @@ import com.cinx.enrollment.dto.request.CartItemDto;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
 import com.cinx.enrollment.dto.response.*;
 import com.cinx.enrollment.mapper.OrderMapper;
+import com.cinx.enrollment.messaging.OrderEventProducer;
 import com.cinx.enrollment.model.Order;
 import com.cinx.enrollment.model.OrderItem;
 import com.cinx.enrollment.repository.OrderItemRepository;
@@ -34,6 +35,7 @@ public class OrderService implements IOrderService {
     private final OrderIdGenerator orderIdGenerator;
     private final PaymentService paymentService;
     private final CartService cartService;
+    private final OrderEventProducer orderEventProducer;
 
     @Override
     public Page<OrderDetailResponse> getOrdersByUserId(int page, int size) {
@@ -91,6 +93,7 @@ public class OrderService implements IOrderService {
         order.setItems(orderItems);
         orderItemRepository.saveAll(orderItems);
         cartService.removeAllFromCartByIds(request.cartItems().stream().map(CartItemDto::id).toList());
+        orderEventProducer.publishOrderCreatedEvent(orderMapper.toEvent(order));
         return orderMapper.toDto(order);
     }
 

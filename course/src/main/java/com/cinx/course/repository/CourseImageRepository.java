@@ -1,4 +1,7 @@
 package com.cinx.course.repository;
 
-public class CourseImageRepository {
+import com.cinx.course.model.CourseImage;
+import org.springframework.data.jpa.repository.JpaRepository;
+
+public interface CourseImageRepository extends JpaRepository<CourseImage, String> {
 }

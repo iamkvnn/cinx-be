@@ -2,17 +2,21 @@ package com.cinx.course.service.course;
 
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.mapper.CourseMapper;
-import com.cinx.course.model.Category;
-import com.cinx.course.model.Course;
+import com.cinx.course.model.*;
 import com.cinx.course.repository.CategoryRepository;
 import com.cinx.course.repository.CourseRepository;
+import com.cinx.course.repository.InstructorRepository;
+import com.cinx.course.service.instructor.IInstructorService;
+import com.cinx.course.service.section.ISectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
@@ -21,12 +25,15 @@ import java.util.List;
 public class CourseService implements ICourseService {
     private final CourseRepository courseRepository;
     private final CategoryRepository categoryRepository;
+    private final ISectionService sectionService;
+    private final InstructorRepository instructorRepository;
     private final CourseMapper courseMapper;
 
     @Override
-    public CourseResponse getCourseById(String courseId) {
+    public CourseDetailResponse getCourseById(String courseId) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        return courseMapper.toDto(course);
+        course.setSections(sectionService.getSectionsByCourseId(courseId));
+        return courseMapper.toDetailDto(course);
     }
 
     @Override
@@ -41,24 +48,57 @@ public class CourseService implements ICourseService {
         return courses.map(courseMapper::toDto);
     }
 
+    @Transactional
     @Override
     public CourseResponse createCourse(CreateCourseRequest request) {
-        Category category = categoryRepository.findByName(request.categoryId())
+        Course course = courseRepository.save(buildCourseFromRequest(request));
+        course.setSections(
+                sectionService.createSections(course.getSections().stream()
+                        .peek(section -> section.setCourse(course))
+                        .toList())
+        );
+        return courseMapper.toDto(course);
+    }
+
+    private Course buildCourseFromRequest(CreateCourseRequest request) {
+        Category category = categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.categoryId()));
-        Course course = courseRepository.save(Course.builder()
+        Instructor instructor = instructorRepository.findById(request.instructorId())
+                .orElseThrow(() -> new NotFoundException("Instructor not found with id: " + request.instructorId()));
+        return Course.builder()
                 .title(request.title())
                 .description(request.description())
                 .category(category)
+                .instructor(instructor)
                 .price(request.price())
-                .discountedPrice(request.discountPrice())
-                .discountRate((long) ((request.price() - request.discountPrice()) / (double) request.price() * 100))
-                .rating(0.0)
+                .discountedPrice(request.discountedPrice())
+                .discountRate((long) ((request.price() - request.discountedPrice()) / (double) request.price() * 100))
                 .enrollmentCount(0L)
                 .isPublished(request.isPublished())
                 .isInSubscription(request.isInSubscription())
                 .duration(request.duration())
-                .build());
-        return courseMapper.toDto(course);
+                .sections(request.sections().stream()
+                        .map(sectionRequest ->
+                                Section.builder()
+                                        .title(sectionRequest.title())
+                                        .description(sectionRequest.description())
+                                        .orderIndex(sectionRequest.orderIndex())
+                                        .duration(sectionRequest.duration())
+                                        .lectures(sectionRequest.lectures().stream()
+                                                .map(lectureRequest ->
+                                                        Lecture.builder()
+                                                                .title(lectureRequest.title())
+                                                                .lectureType(lectureRequest.lectureType())
+                                                                .duration(lectureRequest.duration())
+                                                                .orderIndex(lectureRequest.orderIndex())
+                                                                .build()
+                                                )
+                                                .toList()
+                                        )
+                                        .build()
+                        ).toList()
+                )
+                .build();
     }
 
     @Override

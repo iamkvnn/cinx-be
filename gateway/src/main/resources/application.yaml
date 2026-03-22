@@ -25,7 +25,7 @@ spring:
             - id: course-service
               uri: lb://course
               predicates:
-                - Path=/api/v1/courses/**,/api/v1/categories/**
+                - Path=/api/v1/courses/**,/api/v1/categories/**,/api/v1/instructors/**
             - id: enrollment-service
               uri: lb://enrollment
               predicates:
@@ -50,6 +50,10 @@ spring:
               uri: lb://social
               predicates:
                 - Path=/api/v1/wishlist/**, /api/v1/reviews/**
+            - id: recommendation-service
+              uri: http://localhost:8090
+              predicates:
+                - Path=/api/v1/recommendations/**
 
 server:
     port: 9090

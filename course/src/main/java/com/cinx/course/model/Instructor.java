@@ -17,6 +17,7 @@ public class Instructor {
     @GeneratedValue(strategy = GenerationType.UUID)
     private String id;
     private String name;
+    private String email;
     private String bio;
     private String profilePictureUrl;
 

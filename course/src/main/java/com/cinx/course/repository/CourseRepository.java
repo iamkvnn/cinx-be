@@ -12,11 +12,14 @@ public interface CourseRepository extends JpaRepository<Course, String> {
     @Query("""
         SELECT c
         FROM Course c
+        LEFT JOIN FETCH c.category cat
+        LEFT JOIN FETCH c.images imgs
+        LEFT JOIN FETCH c.instructor instr
         WHERE
             (:query IS NULL OR
                 c.title LIKE %:query%
                 OR c.description LIKE %:query%)
-            AND (:categoryId IS NULL OR c.category.id = :categoryId)
+            AND (:categoryId IS NULL OR cat.id = :categoryId)
     """)
     Page<Course> findAll(
             @Param("query") String query,

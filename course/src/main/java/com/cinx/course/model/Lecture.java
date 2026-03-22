@@ -1,5 +1,6 @@
 package com.cinx.course.model;
 
+import com.cinx.course.consts.LectureType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -18,6 +19,7 @@ public class Lecture {
     private String contentUrl;
     private Long duration;
     private Integer orderIndex;
+    private LectureType lectureType;
 
     @ManyToOne
     private Section section;

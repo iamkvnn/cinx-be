@@ -4,6 +4,8 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.dto.PaginatedMetadata;
 import com.cinx.common.mapper.PaginationWrapper;
+import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.service.course.ICourseService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -54,7 +56,7 @@ public class CourseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseDetailResponse>> getCourseById(@PathVariable("id") String courseId) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(courseId))
         );
@@ -64,6 +66,13 @@ public class CourseController {
     public ResponseEntity<ApiResponse<List<CourseResponse>>> getCourseById(@RequestParam("ids") List<String> courseIds) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseByIds(courseIds))
+        );
+    }
+
+    @PostMapping
+    public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@RequestBody CreateCourseRequest request) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course created successfully", courseService.createCourse(request))
         );
     }
 }

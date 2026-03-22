@@ -3,8 +3,8 @@ package com.cinx.course.model;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -25,6 +25,6 @@ public class Section {
     @ManyToOne
     private Course course;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
-    private Set<Lecture> lectures = new HashSet<>();
+    @OneToMany
+    private List<Lecture> lectures = new ArrayList<>();
 }
