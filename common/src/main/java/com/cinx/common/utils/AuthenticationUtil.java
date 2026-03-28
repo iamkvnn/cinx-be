@@ -8,11 +8,18 @@ public class AuthenticationUtil {
 
     public static String extractUserId() {
         Authentication authentication = getAuthentication();
+        if (authentication == null) {
+            return null;
+        }
         return authentication.getName();
     }
 
     public static String extractJwt() {
-        return ((Jwt) getAuthentication().getPrincipal()).getTokenValue();
+        Authentication authentication = getAuthentication();
+        if (authentication == null || !(authentication.getPrincipal() instanceof Jwt)) {
+            return null;
+        }
+        return ((Jwt) authentication.getPrincipal()).getTokenValue();
     }
 
     public static Authentication getAuthentication() {

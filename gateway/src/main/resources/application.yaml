@@ -25,11 +25,11 @@ spring:
             - id: course-service
               uri: lb://course
               predicates:
-                - Path=/api/v1/courses/**,/api/v1/categories/**,/api/v1/instructors/**
+                - Path=/api/v1/courses/**,/api/v1/categories/**,/api/v1/instructors/**, /api/v1/quiz-lessons/**, /api/v1/video-lessons/**, /api/v1/assignment-lessons/**, /api/v1/article-lessons/**
             - id: enrollment-service
               uri: lb://enrollment
               predicates:
-                - Path=/api/v1/enrollments/**, /api/v1/orders/**
+                - Path=/api/v1/enrollments/**, /api/v1/orders/**, /api/v1/vouchers/**
             - id: payment-service
               uri: lb://payment
               predicates:
