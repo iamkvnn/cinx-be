@@ -1,0 +1,55 @@
+package com.cinx.course.service.video;
+
+import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.dto.request.CreateVideoLessonRequest;
+import com.cinx.course.dto.response.VideoLessonResponse;
+import com.cinx.course.mapper.VideoLessonMapper;
+import com.cinx.course.repository.LessonRepository;
+import com.cinx.course.repository.VideoLessonRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class VideoService implements IVideoService {
+    private final VideoLessonRepository videoLessonRepository;
+    private final VideoLessonMapper videoLessonMapper;
+    private final LessonRepository lessonRepository;
+
+    @Override
+    public VideoLessonResponse getVideoByLessonId(String lessonId) {
+        return videoLessonRepository.findByLessonId(lessonId)
+                .map(videoLessonMapper::toDto)
+                .orElseThrow(() -> new NotFoundException("Video not found for lessonId: " + lessonId));
+    }
+
+    @Override
+    public void createVideo(String lessonId, CreateVideoLessonRequest request) {
+        videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+            throw new AlreadyExistException("Video already exists for lessonId: " + lessonId);
+        },() -> {
+            var videoLesson = videoLessonMapper.toModel(request);
+            videoLesson.setLesson(lessonRepository.findById(lessonId).orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId)));
+            videoLessonRepository.save(videoLesson);
+        });
+    }
+
+    @Override
+    public void updateVideo(String lessonId, CreateVideoLessonRequest request) {
+        videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+            videoLessonMapper.partialUpdate(existing, request);
+            videoLessonRepository.save(existing);
+        },() -> {
+            throw new NotFoundException("Video not found for lessonId: " + lessonId);
+        });
+    }
+
+    @Override
+    public void deleteVideo(String lessonId) {
+        videoLessonRepository.findByLessonId(lessonId)
+                .ifPresentOrElse(videoLessonRepository::delete, () -> {
+                    throw new NotFoundException("Video not found for lessonId: " + lessonId);
+        });
+    }
+}

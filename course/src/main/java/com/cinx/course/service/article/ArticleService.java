@@ -1,0 +1,55 @@
+package com.cinx.course.service.article;
+
+import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.dto.request.CreateArticleLessonRequest;
+import com.cinx.course.dto.response.ArticleLessonResponse;
+import com.cinx.course.mapper.ArticleMapper;
+import com.cinx.course.repository.ArticleLessonRepository;
+import com.cinx.course.repository.LessonRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Service;
+
+@Service
+@RequiredArgsConstructor
+public class ArticleService implements IArticleService {
+    private final ArticleLessonRepository articleLessonRepository;
+    private final ArticleMapper articleLessonMapper;
+    private final LessonRepository lessonRepository;
+
+    @Override
+    public ArticleLessonResponse getArticleByLessonId(String lessonId) {
+        return articleLessonRepository.findByLessonId(lessonId)
+                .map(articleLessonMapper::toDto)
+                .orElseThrow(() -> new NotFoundException("Article not found for lessonId: " + lessonId));
+    }
+
+    @Override
+    public void createArticle(String lessonId, CreateArticleLessonRequest request) {
+        articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+            throw new AlreadyExistException("Article already exists for lessonId: " + lessonId);
+        },() -> {
+            var articleLesson = articleLessonMapper.toModel(request);
+            articleLesson.setLesson(lessonRepository.findById(lessonId).orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId)));
+            articleLessonRepository.save(articleLesson);
+        });
+    }
+
+    @Override
+    public void updateArticle(String lessonId, CreateArticleLessonRequest request) {
+            articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+                articleLessonMapper.partialUpdate(existing, request);
+                articleLessonRepository.save(existing);
+            },() -> {
+                throw new NotFoundException("Article not found for lessonId: " + lessonId);
+            });
+    }
+
+    @Override
+    public void deleteArticle(String lessonId) {
+        articleLessonRepository.findByLessonId(lessonId)
+                .ifPresentOrElse(articleLessonRepository::delete, () -> {
+                    throw new NotFoundException("Article not found for lessonId: " + lessonId);
+        });
+    }
+}
