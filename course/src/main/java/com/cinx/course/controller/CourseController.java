@@ -1,16 +1,19 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.dto.PaginatedApiQuery;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.dto.PaginatedMetadata;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.service.course.ICourseService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -32,24 +35,10 @@ public class CourseController {
 
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getAllCourses(
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String categoryId,
-            @RequestParam(required = false) String sort
-    ) throws JsonProcessingException {
-        int pageIndex = Math.max(page - 1, 0);
-        Sort s = Sort.unsorted();
-        if (sort != null && !sort.isBlank()) {
-            ObjectMapper mapper = new ObjectMapper();
-            Map<String, String> sortMap = mapper.readValue(sort, new TypeReference<>() {});
-            s = sortMap.entrySet().stream()
-                    .map(e -> new Sort.Order(Sort.Direction.fromString(e.getValue()), e.getKey()))
-                    .collect(Collectors.collectingAndThen(Collectors.toList(), Sort::by));
-        }
-
-        Pageable pageable = PageRequest.of(pageIndex, size, s);
-        Page<CourseResponse> courses = courseService.getAllCourses(query, categoryId, pageable);
+            @Valid @ModelAttribute PaginatedApiQuery apiQuery,
+            @RequestParam(required = false) String categoryId
+    ) {
+        Page<CourseResponse> courses = courseService.getAllCourses(apiQuery.getQuery(), categoryId, apiQuery.toPageable());
         return ResponseEntity.ok().body(
                 PaginationWrapper.wrap(courses)
         );
@@ -73,6 +62,13 @@ public class CourseController {
     public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@RequestBody CreateCourseRequest request) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course created successfully", courseService.createCourse(request))
+        );
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable("id") String courseId, @RequestBody UpdateCourseRequest request) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course updated successfully", courseService.updateCourse(courseId, request))
         );
     }
 }
