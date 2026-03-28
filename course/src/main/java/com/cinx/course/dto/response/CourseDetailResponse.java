@@ -9,6 +9,7 @@ public record CourseDetailResponse(
         String description,
         String category,
         InstructorResponse instructor,
+        List<CourseImageResponse> images,
         Long price,
         Long discountedPrice,
         Long discountRate,

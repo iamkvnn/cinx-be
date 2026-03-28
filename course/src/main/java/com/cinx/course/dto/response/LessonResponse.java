@@ -1,6 +1,7 @@
 package com.cinx.course.dto.response;
 
-public record LectureResponse(
+
+public record LessonResponse (
         String id,
         String title,
         String description,
@@ -8,3 +9,4 @@ public record LectureResponse(
         Integer orderIndex
 ) {
 }
+

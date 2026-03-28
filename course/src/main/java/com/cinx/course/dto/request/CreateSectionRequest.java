@@ -7,6 +7,6 @@ public record CreateSectionRequest(
         String description,
         Long duration,
         Integer orderIndex,
-        List<CreateLectureRequest> lectures
+        List<CreateLessonRequest> lessons
 ) {
 }
