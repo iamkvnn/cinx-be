@@ -28,6 +28,15 @@ class SyncService:
         }
         self.course_repo.upsert(data)
 
+    def handle_enrollment(self, user_id: str, course_id: str):
+        self.interaction_repo.add_interaction(user_id, course_id, "ENROLL", 5.0)
+
+    def handle_wishlist(self, user_id: str, course_id: str, added: bool):
+        if added:
+            self.interaction_repo.add_interaction(user_id, course_id, "WISHLIST", 2.0)
+        else:
+            self.interaction_repo.remove_interaction(user_id, course_id, "WISHLIST")
+
     def handle_user_preferences(self, payload):
         self.user_repo.replace_user_preferences(payload.userId, payload.categories)
 

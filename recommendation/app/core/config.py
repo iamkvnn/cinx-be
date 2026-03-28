@@ -11,21 +11,25 @@ class Settings(BaseSettings):
     DB_USER: str = "root"
     DB_PASSWORD: str = "taolao123"
 
-    RABBITMQ_HOST: str = "rabbitmq"
+    RABBITMQ_HOST: str = "localhost"
     RABBITMQ_PORT: int = 5672
     RABBITMQ_USER: str = "guest"
     RABBITMQ_PASSWORD: str = "guest"
-    RABBITMQ_EXCHANGE: str = "recommendation.events.exchange"
+    RABBITMQ_EXCHANGE: str = "course.events.exchange"
     RABBITMQ_EXCHANGE_TYPE: str = "topic"
     RABBITMQ_QUEUE: str = "recommendation.course.queue"
     RABBITMQ_DLX: str = "dlx.exchange"
     RABBITMQ_DLQ: str = "recommendation.course.dead.queue"
     RABBITMQ_ROUTING_KEYS: str = (
-        "course.course.created,course.course.updated,course.course.published,"
-        "course.course.unpublished,course.course.deleted,"
-        "user.preference.selected,user.preference.updated,"
-        "course.course.viewed,course.course.wishlisted,course.course.enrolled,course.course.completed,course.course.rated"
+        "course.course.created,course.course.updated,course.course.published"
     )
+
+    ENROLLMENT_EXCHANGE: str = "enrollment.events.exchange"
+    SOCIAL_EXCHANGE: str = "social.events.exchange"
+    ENROLLMENT_QUEUE: str = "recommendation.enrollment.queue"
+    SOCIAL_QUEUE: str = "recommendation.social.queue"
+    ENROLLMENT_ROUTING_KEYS: str = "enrollment.enrollment.created"
+    SOCIAL_ROUTING_KEYS: str = "social.wishlist.added,social.wishlist.removed"
 
     # Source services (for reconciliation)
     COURSE_SERVICE_BASE_URL: str = "http://localhost:9090/api/v1/courses"

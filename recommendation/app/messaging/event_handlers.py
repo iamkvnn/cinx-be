@@ -1,28 +1,27 @@
 import json
 from app.core.database import SessionLocal
-from app.models.events import CourseEvent, UserPreferenceEvent, CourseInteractionEvent
+from app.models.events import CourseEvent, UserPreferenceEvent, CourseInteractionEvent, EnrolledCourseEvent, WishlistEvent
 from app.services.sync_service import SyncService
 
 
-async def process_message(message_body: bytes):
+async def process_message(message_body: bytes, routing_key: str):
     raw = json.loads(message_body.decode("utf-8"))
-    event_type = raw.get("eventType")
-
+    print(f"Received message with routing key: {routing_key}, payload: {raw}")
     db = SessionLocal()
     try:
         sync_service = SyncService(db)
-
-        if event_type in {"course.created", "course.updated", "course.published", "course.unpublished"}:
+        
+        if routing_key.startswith("course."):
             event = CourseEvent(**raw)
-            sync_service.handle_course_upsert(event.payload)
-
-        elif event_type in {"user.preference.selected", "user.preference.updated"}:
-            event = UserPreferenceEvent(**raw)
-            sync_service.handle_user_preferences(event.payload)
-
-        elif event_type in {"course.viewed", "course.wishlisted", "course.enrolled", "course.completed", "course.rated"}:
-            event = CourseInteractionEvent(**raw)
-            sync_service.handle_interaction(event.payload)
+            sync_service.handle_course_upsert(event.course)
+        
+        elif routing_key == "enrollment.enrollment.created":
+            event = EnrolledCourseEvent(**raw)
+            sync_service.handle_enrollment(event.userId, event.courseId)
+            
+        elif routing_key.startswith("social.wishlist."):
+            event = WishlistEvent(**raw)
+            sync_service.handle_wishlist(event.userId, event.courseId, event.added)
 
     finally:
         db.close()

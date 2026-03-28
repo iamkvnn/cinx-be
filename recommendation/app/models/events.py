@@ -1,11 +1,6 @@
 from pydantic import BaseModel
+from typing import Optional
 from datetime import datetime
-from typing import Optional, List
-
-
-class BaseEvent(BaseModel):
-    eventType: str
-    occurredAt: datetime
 
 
 class CoursePayload(BaseModel):
@@ -16,7 +11,7 @@ class CoursePayload(BaseModel):
     price: Optional[float] = None
     discountedPrice: Optional[float] = None
     discountRate: Optional[int] = None
-    rating: float = 0.0
+    rating: Optional[float] = 0.0
     enrollmentCount: int = 0
     isPublished: bool = False
     isInSubscription: bool = False
@@ -25,18 +20,28 @@ class CoursePayload(BaseModel):
     updatedAt: Optional[datetime] = None
 
 
-class CourseEvent(BaseEvent):
-    payload: CoursePayload
+class CourseEvent(BaseModel):
+    course: CoursePayload
+    timestamp: Optional[datetime] = None
+
+
+class EnrolledCourseEvent(BaseModel):
+    userId: str
+    courseId: str
+
+
+class WishlistEvent(BaseModel):
+    userId: str
+    courseId: str
+    added: bool
 
 
 class UserPreferencePayload(BaseModel):
     userId: str
-    categories: List[str]
+    categories: list[str]
 
-
-class UserPreferenceEvent(BaseEvent):
+class UserPreferenceEvent(BaseModel):
     payload: UserPreferencePayload
-
 
 class CourseInteractionPayload(BaseModel):
     userId: str
@@ -45,5 +50,5 @@ class CourseInteractionPayload(BaseModel):
     ratingValue: Optional[float] = None
 
 
-class CourseInteractionEvent(BaseEvent):
+class CourseInteractionEvent(BaseModel):
     payload: CourseInteractionPayload
