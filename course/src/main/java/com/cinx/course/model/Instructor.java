@@ -21,6 +21,6 @@ public class Instructor {
     private String bio;
     private String profilePictureUrl;
 
-    @OneToMany
+    @OneToMany(mappedBy = "instructor")
     private Set<Course> courses = new HashSet<>();
 }

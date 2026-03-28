@@ -1,7 +1,9 @@
 package com.cinx.course.model;
 
+import com.cinx.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -9,13 +11,10 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Section {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+public class Section extends AuditableEntity {
 
     private String title;
     private String description;
@@ -25,6 +24,6 @@ public class Section {
     @ManyToOne
     private Course course;
 
-    @OneToMany
-    private List<Lecture> lectures = new ArrayList<>();
+    @OneToMany(mappedBy = "section", cascade = CascadeType.ALL)
+    private List<Lesson> lessons = new ArrayList<>();
 }

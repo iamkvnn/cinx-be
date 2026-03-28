@@ -2,6 +2,8 @@ package com.cinx.course.model;
 
 import com.cinx.common.model.BaseEntity;
 import jakarta.persistence.Entity;
+import jakarta.persistence.FetchType;
+import jakarta.persistence.ManyToOne;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -13,4 +15,8 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class CourseImage extends BaseEntity {
     private String imageUrl;
+    private String publicId;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    private Course course;
 }

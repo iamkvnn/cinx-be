@@ -1,6 +1,6 @@
 package com.cinx.course.consts;
 
-public enum LectureType {
+public enum LessonType {
     VIDEO,
     ARTICLE,
     QUIZ,

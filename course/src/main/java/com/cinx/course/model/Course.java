@@ -1,6 +1,6 @@
 package com.cinx.course.model;
 
-import com.cinx.common.model.BaseEntity;
+import com.cinx.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -14,7 +14,7 @@ import java.util.List;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Course extends BaseEntity {
+public class Course extends AuditableEntity {
     private String title;
     @Column(length = 2000)
     private String description;
@@ -30,12 +30,14 @@ public class Course extends BaseEntity {
     @ManyToOne
     private Category category;
 
-    @OneToMany
+    @Builder.Default
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<Section> sections = new ArrayList<>();
 
     @ManyToOne
     private Instructor instructor;
 
-    @OneToMany(cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
+    @Builder.Default
+    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
     private List<CourseImage> images = new ArrayList<>();
 }
