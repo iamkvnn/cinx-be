@@ -3,17 +3,15 @@ package com.cinx.enrollment.model;
 import com.cinx.common.model.BaseEntity;
 import jakarta.persistence.Entity;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 @Entity
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class OrderItem extends BaseEntity {
+public class EnrolledCourse extends BaseEntity {
     private String courseId;
-    private String orderId;
-    private String title;
-    private Long price;
-    private Long discountedPrice;
+    private String userId;
 }

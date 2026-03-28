@@ -1,14 +1,14 @@
 package com.cinx.enrollment.service.enrollment;
 
 import com.cinx.common.utils.AuthenticationUtil;
-import com.cinx.enrollment.consts.PaymentStatus;
+import com.cinx.enrollment.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.enrollment.dto.response.CheckEnrollmentStatus;
 import com.cinx.enrollment.dto.response.CourseResponse;
-import com.cinx.enrollment.dto.response.PaymentResponse;
-import com.cinx.enrollment.model.OrderItem;
-import com.cinx.enrollment.repository.OrderItemRepository;
+import com.cinx.enrollment.messaging.EnrolledCourseEventProducer;
+import com.cinx.enrollment.messaging.event.EnrolledCourseEvent;
+import com.cinx.enrollment.model.EnrolledCourse;
+import com.cinx.enrollment.repository.EnrolledCourseRepository;
 import com.cinx.enrollment.service.course.CourseService;
-import com.cinx.enrollment.service.payment.PaymentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
@@ -23,44 +23,44 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class EnrollmentService implements IEnrollmentService {
-    private final OrderItemRepository orderItemRepository;
+    private final EnrolledCourseRepository enrolledCourseRepository;
     private final CourseService courseService;
-    private final PaymentService paymentService;
+    private final EnrolledCourseEventProducer enrolledCourseEventProducer;
 
     @Override
     public Page<CourseResponse> getEnrolledCourses(int page, int size) {
         String userId = AuthenticationUtil.extractUserId();
-        Page<OrderItem> orderItems = orderItemRepository.findAllByUserId(userId, PageRequest.of(page - 1, size));
-        List<String> orderIds = orderItems.stream()
-            .map(OrderItem::getOrderId)
-            .toList();
-        Map<String, PaymentResponse> paymentMap = paymentService.getPaymentByIds(orderIds).data().stream()
-            .filter(payment -> payment.status().equals(PaymentStatus.PAID))
-            .collect(Collectors.toMap(PaymentResponse::orderId, Function.identity()));
-        List<OrderItem> paidCourse = orderItems.stream()
-            .filter(orderItem -> paymentMap.containsKey(orderItem.getOrderId()))
-            .toList();
-        List<String> courseIds = paidCourse.stream()
-            .map(OrderItem::getCourseId)
+        Page<EnrolledCourse> enrolledCourses = enrolledCourseRepository.findAllByUserId(userId, PageRequest.of(page - 1, size));
+        List<String> courseIds = enrolledCourses.getContent().stream()
+            .map(EnrolledCourse::getCourseId)
             .toList();
         List<CourseResponse> courses = courseService.getCoursesByIds(courseIds).data();
-        return new PageImpl<>(courses, PageRequest.of(page, size), paidCourse.size());
+        return new PageImpl<>(courses, PageRequest.of(page, size), courses.size());
     }
 
     @Override
     public List<CheckEnrollmentStatus> checkEnrollmentStatus(List<String> courseIds) {
         String userId = AuthenticationUtil.extractUserId();
-        List<OrderItem> orderItems = orderItemRepository.findAllByCourseIdsAndUserId(courseIds, userId);
-        Map<String, OrderItem> orderItemMap = orderItems.stream()
-            .collect(Collectors.toMap(OrderItem::getCourseId, Function.identity(), (existing, replacement) -> existing));
-        List<String> paidCourseIds = orderItems.stream()
-            .map(OrderItem::getOrderId)
-            .toList();
-        Map<String, PaymentResponse> paymentMap = paymentService.getPaymentByIds(paidCourseIds).data().stream()
-            .filter(payment -> payment.status().equals(PaymentStatus.PAID))
-            .collect(Collectors.toMap(PaymentResponse::orderId, Function.identity()));
+        Map<String, EnrolledCourse> enrolledCourseMap = enrolledCourseRepository.findAllByUserIdAndCourseIdIn(userId, courseIds).stream()
+            .collect(Collectors.toMap(EnrolledCourse::getCourseId, Function.identity()));
         return courseIds.stream()
-            .map(courseId -> new CheckEnrollmentStatus(courseId, orderItemMap.containsKey(courseId) && paymentMap.containsKey(orderItemMap.get(courseId).getOrderId())))
+            .map(courseId -> new CheckEnrollmentStatus(courseId, enrolledCourseMap.containsKey(courseId)))
             .toList();
+    }
+
+    @Override
+    public void enrollCourses(List<CreateEnrolledCourseRequest> requests) {
+        enrolledCourseRepository.saveAll(requests.stream()
+            .map(req ->
+                    EnrolledCourse.builder()
+                            .courseId(req.courseId())
+                            .userId(req.userId())
+                            .build()
+            ).toList()
+        ).forEach(enrolledCourse ->
+                enrolledCourseEventProducer.publishEnrolledCourseCreatedEvent(
+                        new EnrolledCourseEvent(enrolledCourse.getCourseId(), enrolledCourse.getUserId())
+                )
+        );
     }
 }

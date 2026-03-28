@@ -1,8 +1,10 @@
 package com.cinx.enrollment.model;
 
+import com.cinx.common.model.BaseEntity;
 import com.cinx.enrollment.consts.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -10,19 +12,21 @@ import java.util.List;
 @Entity
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
 @Table(name = "orders")
-public class Order {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+public class Order extends BaseEntity {
     private String userId;
     private Long totalPrice;
     private Long discounted;
     private LocalDateTime orderDate;
     private PaymentMethod paymentMethod;
+    private String voucherId;
+
+    @OneToOne(mappedBy = "order", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JoinColumn(name = "voucher_id", insertable = false, updatable = false)
+    private Voucher voucher;
 
     @OneToMany(mappedBy = "orderId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<OrderItem> items;

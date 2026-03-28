@@ -6,6 +6,7 @@ import java.util.List;
 
 public record CreateOrderRequest(
         List<CartItemDto> cartItems,
-        PaymentMethod paymentMethod
+        PaymentMethod paymentMethod,
+        String voucherCode
 ) {
 }

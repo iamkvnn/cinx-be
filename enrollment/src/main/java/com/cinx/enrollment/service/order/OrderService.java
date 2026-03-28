@@ -14,6 +14,7 @@ import com.cinx.enrollment.repository.OrderItemRepository;
 import com.cinx.enrollment.repository.OrderRepository;
 import com.cinx.enrollment.service.cart.CartService;
 import com.cinx.enrollment.service.payment.PaymentService;
+import com.cinx.enrollment.service.voucher.IVoucherService;
 import com.cinx.enrollment.utils.OrderIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -36,6 +37,7 @@ public class OrderService implements IOrderService {
     private final PaymentService paymentService;
     private final CartService cartService;
     private final OrderEventProducer orderEventProducer;
+    private final IVoucherService voucherService;
 
     @Override
     public Page<OrderDetailResponse> getOrdersByUserId(int page, int size) {
@@ -80,6 +82,11 @@ public class OrderService implements IOrderService {
         List<OrderItem> orderItems = createOrderItems(request);
         Long totalPrice = orderItems.stream().mapToLong(OrderItem::getPrice).sum();
         Long discounted = orderItems.stream().mapToLong(item -> item.getPrice() - item.getDiscountedPrice()).sum();
+        VoucherResponse voucherResponse = null;
+        if (request.voucherCode() != null) {
+            voucherResponse = voucherService.validateVoucher(request.voucherCode(), totalPrice);
+            discounted += voucherResponse.discountAmount();
+        }
         Order order = orderRepository.save(
                 Order.builder()
                         .userId(userId)
@@ -87,6 +94,7 @@ public class OrderService implements IOrderService {
                         .totalPrice(totalPrice)
                         .discounted(discounted)
                         .paymentMethod(request.paymentMethod())
+                        .voucherId(voucherResponse != null ? voucherResponse.id() : null)
                         .build()
         );
         orderItems.forEach(item -> item.setOrderId(order.getId()));
@@ -101,7 +109,6 @@ public class OrderService implements IOrderService {
         if (request.cartItems() == null || request.cartItems().isEmpty()) {
             throw new BadRequestException("Order must contain at least one item");
         }
-
     }
 
     private List<OrderItem> createOrderItems(CreateOrderRequest request) {
