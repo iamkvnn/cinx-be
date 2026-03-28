@@ -1,5 +1,7 @@
 package com.cinx.payment.service.payment;
 
+import com.cinx.payment.messaging.PaymentEventProducer;
+import com.cinx.payment.messaging.event.PaymentEvent;
 import com.cinx.payment.model.Payment;
 import lombok.RequiredArgsConstructor;
 
@@ -7,10 +9,10 @@ import java.text.NumberFormat;
 import java.util.Currency;
 import java.util.Locale;
 import java.util.Map;
-import java.util.Set;
 
 @RequiredArgsConstructor
 public abstract class PaymentTemplate implements IPaymentStrategyService{
+    private final PaymentEventProducer paymentEventProducer;
 
     @Override
     public boolean handleCallback(Map<String, String> callbackData){
@@ -23,6 +25,7 @@ public abstract class PaymentTemplate implements IPaymentStrategyService{
             orderId = callbackData.get("vnp_OrderInfo").substring(20);
         }
         updatePayment(payment);
+        paymentEventProducer.publishPaymentSuccessEvent(new PaymentEvent(payment.getOrderId(), payment.getStatus()));
         return true;
     }
 

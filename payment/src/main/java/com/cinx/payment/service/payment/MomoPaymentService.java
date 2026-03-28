@@ -10,6 +10,7 @@ import com.cinx.payment.dto.request.MomoPaymentRequest;
 import com.cinx.payment.dto.response.OrderResponse;
 import com.cinx.payment.dto.response.PaymentResponse;
 import com.cinx.payment.mapper.PaymentMapper;
+import com.cinx.payment.messaging.PaymentEventProducer;
 import com.cinx.payment.model.MomoPayment;
 import com.cinx.payment.model.Payment;
 import com.cinx.payment.repository.MomoPaymentRepository;
@@ -36,7 +37,8 @@ public class MomoPaymentService extends PaymentTemplate {
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
-    public MomoPaymentService(MomoPaymentRepository momoPaymentRepository, MomoPaymentConfig momoConfig, EnrollmentService enrollmentService, PaymentMapper paymentMapper) {
+    public MomoPaymentService(MomoPaymentRepository momoPaymentRepository, MomoPaymentConfig momoConfig, EnrollmentService enrollmentService, PaymentMapper paymentMapper, PaymentEventProducer paymentEventProducer) {
+        super(paymentEventProducer);
         this.momoPaymentRepository = momoPaymentRepository;
         this.momoConfig = momoConfig;
         this.enrollmentService = enrollmentService;
@@ -79,8 +81,9 @@ public class MomoPaymentService extends PaymentTemplate {
         if (momoPayment.getPaymentUrl() != null && momoPayment.getUrlExpireTime().isAfter(LocalDateTime.now())) {
             return momoPayment.getPaymentUrl();
         }
-        String returnUrl = "exp://196.169.6.155:8090/--/payment-success";
-        String notifyUrl = "https://ae99-14-187-47-36.ngrok-free.app/api/v1/payments/momo-callback";
+        //String returnUrl = "exp://196.169.6.155:8090/--/payment-success";
+        String returnUrl = feBaseUrl + "/payment-success";
+        String notifyUrl = "https://e64b-117-5-143-58.ngrok-free.app/api/v1/payments/momo-callback";
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),

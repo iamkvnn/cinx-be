@@ -5,6 +5,7 @@ import com.cinx.payment.consts.PaymentStatus;
 import com.cinx.payment.dto.response.OrderResponse;
 import com.cinx.payment.dto.response.PaymentResponse;
 import com.cinx.payment.mapper.PaymentMapper;
+import com.cinx.payment.messaging.PaymentEventProducer;
 import com.cinx.payment.model.Payment;
 import com.cinx.payment.model.VNPayPayment;
 import com.cinx.payment.repository.VNPayPaymentRepository;
@@ -35,7 +36,8 @@ public class VNPayPaymentService extends PaymentTemplate {
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
-    public VNPayPaymentService(VNPayPaymentRepository vnPayPaymentRepository, VNPayPaymentConfig vnPayConfig, PaymentMapper paymentMapper) {
+    public VNPayPaymentService(VNPayPaymentRepository vnPayPaymentRepository, VNPayPaymentConfig vnPayConfig, PaymentMapper paymentMapper, PaymentEventProducer paymentEventProducer) {
+        super(paymentEventProducer);
         this.vnPayPaymentRepository = vnPayPaymentRepository;
         this.vnPayConfig = vnPayConfig;
         this.paymentMapper = paymentMapper;
