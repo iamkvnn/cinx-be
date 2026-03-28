@@ -24,6 +24,11 @@ jwt:
     secret: myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
     expire: 7
 
+cloudinary:
+  cloud-name: ${CLOUDINARY_CLOUD_NAME:dxjusps3n}
+  api-key: ${CLOUDINARY_API_KEY:268928962386637}
+  api-secret: ${CLOUDINARY_API_SECRET:9E91Uo7DXxRZrH9YA5payyyKYk0}
+
 eureka:
   client:
     serviceUrl:
