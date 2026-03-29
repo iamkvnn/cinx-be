@@ -1,12 +1,15 @@
 package com.cinx.cart.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 public record CourseResponse (
         String id,
         String title,
         String description,
         String category,
+        InstructorResponse instructor,
+        List<CourseImageResponse> images,
         Long price,
         Long discountedPrice,
         Long discountRate,

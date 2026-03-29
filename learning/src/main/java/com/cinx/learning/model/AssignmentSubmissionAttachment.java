@@ -17,7 +17,7 @@ import lombok.experimental.SuperBuilder;
 @AllArgsConstructor
 public class AssignmentSubmissionAttachment extends BaseEntity {
     private String attachmentUrl;
-    private String s3ObjectKey;
+    private String fileKey;
     private String fileName;
     private String fileType;
     private Long fileSize;

@@ -8,6 +8,7 @@ import com.cinx.course.mapper.VideoLessonMapper;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.VideoLessonRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -16,6 +17,9 @@ public class VideoService implements IVideoService {
     private final VideoLessonRepository videoLessonRepository;
     private final VideoLessonMapper videoLessonMapper;
     private final LessonRepository lessonRepository;
+
+    @Value("${aws.s3.cdn-url}")
+    private String cdnUrl;
 
     @Override
     public VideoLessonResponse getVideoByLessonId(String lessonId) {
@@ -30,6 +34,7 @@ public class VideoService implements IVideoService {
             throw new AlreadyExistException("Video already exists for lessonId: " + lessonId);
         },() -> {
             var videoLesson = videoLessonMapper.toModel(request);
+            videoLesson.setVideoUrl(cdnUrl + "/" + request.getFileKey());
             videoLesson.setLesson(lessonRepository.findById(lessonId).orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId)));
             videoLessonRepository.save(videoLesson);
         });

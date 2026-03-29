@@ -1,6 +1,7 @@
 package com.cinx.user.dto;
 
 import com.cinx.user.consts.Gender;
+import com.cinx.user.consts.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -12,6 +13,7 @@ public record CreateUserRequest(
         @NotBlank(message = "Email không được để trống")
         @Email(message = "Email không hợp lệ")
         String email,
+        Role role,
         Gender gender
 ) {
 }

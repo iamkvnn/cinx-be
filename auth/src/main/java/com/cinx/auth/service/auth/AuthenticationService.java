@@ -1,9 +1,11 @@
 package com.cinx.auth.service.auth;
 
+import com.cinx.auth.consts.Role;
 import com.cinx.auth.dto.*;
 import com.cinx.auth.dto.request.*;
 import com.cinx.auth.dto.response.TokenResponseDto;
 import com.cinx.auth.service.user.IUserService;
+import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.auth.model.User;
 import com.cinx.auth.service.mail.EmailQueueService;
@@ -37,6 +39,7 @@ public class AuthenticationService implements IAuthenticationService {
     private final PasswordEncoder passwordEncoder;
     private final IUserService userService;
     private final EmailQueueService emailQueueService;
+    private final IUserProfileService userProfileService;
 
     @Override
     public void sendVerifyOtp(String email) {
@@ -70,6 +73,9 @@ public class AuthenticationService implements IAuthenticationService {
         }
         if (user.getIsVerified() == null || !user.getIsVerified()) {
             throw new BadRequestException("User email is not verified");
+        }
+        if (user.getRole() == Role.INSTRUCTOR && !userProfileService.checkInstructorVerified(user.getId())) {
+            throw new BadRequestException("Instructor account is not verified by admin");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
         return generateTokens(payload);

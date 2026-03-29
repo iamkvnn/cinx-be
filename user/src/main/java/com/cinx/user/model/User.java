@@ -1,6 +1,7 @@
 package com.cinx.user.model;
 
 import com.cinx.user.consts.Gender;
+import com.cinx.user.consts.Role;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -20,6 +21,8 @@ public class User {
     private String email;
     private String name;
     private Gender gender;
+    private Role role;
+    private Boolean isInstructorVerified;
     private String avatarUrl;
 
     private String userId;

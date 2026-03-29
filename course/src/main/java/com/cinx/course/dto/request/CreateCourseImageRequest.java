@@ -9,7 +9,6 @@ public class CreateCourseImageRequest {
 
     @Data
     public static class ImageDto {
-        private String imageUrl;
-        private String s3ObjectKey;
+        private String fileKey;
     }
 }

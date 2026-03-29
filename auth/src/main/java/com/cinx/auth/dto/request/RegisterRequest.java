@@ -1,6 +1,7 @@
 package com.cinx.auth.dto.request;
 
 import com.cinx.auth.consts.Gender;
+import com.cinx.auth.consts.Role;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
@@ -12,6 +13,7 @@ public record RegisterRequest(
         String email,
         @NotBlank(message = "Mật khẩu không được để trống")
         String password,
+        Role role,
         Gender gender
 ) {
 }

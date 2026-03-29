@@ -14,8 +14,7 @@ public class CreateAssignmentLessonRequest {
 
         @Data
         public static class AttachmentDto {
-                private String attachmentUrl;
-                private String s3ObjectKey;
+                private String fileKey;
                 private String fileName;
                 private String fileType;
                 private Long fileSize;

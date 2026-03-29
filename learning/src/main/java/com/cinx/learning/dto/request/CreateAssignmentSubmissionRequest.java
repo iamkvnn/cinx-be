@@ -7,8 +7,7 @@ public record CreateAssignmentSubmissionRequest(
         List<AttachmentRequest> attachments
 ) {
     public record AttachmentRequest(
-            String s3ObjectKey,
-            String attachmentUrl,
+            String fileKey,
             String fileName,
             String fileType,
             Long fileSize

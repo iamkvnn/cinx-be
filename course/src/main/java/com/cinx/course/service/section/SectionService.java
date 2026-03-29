@@ -63,7 +63,6 @@ public class SectionService implements ISectionService{
                                 }
                                 existingLessonMap.remove(lessonRequest.id());
                                 existingLesson.setTitle(lessonRequest.title());
-                                existingLesson.setLessonType(lessonRequest.lessonType());
                                 existingLesson.setDuration(lessonRequest.duration());
                                 existingLesson.setOrderIndex(lessonRequest.orderIndex());
                                 return existingLesson;
@@ -104,7 +103,6 @@ public class SectionService implements ISectionService{
     private Lesson buildLessonFromUpdateRequest(UpdateLessonRequest lessonRequest, Section section) {
         return Lesson.builder()
                 .title(lessonRequest.title())
-                .lessonType(lessonRequest.lessonType())
                 .duration(lessonRequest.duration())
                 .orderIndex(lessonRequest.orderIndex())
                 .section(section)

@@ -21,4 +21,4 @@ jobs:
           script: |
             cd /root/cinx-deployment
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cinx-cart:latest
-            docker-compose up -d --no-deps cart
+            docker compose up -d --no-deps cart

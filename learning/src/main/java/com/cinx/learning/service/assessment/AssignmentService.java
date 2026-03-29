@@ -3,7 +3,6 @@ package com.cinx.learning.service.assessment;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
-import com.cinx.learning.dto.request.UpdateCourseProgressRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.AssignmentSubmissionResponse;
 import com.cinx.learning.mapper.AssignmentSubmissionMapper;
@@ -13,6 +12,7 @@ import com.cinx.learning.repository.AssignmentSubmissionRepository;
 import com.cinx.learning.repository.AssignmentSubmissionAttachmentRepository;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -28,6 +28,9 @@ public class AssignmentService implements IAssignmentService {
     private final AssignmentSubmissionRepository assignmentSubmissionRepository;
     private final AssignmentSubmissionMapper assignmentSubmissionMapper;
     private final ILearningProgressService learningProgressService;
+
+    @Value("${aws.s3.cdn-url}")
+    private String cdnUrl;
 
     @Override
     public Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size) {
@@ -64,8 +67,8 @@ public class AssignmentService implements IAssignmentService {
                             .fileName(file.fileName())
                             .fileType(file.fileType())
                             .fileSize(file.fileSize())
-                            .attachmentUrl(file.attachmentUrl())
-                            .s3ObjectKey(file.s3ObjectKey())
+                            .attachmentUrl(cdnUrl + "/" + file.fileKey())
+                            .fileKey(file.fileKey())
                             .build())
                     .toList());
         }
