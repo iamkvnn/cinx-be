@@ -250,7 +250,6 @@ services:
     ports:
     - "8090:8090"
     environment:
-      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
       APP_ENV: prod
       DB_HOST: mysql
       DB_PORT: '3306'
@@ -260,9 +259,6 @@ services:
       RABBITMQ_PORT: '5672'
       RABBITMQ_USER: guest
       RABBITMQ_PASSWORD: guest
-      COURSE_SERVICE_BASE_URL: http://gateway:9090/api/v1/courses
-      USER_SERVICE_BASE_URL: http://gateway:9090/api/v1/users
-      ENROLLMENT_SERVICE_BASE_URL: http://gateway:9090/api/v1/enrollments
     networks:
     - cinx-network
     depends_on:
