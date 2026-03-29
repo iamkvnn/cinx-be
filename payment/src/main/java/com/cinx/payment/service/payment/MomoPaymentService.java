@@ -37,6 +37,12 @@ public class MomoPaymentService extends PaymentTemplate {
     @Value("${FE_BASE_URL}")
     private String feBaseUrl;
 
+    @Value("${MoMo.returnUrl}")
+    private String returnUrlEnv;
+
+    @Value("${MoMo.notifyUrl}")
+    private String notifyUrlEnv;
+
     public MomoPaymentService(MomoPaymentRepository momoPaymentRepository, MomoPaymentConfig momoConfig, EnrollmentService enrollmentService, PaymentMapper paymentMapper, PaymentEventProducer paymentEventProducer) {
         super(paymentEventProducer);
         this.momoPaymentRepository = momoPaymentRepository;
@@ -81,9 +87,10 @@ public class MomoPaymentService extends PaymentTemplate {
         if (momoPayment.getPaymentUrl() != null && momoPayment.getUrlExpireTime().isAfter(LocalDateTime.now())) {
             return momoPayment.getPaymentUrl();
         }
-        //String returnUrl = "exp://196.169.6.155:8090/--/payment-success";
-        String returnUrl = feBaseUrl + "/payment-success";
-        String notifyUrl = "https://e64b-117-5-143-58.ngrok-free.app/api/v1/payments/momo-callback";
+        
+        String returnUrl = returnUrlEnv;
+        String notifyUrl = notifyUrlEnv;
+        
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),

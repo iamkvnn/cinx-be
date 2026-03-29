@@ -15,10 +15,10 @@ server:
 
 jwt:
   access:
-    secret: mysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
+    secret: ${JWT_ACCESS_SECRET:mysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff}
     expire: 1
   refresh:
-    secret: myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff
+    secret: ${JWT_REFRESH_SECRET:myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff}
     expire: 7
 
 eureka:
@@ -29,14 +29,16 @@ eureka:
 VNPay:
   vnp_Version: 2.1.0
   vnp_Command: pay
-  vnp_TmnCode: YAECLV2E
-  vnp_HashSecret: XWQ7OO6P3LE601JZGCMIC6HM4AU4EAB0
+  vnp_TmnCode: ${VNPAY_TMN_CODE:YAECLV2E}
+  vnp_HashSecret: ${VNPAY_HASH_SECRET:XWQ7OO6P3LE601JZGCMIC6HM4AU4EAB0}
   vnp_Url: https://sandbox.vnpayment.vn/paymentv2/vpcpay.html
 
 MoMo:
+  returnUrl: ${MOMO_RETURN_URL:https://shinyjewelry.shop/payment/momo-return}
+  notifyUrl: ${MOMO_NOTIFY_URL:https://api.shinyjewelry.shop/api/v1/payments/momo-callback}
   url: https://test-payment.momo.vn/v2/gateway/api/create
-  partnerCode: MOMOBKUN20180529
-  accessKey: klm05TvNBzhg7h7j
-  secret: at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa
+  partnerCode: ${MOMO_PARTNER_CODE:MOMOBKUN20180529}
+  accessKey: ${MOMO_ACCESS_KEY:klm05TvNBzhg7h7j}
+  secret: ${MOMO_SECRET:at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa}
 
-FE_BASE_URL: https://shinyjewelry.shop
+FE_BASE_URL: ${FE_BASE_URL:https://shinyjewelry.shop}
