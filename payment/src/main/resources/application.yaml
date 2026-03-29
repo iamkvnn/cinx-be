@@ -41,4 +41,4 @@ MoMo:
   accessKey: ${MOMO_ACCESS_KEY:klm05TvNBzhg7h7j}
   secret: ${MOMO_SECRET:at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa}
 
-FE_BASE_URL: ${FE_BASE_URL:https://shinyjewelry.shop}
+feBaseUrl: ${FE_BASE_URL:https://shinyjewelry.shop}

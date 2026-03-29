@@ -34,7 +34,7 @@ public class MomoPaymentService extends PaymentTemplate {
     private final EnrollmentService enrollmentService;
     private final PaymentMapper paymentMapper;
 
-    @Value("${FE_BASE_URL}")
+    @Value("${feBaseUrl}")
     private String feBaseUrl;
 
     @Value("${MoMo.returnUrl}")

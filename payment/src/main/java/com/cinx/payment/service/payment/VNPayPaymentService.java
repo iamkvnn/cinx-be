@@ -33,7 +33,7 @@ public class VNPayPaymentService extends PaymentTemplate {
     private String vnp_TmnCode;
     @Value("${VNPay.vnp_Url}")
     private String vnp_Url;
-    @Value("${FE_BASE_URL}")
+    @Value("${feBaseUrl}")
     private String feBaseUrl;
 
     public VNPayPaymentService(VNPayPaymentRepository vnPayPaymentRepository, VNPayPaymentConfig vnPayConfig, PaymentMapper paymentMapper, PaymentEventProducer paymentEventProducer) {
