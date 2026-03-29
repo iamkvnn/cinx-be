@@ -8,6 +8,7 @@ import com.cinx.course.model.CourseImage;
 import com.cinx.course.repository.CourseImageRepository;
 import com.cinx.course.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -18,6 +19,9 @@ public class CourseImageService implements ICourseImageService{
     private final CourseImageRepository courseImageRepository;
     private final CourseRepository courseRepository;
 
+    @Value("${aws.s3.cdn-url}")
+    private String cdnUrl;
+
     @Override
     public void saveCourseImages(String courseId, CreateCourseImageRequest request) {  
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
@@ -26,8 +30,8 @@ public class CourseImageService implements ICourseImageService{
                 course.getImages().add(
                         CourseImage.builder()
                                 .course(course)
-                                .imageUrl(dto.getImageUrl())
-                                .publicId(dto.getS3ObjectKey())
+                                .imageUrl(cdnUrl + "/" + dto.getFileKey())
+                                .publicId(dto.getFileKey())
                                 .build()
                 );
             }
@@ -38,8 +42,8 @@ public class CourseImageService implements ICourseImageService{
     @Override
     public void updateCourseImage(String imageId, UpdateCourseImageRequest request) {        
         courseImageRepository.findById(imageId).ifPresent(image -> {
-            image.setImageUrl(request.getImageUrl());
-            image.setPublicId(request.getS3ObjectKey());
+            image.setImageUrl(cdnUrl + "/" + request.getFileKey());
+            image.setPublicId(request.getFileKey());
             courseImageRepository.save(image);
         });
     }

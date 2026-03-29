@@ -20,6 +20,9 @@ public class S3Config {
     @Value("${aws.credentials.secret-key:}")
     private String secretKey;
 
+    @Value("${aws.s3.endpoint}")
+    private String endpoint;
+
     @Bean
     public S3Presigner s3Presigner() {
         if (accessKey.isEmpty() || secretKey.isEmpty()) {
@@ -31,6 +34,7 @@ public class S3Config {
         AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
         return S3Presigner.builder()
                 .region(Region.of(region))
+                .endpointOverride(java.net.URI.create(endpoint))
                 .credentialsProvider(StaticCredentialsProvider.create(credentials))
                 .build();
     }

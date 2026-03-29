@@ -28,8 +28,10 @@ eureka:
 
 aws:
   s3:
-    bucket: ${AWS_S3_BUCKET:course-bucket}
+    endpoint: ${AWS_S3_ENDPOINT:endpoint}
+    cdn-url: ${AWS_S3_CDN_URL:cdn}
+    bucket: ${AWS_S3_BUCKET:bucket}
   region: ${AWS_REGION:us-east-1}
   credentials:
-    access-key: ${AWS_ACCESS_KEY:your-access-key}
-    secret-key: ${AWS_SECRET_KEY:your-secret-key}
+    access-key: ${AWS_ACCESS_KEY:key}
+    secret-key: ${AWS_SECRET_KEY:secret}

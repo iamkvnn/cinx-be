@@ -24,7 +24,6 @@ public class AssignmentLesson {
     @JoinColumn(name = "lessonId")
     private Lesson lesson;
 
-    @OneToMany(cascade = CascadeType.ALL, orphanRemoval = true)
-    @JoinColumn(name = "assignment_lesson_id")
+    @OneToMany(mappedBy = "assignmentLesson", cascade = CascadeType.ALL)
     private List<AssignmentAttachment> attachments;
 }
