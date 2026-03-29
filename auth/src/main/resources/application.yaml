@@ -2,13 +2,44 @@ spring:
   application:
     name: auth
   datasource:
-    url: jdbc:mysql://localhost:3306/cinx
-    username: root
-    password: taolao123
+    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/authdb}
+    username: ${SPRING_DATASOURCE_USERNAME:root}
+    password: ${SPRING_DATASOURCE_PASSWORD:taolao123}
   jpa:
     hibernate:
       ddl-auto: update
     show-sql: true
 
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME:shinyjewelry39@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:juxx vpev tszm nrlf}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+  servlet:
+    multipart:
+      enabled: true
+      max-file-size: 10MB
+      max-request-size: 20MB
+
 server:
-    port: 8888
+  port: 8888
+
+jwt:
+  access:
+    secret: ${JWT_ACCESS_SECRET:mysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff}
+    expire: 1
+  refresh:
+    secret: ${JWT_REFRESH_SECRET:myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff}
+    expire: 7
+
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}

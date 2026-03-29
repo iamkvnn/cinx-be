@@ -1,6 +1,0 @@
-spring:
-  application:
-    name: media
-
-server:
-  port: 8085

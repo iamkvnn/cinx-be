@@ -1,0 +1,133 @@
+package com.cinx.auth.service.auth;
+
+import com.cinx.auth.dto.*;
+import com.cinx.auth.dto.request.*;
+import com.cinx.auth.dto.response.TokenResponseDto;
+import com.cinx.auth.service.user.IUserService;
+import com.cinx.common.exception.BadRequestException;
+import com.cinx.auth.model.User;
+import com.cinx.auth.service.mail.EmailQueueService;
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.MACSigner;
+import com.nimbusds.jose.crypto.MACVerifier;
+import com.nimbusds.jwt.JWTClaimsSet;
+import com.nimbusds.jwt.SignedJWT;
+import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Service;
+
+import java.text.ParseException;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.Date;
+
+@Service
+@RequiredArgsConstructor
+public class AuthenticationService implements IAuthenticationService {
+    @Value("${jwt.access.secret}")
+    private String accessKey;
+    @Value("${jwt.access.expire}")
+    private Long accessExpirationTime;
+    @Value("${jwt.refresh.secret}")
+    private String refreshKey;
+    @Value("${jwt.refresh.expire}")
+    private Long refreshExpirationTime;
+
+    private final PasswordEncoder passwordEncoder;
+    private final IUserService userService;
+    private final EmailQueueService emailQueueService;
+
+    @Override
+    public void sendVerifyOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Mã xác nhận OTP", "Mã OTP của bạn là: " + otp));
+    }
+
+    @Override
+    public void sendForgotPasswordOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu quên mật khẩu", "Mã OTP của bạn là: " + otp));
+    }
+
+    @Override
+    public void sendChangePasswordOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu đổi mật khẩu", "Mã OTP của bạn là: " + otp));
+    }
+
+    @Override
+    public void sendChangeEmailOtp(String email) {
+        String otp = userService.generateOtp(email);
+        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu đổi email", "Mã OTP của bạn là: " + otp));
+    }
+
+    @Override
+    public TokenResponseDto authenticate(AuthRequestDto request) {
+        User user = userService.findByEmail(request.email());
+        if (!passwordEncoder.matches(request.password(), user.getPassword())) {
+            throw new BadRequestException("Invalid email or password");
+        }
+        if (user.getIsVerified() == null || !user.getIsVerified()) {
+            throw new BadRequestException("User email is not verified");
+        }
+        JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
+        return generateTokens(payload);
+    }
+
+    @Override
+    public TokenResponseDto generateTokens(JWTPayload payload) {
+        JWSHeader header = new JWSHeader(JWSAlgorithm.HS512);
+        JWTClaimsSet accessClaimsSet = new JWTClaimsSet.Builder()
+                .subject(payload.userId())
+                .issueTime(new Date())
+                .expirationTime(new Date(
+                        Instant.now().plus(accessExpirationTime, ChronoUnit.HOURS).toEpochMilli()
+                ))
+                .claim("scope", payload.role())
+                .build();
+        Payload jwtPayload = new Payload(accessClaimsSet.toJSONObject());
+        JWSObject accessJwsObject = new JWSObject(header, jwtPayload);
+
+        JWTClaimsSet refreshClaimsSet = new JWTClaimsSet.Builder()
+                .subject(payload.userId())
+                .issueTime(new Date())
+                .expirationTime(new Date(
+                        Instant.now().plus(refreshExpirationTime, ChronoUnit.DAYS).toEpochMilli()
+                ))
+                .build();
+        Payload refreshJwtPayload = new Payload(refreshClaimsSet.toJSONObject());
+        JWSObject refreshJwsObject = new JWSObject(header, refreshJwtPayload);
+
+        try{
+            accessJwsObject.sign(new MACSigner(accessKey.getBytes()));
+            String accessToken = accessJwsObject.serialize();
+            refreshJwsObject.sign(new MACSigner(refreshKey.getBytes()));
+            String refreshToken = refreshJwsObject.serialize();
+            return new TokenResponseDto(accessToken, refreshToken);
+        }
+        catch (JOSEException e){
+            throw new RuntimeException(e.getMessage());
+        }
+    }
+
+    @Override
+    public TokenResponseDto refreshToken(String refreshToken) {
+        try {
+            JWSVerifier verifier = new MACVerifier(refreshKey.getBytes());
+            SignedJWT signedJWT = SignedJWT.parse(refreshToken);
+            Date expirationDate = signedJWT.getJWTClaimsSet().getExpirationTime();
+            boolean verified = signedJWT.verify(verifier);
+            if (!verified || expirationDate.before(new Date())) {
+                throw new BadRequestException("Invalid or expired refresh token");
+            }
+            String userId = signedJWT.getJWTClaimsSet().getSubject();
+            User user = userService.findById(userId);
+            JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
+            return generateTokens(payload);
+        }
+        catch (JOSEException | ParseException e) {
+            throw new RuntimeException(e);
+        }
+    }
+}

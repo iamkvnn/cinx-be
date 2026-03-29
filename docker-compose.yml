@@ -1,119 +1,281 @@
-version: "3.9"
-
 services:
-  cart-service:
-    build:
-        context: ./cart
-        dockerfile: Dockerfile
-    container_name: cart-service
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cart_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+      MYSQL_ROOT_PASSWORD: root
+    ports:
+    - "3300:3306"
     networks:
-        - cinx-network
-
-  course-service:
-    build:
-        context: ./course
-        dockerfile: Dockerfile
-    container_name: course-service
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/course_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
+    - cinx-network
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./mysql-init:/docker-entrypoint-initdb.d
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+    - .env
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq
+    ports:
+    - "5672:5672"
+    - "15672:15672"
     networks:
-        - cinx-network
-
+    - cinx-network
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    env_file:
+    - .env
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+  eureka-server:
+    container_name: eureka-server
+    ports:
+    - "8761:8761"
+    networks:
+    - cinx-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8761/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-eureka:latest
   discovery-service:
-    build:
-        context: ./discovery
-        dockerfile: Dockerfile
     container_name: discovery-service
     networks:
-        - cinx-network
-
-  learning-service:
-    build:
-        context: ./learning
-        dockerfile: Dockerfile
+    - cinx-network
+    depends_on:
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-discovery:latest
+  gateway:
+    container_name: gateway
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    ports:
+    - "9090:9090"
+    networks:
+    - cinx-network
+    depends_on:
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-gateway:latest
+  auth:
+    container_name: auth-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/authdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    networks:
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-auth:latest
+  cart:
+    container_name: cart-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/cartdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    networks:
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-cart:latest
+  course:
+    container_name: course-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/coursedb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    networks:
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-course:latest
+  enrollment:
+    container_name: enrollment-service
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/enrollmentdb
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+    networks:
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-enrollment:latest
+  learning:
     container_name: learning-service
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/learning_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/learningdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
-        - cinx-network
-
-  media-service:
-    build:
-        context: ./media
-        dockerfile: Dockerfile
-    container_name: media-service
-    environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/media_db
-      SPRING_DATASOURCE_USERNAME: root
-      SPRING_DATASOURCE_PASSWORD: root
-    networks:
-        - cinx-network
-
-  notification-service:
-    build:
-        context: ./notification
-        dockerfile: Dockerfile
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-learning:latest
+  notification:
     container_name: notification-service
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/notification_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/notificationdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
-        - cinx-network
-
-  payment-service:
-    build:
-        context: ./payment
-        dockerfile: Dockerfile
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-notification:latest
+  payment:
     container_name: payment-service
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/payment_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/paymentdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
-        - cinx-network
-
-  social-service:
-    build:
-        context: ./social
-        dockerfile: Dockerfile
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-payment:latest
+  social:
     container_name: social-service
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/social_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/socialdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
-        - cinx-network
-
-  user-service:
-    build:
-        context: ./user
-        dockerfile: Dockerfile
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-social:latest
+  user:
     container_name: user-service
     environment:
-      SPRING_PROFILES_ACTIVE: dev
-      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/user_db
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/userdb
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
     networks:
-        - cinx-network
-
+    - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-user:latest
+  recommendation:
+    container_name: recommendation-service
+    ports:
+    - "8090:8090"
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eureka-server:8761/eureka/
+      APP_ENV: prod
+      DB_HOST: mysql
+      DB_PORT: '3306'
+      DB_USER: root
+      DB_PASSWORD: root
+      RABBITMQ_HOST: rabbitmq
+      RABBITMQ_PORT: '5672'
+      RABBITMQ_USER: guest
+      RABBITMQ_PASSWORD: guest
+      COURSE_SERVICE_BASE_URL: http://gateway:9090/api/v1/courses
+      USER_SERVICE_BASE_URL: http://gateway:9090/api/v1/users
+      ENROLLMENT_SERVICE_BASE_URL: http://gateway:9090/api/v1/enrollments
+    networks:
+    - cinx-network
+    depends_on:
+      eureka-server:
+        condition: service_started
+    env_file:
+    - .env
+    image: ${DOCKERHUB_USERNAME}/cinx-recommendation:latest
 networks:
   cinx-network:
     driver: bridge
     name: cinx-network
+
+volumes:
+  mysql-data:
+  rabbitmq-data:
