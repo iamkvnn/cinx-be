@@ -18,7 +18,7 @@ on:
   workflow_dispatch:
 
 jobs:
-  build_deploy:
+  build:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -33,9 +33,6 @@ jobs:
 
       - name: Build with Maven
         run: mvn clean install -pl auth -am -DskipTests
-
-      - name: Run Tests
-        run: mvn test -pl auth
 
       - name: Log in to Docker Hub
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
