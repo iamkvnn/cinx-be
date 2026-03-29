@@ -43,6 +43,7 @@ public class SecurityConfig {
              .authorizeHttpRequests(
                 auth -> auth
                     .requestMatchers("/api/v1/**").permitAll()
+                    .requestMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
                     .anyRequest().authenticated()
              )
             .oauth2ResourceServer(oauth2 -> oauth2
@@ -75,3 +76,4 @@ public class SecurityConfig {
                 .build();
     }
 }
+

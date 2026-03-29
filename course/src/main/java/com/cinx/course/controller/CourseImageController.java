@@ -2,12 +2,11 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.service.image.ICourseImageService;
+import com.cinx.course.dto.request.CreateCourseImageRequest;
+import com.cinx.course.dto.request.UpdateCourseImageRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -16,14 +15,14 @@ public class CourseImageController {
     private final ICourseImageService courseImageService;
 
     @PostMapping("/{courseId}/images")
-    public ResponseEntity<ApiResponse<?>> uploadCourseImages(@PathVariable String courseId, List<MultipartFile> files) {
-        courseImageService.saveCourseImages(courseId, files);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Course images uploaded successfully", null));
+    public ResponseEntity<ApiResponse<?>> uploadCourseImages(@PathVariable String courseId, @RequestBody CreateCourseImageRequest request) {
+        courseImageService.saveCourseImages(courseId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Course images added successfully", null));
     }
 
     @PutMapping("/{courseId}/images/{imageId}")
-    public ResponseEntity<ApiResponse<?>> updateCourseImage(@PathVariable String imageId, MultipartFile file, @PathVariable String courseId) {
-        courseImageService.updateCourseImages(imageId, file);
+    public ResponseEntity<ApiResponse<?>> updateCourseImage(@PathVariable String imageId, @RequestBody UpdateCourseImageRequest request, @PathVariable String courseId) {
+        courseImageService.updateCourseImage(imageId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Course image updated successfully", null));
     }
 
