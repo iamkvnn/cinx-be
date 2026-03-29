@@ -48,12 +48,12 @@ public class UserService implements IUserService {
                 .builder()
                 .email(dto.email())
                 .password(passwordEncoder.encode(dto.password()))
-                .role(Role.USER)
+                .role(dto.role())
                 .isVerified(false)
                 .otp(otp)
                 .otpExpireAt(LocalDateTime.now().plusSeconds(90))
                 .build());
-        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.gender()));
+        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.role(), dto.gender()));
     }
 
     @Override

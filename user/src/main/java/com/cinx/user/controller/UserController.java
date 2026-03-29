@@ -1,8 +1,10 @@
 package com.cinx.user.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.dto.PaginatedApiResponse;
+import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.user.dto.CreateUserRequest;
-import com.cinx.user.dto.UpdateProifileRequest;
+import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.service.user.IUserService;
 import jakarta.validation.Valid;
@@ -19,6 +21,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.security.Principal;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
@@ -26,11 +29,45 @@ import java.security.Principal;
 public class UserController {
     private final IUserService userService;
 
+    @GetMapping
+    public ResponseEntity<PaginatedApiResponse<?>> getAllUsers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        return ResponseEntity.ok().body(
+                PaginationWrapper.wrap(userService.findAll(page, size))
+        );
+    }
+
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDto>> getCurrentUser(Principal principal) {
         UserDto user = userService.findByUserId(principal.getName());
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Current user fetched successfully", user)
+        );
+    }
+
+    @GetMapping("/ids")
+    public ResponseEntity<ApiResponse<?>> getUsersByIds(@RequestParam("ids") List<String> ids) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Users fetched successfully", userService.findByIds(ids))
+        );
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable String id) {
+        UserDto user = userService.findByUserId(id);
+        System.out.println("User: " + user);
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "User fetched successfully", user)
+        );
+    }
+
+    @GetMapping("/{id}/instructor-verified")
+    public ResponseEntity<ApiResponse<Boolean>> checkInstructorVerified(@PathVariable String id) {
+        boolean isVerified = userService.checkInstructorVerified(id);
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Instructor verification status fetched successfully", isVerified)
         );
     }
 
@@ -41,11 +78,19 @@ public class UserController {
         );
     }
 
+    @PostMapping(value = "/{id}/verify-instructor")
+    public ResponseEntity<ApiResponse<?>> verifyInstructor(@PathVariable String id) {
+        userService.verifyInstructor(id);
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Instructor verified successfully", null)
+        );
+    }
+
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> updateUser(
             @PathVariable("id") String id,
-            @Valid @RequestPart("user") UpdateProifileRequest dto,
+            @Valid @RequestPart("user") UpdateProfileRequest dto,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar
     ) {
         return ResponseEntity.ok().body(

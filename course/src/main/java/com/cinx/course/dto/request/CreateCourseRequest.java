@@ -6,7 +6,6 @@ public record CreateCourseRequest (
         String title,
         String description,
         String categoryId,
-        String instructorId,
         Long price,
         Long discountedPrice,
         Boolean isPublished,

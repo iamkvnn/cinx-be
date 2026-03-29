@@ -6,7 +6,6 @@ public record UpdateCourseRequest(
         String title,
         String description,
         String categoryId,
-        String instructorId,
         Long price,
         Long discountedPrice,
         Boolean isPublished,

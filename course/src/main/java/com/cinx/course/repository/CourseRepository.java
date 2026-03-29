@@ -14,7 +14,6 @@ public interface CourseRepository extends JpaRepository<Course, String> {
         FROM Course c
         LEFT JOIN FETCH c.category cat
         LEFT JOIN FETCH c.images imgs
-        LEFT JOIN FETCH c.instructor instr
         WHERE
             (:query IS NULL OR
                 c.title LIKE %:query%

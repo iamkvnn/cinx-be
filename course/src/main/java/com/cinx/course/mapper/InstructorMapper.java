@@ -1,17 +1,13 @@
 package com.cinx.course.mapper;
 
-import com.cinx.common.mapper.BaseMapper;
-import com.cinx.common.mapper.CreateMapper;
-import com.cinx.common.mapper.UpdateMapper;
-import com.cinx.course.dto.request.CreateInstructorRequest;
-import com.cinx.course.dto.request.UpdateInstructorRequest;
 import com.cinx.course.dto.response.InstructorResponse;
-import com.cinx.course.model.Instructor;
+import com.cinx.course.dto.response.UserDto;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
-public interface InstructorMapper extends
-        BaseMapper<Instructor, InstructorResponse>,
-        CreateMapper<Instructor, CreateInstructorRequest>,
-        UpdateMapper<Instructor, UpdateInstructorRequest> {
+public interface InstructorMapper {
+
+    @Mapping(source = "userId", target = "id")
+    InstructorResponse toResponse(UserDto userDto);
 }

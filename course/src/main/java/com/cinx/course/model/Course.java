@@ -26,6 +26,7 @@ public class Course extends AuditableEntity {
     private Long enrollmentCount;
     private Boolean isPublished;
     private Boolean isInSubscription;
+    private String instructorId;
 
     @ManyToOne
     private Category category;
@@ -33,9 +34,6 @@ public class Course extends AuditableEntity {
     @Builder.Default
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
     private List<Section> sections = new ArrayList<>();
-
-    @ManyToOne
-    private Instructor instructor;
 
     @Builder.Default
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)
