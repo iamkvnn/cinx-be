@@ -15,7 +15,7 @@ class RecommendationService:
     def recommend_for_user(self, user_id: str, top_k: int = 10):
         interaction_count = self.interaction_repo.count_user_interactions(user_id)
 
-        if interaction_count < 3:
+        if interaction_count < 1:
             result = self._onboarding_recommendation(user_id, top_k)
             if result:
                 return result
