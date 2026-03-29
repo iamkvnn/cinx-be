@@ -36,3 +36,11 @@ eureka:
 
 server:
   port: 8081
+
+aws:
+  s3:
+    bucket: ${AWS_S3_BUCKET:course-bucket}
+  region: ${AWS_REGION:us-east-1}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY:your-access-key}
+    secret-key: ${AWS_SECRET_KEY:your-secret-key}

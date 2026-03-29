@@ -5,6 +5,7 @@ public record AssignmentAttachmentResponse(
         String fileName,
         String fileType,
         Long fileSize,
-        String attachmentUrl
+        String attachmentUrl,
+        String s3ObjectKey
 ) {
 }

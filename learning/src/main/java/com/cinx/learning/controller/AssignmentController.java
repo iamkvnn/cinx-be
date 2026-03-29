@@ -9,9 +9,6 @@ import com.cinx.learning.service.assessment.IAssignmentService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
@@ -37,14 +34,10 @@ public class AssignmentController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> submitAssignment(
             @RequestParam String assignmentId,
-            @RequestPart CreateAssignmentSubmissionRequest request,
-            @RequestPart(required = false) List<MultipartFile> attachments) {
+            @RequestBody CreateAssignmentSubmissionRequest request) {
         String userId = AuthenticationUtil.extractUserId();
-        assignmentService.submitAssignment(userId, assignmentId, request, attachments);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submitted successfully", null));
-    }
-
-    @PostMapping("/{submissionId}/score")
+        assignmentService.submitAssignment(userId, assignmentId, request);        return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submitted successfully", null));
+    }    @PostMapping("/{submissionId}/score")
     public ResponseEntity<ApiResponse<?>> scoreAssignmentSubmission(
             @PathVariable String submissionId,
             @RequestParam Double score

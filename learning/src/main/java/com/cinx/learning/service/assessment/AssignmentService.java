@@ -17,7 +17,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -45,7 +44,7 @@ public class AssignmentService implements IAssignmentService {
 
     @Transactional
     @Override
-    public void submitAssignment(String userId, String assignmentId, CreateAssignmentSubmissionRequest request, List<MultipartFile> attachments) {
+    public void submitAssignment(String userId, String assignmentId, CreateAssignmentSubmissionRequest request) {
         if (assignmentSubmissionRepository.findByUserIdAndAssignmentId(userId, assignmentId).isPresent()) {
             throw new BadRequestException("You have already submitted this assignment");
         }
@@ -58,13 +57,15 @@ public class AssignmentService implements IAssignmentService {
                         .build()
         );
 
-        if (attachments != null && !attachments.isEmpty()) {
-            assignmentSubmissionAttachmentRepository.saveAll(attachments.stream()
-                    .map(file -> AssignmentSubmissionAttachment.builder()
+        if (request.attachments() != null && !request.attachments().isEmpty()) {
+            assignmentSubmissionAttachmentRepository.saveAll(request.attachments().stream()
+                    .map(file -> AssignmentSubmissionAttachment.builder()       
                             .assignmentSubmission(assignmentSubmission)
-                            .fileName(file.getOriginalFilename())
-                            .fileType(file.getContentType())
-                            .fileSize(file.getSize())
+                            .fileName(file.fileName())
+                            .fileType(file.fileType())
+                            .fileSize(file.fileSize())
+                            .attachmentUrl(file.attachmentUrl())
+                            .s3ObjectKey(file.s3ObjectKey())
                             .build())
                     .toList());
         }
