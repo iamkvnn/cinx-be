@@ -21,4 +21,4 @@ jobs:
           script: |
             cd /root/cinx-deployment
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cinx-eureka:latest
-            docker-compose up -d --no-deps eureka-server
+            docker compose up -d --no-deps eureka-server

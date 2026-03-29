@@ -21,4 +21,4 @@ jobs:
           script: |
             cd /root/cinx-deployment
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cinx-user:latest
-            docker-compose up -d --no-deps user
+            docker compose up -d --no-deps user
