@@ -252,6 +252,7 @@ services:
     environment:
       APP_ENV: prod
       DB_HOST: mysql
+      DB_NAME: recommendationdb
       DB_PORT: '3306'
       DB_USER: root
       DB_PASSWORD: root

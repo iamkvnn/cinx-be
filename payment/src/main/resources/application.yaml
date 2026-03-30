@@ -60,3 +60,4 @@ MoMo:
   secret: ${MOMO_SECRET:at67qH6mk8w5Y1nAyMoYKMWACiEi2bsa}
 
 feBaseUrl: ${FE_BASE_URL:https://shinyjewelry.shop}
+gateway.url: ${GATEWAY_URL:http://localhost:9090}

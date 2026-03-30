@@ -12,7 +12,7 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 @EnableFeignClients(basePackages = "com.cinx")
 @OpenAPIDefinition(
 		servers = {
-				@Server(url = "http://localhost:9090", description = "API Gateway")
+				@Server(url = "${gateway.url}", description = "API Gateway")
 		}
 )
 public class AuthApplication {

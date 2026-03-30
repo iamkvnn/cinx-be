@@ -8,7 +8,7 @@ import org.springframework.cloud.client.discovery.EnableDiscoveryClient;
 
 @OpenAPIDefinition(
 		servers = {
-				@Server(url = "http://localhost:9090", description = "API Gateway")
+				@Server(url = "${gateway.url}", description = "API Gateway")
 		}
 )
 @SpringBootApplication(scanBasePackages = {"com.cinx.notification", "com.cinx.common"})

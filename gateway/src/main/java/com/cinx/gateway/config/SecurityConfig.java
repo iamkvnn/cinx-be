@@ -26,6 +26,9 @@ public class SecurityConfig {
     @Value("${jwt.access.secret}")
     private String accessKey;
 
+    @Value("${cors.allowed-origins:http://localhost:*}")
+    private List<String> allowedOrigins;
+
     @Bean
     SecurityWebFilterChain securityWebFilterChain(ServerHttpSecurity http) {
         http
@@ -52,7 +55,7 @@ public class SecurityConfig {
     @Bean
     CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("http://localhost:*"));
+        config.setAllowedOriginPatterns(allowedOrigins);
         config.setAllowedMethods(List.of("GET","POST","PUT","DELETE"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);

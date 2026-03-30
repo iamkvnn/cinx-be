@@ -64,3 +64,4 @@ aws:
   credentials:
     access-key: ${AWS_ACCESS_KEY:key}
     secret-key: ${AWS_SECRET_KEY:secret}
+gateway.url: ${GATEWAY_URL:http://localhost:9090}
