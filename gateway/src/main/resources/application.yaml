@@ -148,3 +148,5 @@ springdoc:
       - name: Social Service
         url: /v3/api-docs/social
 
+
+cors.allowed-origins: ${CORS_ALLOWED_ORIGINS:http://localhost:*}
