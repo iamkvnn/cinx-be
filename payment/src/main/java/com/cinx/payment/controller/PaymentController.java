@@ -7,6 +7,8 @@ import com.cinx.payment.dto.response.PaymentResponse;
 import com.cinx.payment.dto.response.VNPayIPNResponse;
 import com.cinx.payment.service.payment.PaymentServiceFactory;
 import com.cinx.payment.service.payment.adapter.VNPayCallbackAdapter;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -21,12 +23,14 @@ import java.util.Map;
 public class PaymentController {
     private final PaymentServiceFactory factory;
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod) {
         PaymentResponse response = factory.getPaymentService(paymentMethod).getPaymentByOrderId(orderId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/ids")
     public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentByOrderIds(@RequestParam List<String> orderIds) {
         List<PaymentResponse> response = factory.getPaymentService(PaymentMethod.MOMO).getPaymentByIds(orderIds);
@@ -34,11 +38,13 @@ public class PaymentController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<String>> requestMomoPayment(@RequestBody PaymentRequest request) {
         String response = factory.getPaymentService(request.paymentMethod()).getPaymentUrl(request.orderId());
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
     }
+
     @PostMapping("/momo-callback")
     public ResponseEntity<ApiResponse<Void>> handleMoMoCallback(@RequestBody Map<String, String> response) {
         factory.getPaymentService(PaymentMethod.MOMO).handleCallback(response);

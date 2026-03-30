@@ -3,6 +3,8 @@ package com.cinx.learning.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PresignedUrlResponse;
 import com.cinx.learning.service.s3.S3Service;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -21,6 +23,7 @@ public class PresignedUrlController {
         this.s3Service = s3Service;
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/presigned-url")
     public ResponseEntity<ApiResponse<PresignedUrlResponse>> getPresignedUrl(
             @RequestParam String fileName,

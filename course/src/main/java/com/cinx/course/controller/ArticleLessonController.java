@@ -2,7 +2,10 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.request.CreateArticleLessonRequest;
+import com.cinx.course.dto.response.ArticleLessonResponse;
 import com.cinx.course.service.article.IArticleService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,12 +17,13 @@ public class ArticleLessonController {
     private final IArticleService articleService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getArticleByLessonId(@RequestParam String lessonId) {
+    public ResponseEntity<ApiResponse<ArticleLessonResponse>> getArticleByLessonId(@RequestParam String lessonId) {
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", articleService.getArticleByLessonId(lessonId))
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createArticleLesson(@RequestParam String lessonId, @RequestBody CreateArticleLessonRequest request) {
         articleService.createArticle(lessonId, request);
@@ -28,6 +32,7 @@ public class ArticleLessonController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
     public ResponseEntity<ApiResponse<?>> updateArticleLesson(@RequestParam String lessonId, @RequestBody CreateArticleLessonRequest request) {
         articleService.updateArticle(lessonId, request);
@@ -36,6 +41,7 @@ public class ArticleLessonController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
     public ResponseEntity<ApiResponse<?>> deleteArticleLesson(@RequestParam String lessonId) {
         articleService.deleteArticle(lessonId);
