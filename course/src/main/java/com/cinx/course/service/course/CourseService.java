@@ -75,15 +75,13 @@ public class CourseService implements ICourseService {
     public CourseResponse createCourse(CreateCourseRequest request) {
         Course course = courseRepository.save(buildCourseFromRequest(request));
         UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
-        CourseResponse courseResponse = courseMapper.toDto(new CourseAggregate(
-                course,
-                instructor
-        ));
+        CourseAggregate aggregate = new CourseAggregate(course, instructor);
+        
         courseEventProducer.publishOrderCreatedEvent(new CourseEvent(
-                courseResponse,
+                courseMapper.toDetailDto(aggregate),
                 LocalDateTime.now()
         ));
-        return courseResponse;
+        return courseMapper.toDto(aggregate);
     }
 
     private Course buildCourseFromRequest(CreateCourseRequest request) {
@@ -109,14 +107,13 @@ public class CourseService implements ICourseService {
                 .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.categoryId())));
         courseRepository.save(course);
         course.setSections(sectionService.updateSections(course, request.sections()));
+        UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
+        CourseAggregate aggregate = new CourseAggregate(course, instructor);
+        
         courseEventProducer.publishCourseUpdatedEvent(new CourseEvent(
-                courseMapper.toDto(course),
+                courseMapper.toDetailDto(aggregate),
                 LocalDateTime.now()
         ));
-        UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
-        return courseMapper.toDto(new CourseAggregate(
-                course,
-                instructor
-        ));
+        return courseMapper.toDto(aggregate);
     }
 }

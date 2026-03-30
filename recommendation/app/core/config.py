@@ -33,8 +33,9 @@ class Settings(BaseSettings):
 
     RECONCILE_BATCH_SIZE: int = 100
     INTERACTION_THRESHOLD_FOR_CONTENT_BASED: int = 3
+    GEMINI_API_KEY: str
 
-    model_config = SettingsConfigDict(env_file=".env", case_sensitive=True)
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
 
 
 settings = Settings()

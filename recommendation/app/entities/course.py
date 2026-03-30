@@ -1,5 +1,6 @@
 from sqlalchemy import String, Text, Boolean, Integer, Numeric, Float, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.dialects.mysql import JSON
 from datetime import datetime
 from app.core.database import Base
 
@@ -22,8 +23,8 @@ class Course(Base):
     is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
     is_in_subscription: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
 
-    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
-
+    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)    
+    sections: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 

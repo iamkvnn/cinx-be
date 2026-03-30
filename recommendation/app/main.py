@@ -4,6 +4,7 @@ from fastapi import FastAPI
 from app.core.config import settings
 from app.core.database import Base, engine
 from app.api.recommendation import router as recommendation_router
+from app.api.learning_path import router as learning_path_router
 from app.messaging.rabbitmq_consumer import start_consumer
 
 
@@ -18,3 +19,4 @@ async def lifespan(app: FastAPI):
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
 app.include_router(recommendation_router)
+app.include_router(learning_path_router)

@@ -9,3 +9,6 @@ numpy
 aio-pika
 httpx
 cryptography
+sentence-transformers
+google-genai
+faiss-cpu
