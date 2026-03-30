@@ -2,7 +2,10 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.request.CreateAssignmentLessonRequest;
+import com.cinx.course.dto.response.AssignmentLessonResponse;
 import com.cinx.course.service.assignment.IAssignmentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -14,12 +17,13 @@ public class AssignmentLessonController {
     private final IAssignmentService assignmentService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getAssigmentByLessonId(@RequestParam String lessonId) {
+    public ResponseEntity<ApiResponse<AssignmentLessonResponse>> getAssigmentByLessonId(@RequestParam String lessonId) {
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", assignmentService.getAssignmentByLessonId(lessonId))
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createAssigmentLesson(@RequestParam String lessonId, @RequestBody CreateAssignmentLessonRequest request) {
         assignmentService.createAssignment(lessonId, request);
@@ -28,6 +32,7 @@ public class AssignmentLessonController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
     public ResponseEntity<ApiResponse<?>> updateAssigmentLesson(@RequestParam String lessonId, @RequestBody CreateAssignmentLessonRequest request) {
         assignmentService.updateAssignment(lessonId, request);
@@ -36,6 +41,7 @@ public class AssignmentLessonController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
     public ResponseEntity<ApiResponse<?>> deleteAssigmentLesson(@RequestParam String lessonId) {
         assignmentService.deleteAssignment(lessonId);

@@ -7,6 +7,8 @@ import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.service.user.IUserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.core.io.Resource;
@@ -29,8 +31,9 @@ import java.util.List;
 public class UserController {
     private final IUserService userService;
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<?>> getAllUsers(
+    public ResponseEntity<PaginatedApiResponse<UserDto>> getAllUsers(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ) {
@@ -39,6 +42,7 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDto>> getCurrentUser(Principal principal) {
         UserDto user = userService.findByUserId(principal.getName());
@@ -47,13 +51,15 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/ids")
-    public ResponseEntity<ApiResponse<?>> getUsersByIds(@RequestParam("ids") List<String> ids) {
+    public ResponseEntity<ApiResponse<List<UserDto>>> getUsersByIds(@RequestParam("ids") List<String> ids) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Users fetched successfully", userService.findByIds(ids))
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable String id) {
         UserDto user = userService.findByUserId(id);
@@ -63,6 +69,7 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{id}/instructor-verified")
     public ResponseEntity<ApiResponse<Boolean>> checkInstructorVerified(@PathVariable String id) {
         boolean isVerified = userService.checkInstructorVerified(id);
@@ -71,13 +78,15 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createUser(@RequestBody CreateUserRequest registerDto) {
+    public ResponseEntity<ApiResponse<UserDto>> createUser(@RequestBody CreateUserRequest registerDto) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "User created successfully", userService.createUser(registerDto))
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping(value = "/{id}/verify-instructor")
     public ResponseEntity<ApiResponse<?>> verifyInstructor(@PathVariable String id) {
         userService.verifyInstructor(id);
@@ -86,9 +95,10 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<?>> updateUser(
+    public ResponseEntity<ApiResponse<UserDto>> updateUser(
             @PathVariable("id") String id,
             @Valid @RequestPart("user") UpdateProfileRequest dto,
             @RequestPart(value = "avatar", required = false) MultipartFile avatar
@@ -98,8 +108,9 @@ public class UserController {
         );
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/avatars/{fileName:.+}")
-    public ResponseEntity<Resource> getBannerImage(@PathVariable String fileName) throws IOException {
+    public ResponseEntity<Resource> getAvatarImage(@PathVariable String fileName) throws IOException {
         Path imagePath = Paths.get("uploads/avatars/").resolve(fileName).normalize();
         if (!Files.exists(imagePath)) {
             return ResponseEntity.notFound().build();

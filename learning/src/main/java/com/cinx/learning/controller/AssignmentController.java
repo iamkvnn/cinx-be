@@ -5,7 +5,10 @@ import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
+import com.cinx.learning.dto.response.AssignmentSubmissionResponse;
 import com.cinx.learning.service.assessment.IAssignmentService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,8 +19,9 @@ import org.springframework.web.bind.annotation.*;
 public class AssignmentController {
     private final IAssignmentService assignmentService;
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/list")
-    public ResponseEntity<PaginatedApiResponse<?>> getAssignmentSubmissions(
+    public ResponseEntity<PaginatedApiResponse<AssignmentSubmissionResponse>> getAssignmentSubmissions(
             @RequestParam String assignmentId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
@@ -25,12 +29,14 @@ public class AssignmentController {
         return ResponseEntity.ok(PaginationWrapper.wrap(assignmentService.getAssignmentSubmissions(assignmentId, page, size)));
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<ApiResponse<?>> getAssignmentSubmission(@RequestParam String assignmentId) {
+    public ResponseEntity<ApiResponse<AssignmentSubmissionResponse>> getAssignmentSubmission(@RequestParam String assignmentId) {
         String userId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "", assignmentService.getAssignmentSubmission(userId, assignmentId)));
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<?>> submitAssignment(
             @RequestParam String assignmentId,
@@ -40,6 +46,7 @@ public class AssignmentController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submitted successfully", null));
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{submissionId}/score")
     public ResponseEntity<ApiResponse<?>> scoreAssignmentSubmission(
             @PathVariable String submissionId,
@@ -49,6 +56,7 @@ public class AssignmentController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submission scored successfully", null));
     }
 
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping("/{submissionId}")
     public ResponseEntity<ApiResponse<?>> deleteAssignmentSubmission(@PathVariable String submissionId) {
         assignmentService.deleteAssignmentSubmission(submissionId);

@@ -1,7 +1,6 @@
 package com.cinx.learning.service.learningProgress;
 
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.learning.dto.request.UpdateCourseProgressRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseDetailResponse;
 import com.cinx.learning.dto.response.CourseProgressResponse;
@@ -22,11 +21,11 @@ import java.util.List;
 
 @Service
 @RequiredArgsConstructor
-public class LearningProgressService implements ILearningProgressService{
+public class LearningProgressService implements ILearningProgressService{       
     private final CourseProgressRepository courseProgressRepository;
     private final LearningItemProgressRepository learningItemProgressRepository;
     private final CourseProgressMapper courseProgressMapper;
-    private final LearningItemProgressMapper learningItemProgressMapper;
+    private final LearningItemProgressMapper learningItemProgressMapper;        
     private final CourseService courseService;
 
     @Override
