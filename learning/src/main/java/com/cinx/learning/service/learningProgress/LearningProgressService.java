@@ -1,7 +1,6 @@
 package com.cinx.learning.service.learningProgress;
 
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.learning.dto.request.UpdateCourseProgressRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseDetailResponse;
 import com.cinx.learning.dto.response.CourseProgressResponse;
@@ -13,8 +12,6 @@ import com.cinx.learning.model.LearningItemProgress;
 import com.cinx.learning.repository.CourseProgressRepository;
 import com.cinx.learning.repository.LearningItemProgressRepository;
 import com.cinx.learning.service.course.CourseService;
-import com.cinx.learning.service.learningPath.ILearningPathService;
-import com.cinx.learning.service.streak.IStreakService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -30,8 +27,6 @@ public class LearningProgressService implements ILearningProgressService{
     private final CourseProgressMapper courseProgressMapper;
     private final LearningItemProgressMapper learningItemProgressMapper;        
     private final CourseService courseService;
-    private final ILearningPathService learningPathService;
-    private final IStreakService streakService;
 
     @Override
     public List<CourseProgressResponse> getCourseProgressByCourseIds(String userId, List<String> courseIds) {
@@ -102,10 +97,6 @@ public class LearningProgressService implements ILearningProgressService{
                                     courseProgress.setCompletionTime(LocalDateTime.now());
                                 }
                                 courseProgressRepository.save(courseProgress);
-                                
-                                // Update Streaks and Learning Path
-                                streakService.updateStreakOnActivity(userId);
-                                learningPathService.updatePathProgress(userId, itemId);
                             }
                             learningItemProgressRepository.save(existingProgress);
                         },
