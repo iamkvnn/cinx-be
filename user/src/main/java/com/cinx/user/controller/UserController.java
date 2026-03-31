@@ -3,9 +3,11 @@ package com.cinx.user.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
+import com.cinx.user.dto.request.DeviceTokenRequest;
 import com.cinx.user.service.user.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -120,5 +122,25 @@ public class UserController {
         return ResponseEntity.ok()
                 .contentType(MediaType.parseMediaType(contentType))
                 .body(resource);
+    }
+
+    @Operation(summary = "Save user FCM device token", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/device-tokens")
+    public ApiResponse<Void> saveDeviceToken(@Valid @RequestBody DeviceTokenRequest request) {
+        String userId = AuthenticationUtil.extractUserId();
+        userService.saveDeviceToken(userId, request);
+        return new ApiResponse<>(true, "Device token saved successfully", null);
+    }
+
+    @Operation(summary = "Get user FCM device tokens (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{userId}/fcm-tokens")
+    public ApiResponse<List<String>> getUserTokens(@PathVariable String userId) {
+        return new ApiResponse<>(true, "Success", userService.getUserTokens(userId));
+    }
+
+    @Operation(summary = "Add XP to user profile (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{userId}/add-xp")
+    public ApiResponse<UserDto> addXp(@PathVariable String userId, @RequestParam Integer amount) {
+        return new ApiResponse<>(true, "XP added successfully", userService.addXp(userId, amount));
     }
 }

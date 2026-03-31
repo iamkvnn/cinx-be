@@ -2,11 +2,7 @@ package com.cinx.learning.model;
 
 import com.cinx.common.model.BaseEntity;
 import com.cinx.learning.consts.LearningPathStatus;
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.OneToMany;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -25,6 +21,7 @@ import java.util.List;
 public class UserLearningPath extends BaseEntity {
     private String userId;
     private String title;
+    @Column(length = 2000)
     private String description;
     
     @Enumerated(EnumType.STRING)

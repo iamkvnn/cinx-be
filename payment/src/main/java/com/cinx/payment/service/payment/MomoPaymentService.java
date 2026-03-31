@@ -94,7 +94,7 @@ public class MomoPaymentService extends PaymentTemplate {
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),
-                        momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_CC, momoPayment.getRequestId());
+                        momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM, momoPayment.getRequestId());
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }

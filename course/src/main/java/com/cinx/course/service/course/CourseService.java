@@ -116,4 +116,12 @@ public class CourseService implements ICourseService {
         ));
         return courseMapper.toDto(aggregate);
     }
+
+    @Override
+    @Transactional
+    public void updateCourseRating(String courseId, Double rating) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found"));
+        course.setRating(rating);
+        courseRepository.save(course);
+    }
 }

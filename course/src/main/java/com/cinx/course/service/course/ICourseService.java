@@ -16,4 +16,5 @@ public interface ICourseService {
     Page<CourseResponse> getAllCourses(String query, String categoryId, Pageable pageable);
     CourseResponse createCourse(CreateCourseRequest request);
     CourseResponse updateCourse(String courseId, UpdateCourseRequest request);
+    void updateCourseRating(String courseId, Double rating);
 }

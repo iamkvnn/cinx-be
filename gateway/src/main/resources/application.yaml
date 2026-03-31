@@ -91,7 +91,7 @@ spring:
             - id: learning-service
               uri: lb://learning
               predicates:
-                - Path=/api/v1/learning/**
+                - Path=/api/v1/learning/**, /api/v1/daily-goals/**, /api/v1/certificates/**, /api/v1/streaks/**, /api/v1/learning-paths/**
             - id: notification-service
               uri: lb://notification
               predicates:

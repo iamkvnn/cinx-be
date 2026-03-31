@@ -56,8 +56,45 @@ public class QuizService implements IQuizService {
 
     @Override
     public Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size) {
+        QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
+                .orElseThrow(() -> new NotFoundException("Quiz session not found"));
+                
+        if (quizSession.getStatus() == QuizSessionStatus.SUBMITTED) {
+            if (Boolean.FALSE.equals(quizSession.getIsReviewAllowed())) {
+                throw new BadRequestException("Review is not allowed for this quiz session");
+            }
+        }
+
         return quizSessionQuestionRepository.findAllByQuizSessionId(quizSessionId, PageRequest.of(page - 1, size))
-                .map(quizSessionQuestionMapper::toDto);
+                .map(quizSessionQuestionMapper::toDto)
+                .map(dto -> {
+                    if (quizSession.getStatus() == QuizSessionStatus.IN_PROGRESS) {
+                        return new QuizSessionQuestionResponse(
+                                dto.id(),
+                                dto.quizSessionId(),
+                                dto.questionId(),
+                                dto.questionType(),
+                                dto.questionOrder(),
+                                dto.userAnswer(),
+                                null,
+                                null,
+                                null
+                        );
+                    } else if (Boolean.FALSE.equals(quizSession.getIsShowAnswersOnReview())) {
+                        return new QuizSessionQuestionResponse(
+                                dto.id(),
+                                dto.quizSessionId(),
+                                dto.questionId(),
+                                dto.questionType(),
+                                dto.questionOrder(),
+                                dto.userAnswer(),
+                                null,
+                                null,
+                                null
+                        );
+                    }
+                    return dto;
+                });
     }
 
     @Transactional
@@ -74,6 +111,8 @@ public class QuizService implements IQuizService {
                         .endTime(LocalDateTime.now().plusMinutes(quizLessonResponse.duration()))
                         .quizLessonId(quizLessonId)
                         .status(QuizSessionStatus.IN_PROGRESS)
+                        .isReviewAllowed(quizLessonResponse.isReviewAllowed())
+                        .isShowAnswersOnReview(quizLessonResponse.isShowAnswersOnReview())
                         .build()
         );
         createQuizSessionQuestions(quizSession, quizLessonResponse.numberOfQuestionPerQuizSession(), quizLessonResponse.questions());

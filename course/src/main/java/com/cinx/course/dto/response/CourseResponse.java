@@ -18,6 +18,8 @@ public record CourseResponse (
         Boolean isPublished,
         Boolean isInSubscription,
         Long duration,
+        Boolean hasCertificate,
+        String certificateTitle,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

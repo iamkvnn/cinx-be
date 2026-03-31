@@ -2,6 +2,7 @@ package com.cinx.learning.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.LearningItemProgressResponse;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
@@ -38,5 +39,13 @@ public class LearningProgressController {
     public ResponseEntity<ApiResponse<List<LearningItemProgressResponse>>> getLearningItemProgressByCourseId(@PathVariable String courseId) {
         String userId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "", learningProgressService.getLearningItemProgressByCourseId(userId, courseId)));
+    }
+
+    @Operation(summary = "Mark an item as complete (e.g. Article)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/items/{itemId}/complete")
+    public ResponseEntity<ApiResponse<?>> markItemAsComplete(@PathVariable String itemId) {
+        String userId = AuthenticationUtil.extractUserId();
+        learningProgressService.updateLearningItemProgress(userId, itemId, new UpdateLearningItemRequest(true, true, 10.0));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Marked complete", null));
     }
 }

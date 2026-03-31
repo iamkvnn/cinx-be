@@ -8,6 +8,7 @@ import com.cinx.learning.service.learningPath.ILearningPathService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/learning-paths")
@@ -15,6 +16,20 @@ import org.springframework.web.bind.annotation.*;
 public class LearningPathController {
     
     private final ILearningPathService learningPathService;
+
+    @GetMapping
+    public ResponseEntity<ApiResponse<List<LearningPathResponse>>> getLearningPaths() {
+        String userId = AuthenticationUtil.extractUserId();
+        List<LearningPathResponse> response = learningPathService.getLearningPaths(userId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Learning paths retrieved successfully", response));
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ApiResponse<LearningPathResponse>> getLearningPath(@PathVariable String id) {
+        String userId = AuthenticationUtil.extractUserId();
+        LearningPathResponse response = learningPathService.getLearningPath(userId, id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Learning path retrieved successfully", response));
+    }
 
     @PostMapping
     public ResponseEntity<ApiResponse<LearningPathResponse>> createLearningPath(@RequestBody LearningPathRequest request) {

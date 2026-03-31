@@ -3,10 +3,14 @@ package com.cinx.learning.service.video;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.dto.request.TrackingVideoLessonRequest;
+import com.cinx.learning.dto.request.UpdateLearningItemRequest;
+import com.cinx.learning.dto.response.VideoLessonResponse;
 import com.cinx.learning.dto.response.VideoLessonTrackingHistoryResponse;
 import com.cinx.learning.mapper.VideoLessonTrackingHistoryMapper;
 import com.cinx.learning.model.VideoLessonTrackingHistory;
 import com.cinx.learning.repository.VideoLessonTrackingHistoryRepository;
+import com.cinx.learning.service.course.CourseService;
+import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -19,6 +23,8 @@ import java.time.LocalDateTime;
 public class VideoService implements IVideoService {
     private final VideoLessonTrackingHistoryMapper videoLessonTrackingHistoryMapper;
     private final VideoLessonTrackingHistoryRepository videoLessonTrackingHistoryRepository;
+    private final CourseService courseService;
+    private final ILearningProgressService learningProgressService;
 
     @Override
     public Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String videoLessonId, int page, int size) {
@@ -60,5 +66,13 @@ public class VideoService implements IVideoService {
                     return newTrackingHistory;
                 });
         videoLessonTrackingHistoryRepository.save(trackingHistory);
+        
+        VideoLessonResponse videoLessonResponse = courseService.getVideoLessonById(request.videoLessonId()).data();
+        if (videoLessonResponse != null && videoLessonResponse.duration() != null && videoLessonResponse.duration() > 0) {
+            double progress = (double) trackingHistory.getCurrentPosition() / videoLessonResponse.duration();
+            if (progress >= 0.7) {
+                learningProgressService.updateLearningItemProgress(userId, request.videoLessonId(), new UpdateLearningItemRequest(true, true, 10.0));
+            }
+        }
     }
 }

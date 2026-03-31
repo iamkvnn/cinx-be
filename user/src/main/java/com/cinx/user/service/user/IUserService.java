@@ -21,4 +21,9 @@ public interface IUserService {
     UserDto updateProfile(String id, UpdateProfileRequest dto, MultipartFile avatar);
 
     List<UserDto> findByIds(List<String> ids);
+    
+    void saveDeviceToken(String userId, com.cinx.user.dto.request.DeviceTokenRequest request);
+    List<String> getUserTokens(String userId);
+
+    UserDto addXp(String userId, Integer xpAmount);
 }

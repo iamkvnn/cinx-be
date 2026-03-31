@@ -28,6 +28,10 @@ public class Course extends AuditableEntity {
     private Boolean isInSubscription;
     private String instructorId;
 
+    @Builder.Default
+    private Boolean hasCertificate = false;
+    private String certificateTitle;
+
     @ManyToOne
     private Category category;
 

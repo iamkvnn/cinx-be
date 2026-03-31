@@ -12,6 +12,7 @@ import com.cinx.learning.dto.response.LearningPathResponse;
 import com.cinx.learning.mapper.LearningPathMapper;
 import com.cinx.learning.model.LearningPathItem;
 import com.cinx.learning.model.UserLearningPath;
+import com.cinx.learning.repository.CourseProgressRepository;
 import com.cinx.learning.repository.LearningPathItemRepository;
 import com.cinx.learning.repository.UserLearningPathRepository;
 import com.cinx.learning.service.cart.CartClient;
@@ -34,6 +35,24 @@ public class LearningPathService implements ILearningPathService {
     private final LearningPathMapper pathMapper;
     private final EnrollmentClient enrollmentClient;
     private final CartClient cartClient;
+    private final CourseProgressRepository courseProgressRepository;
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<LearningPathResponse> getLearningPaths(String userId) {
+        return pathRepository.findByUserId(userId).stream()
+                .map(pathMapper::toDto)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public LearningPathResponse getLearningPath(String userId, String id) {
+        UserLearningPath path = pathRepository.findById(id)
+                .filter(p -> p.getUserId().equals(userId))
+                .orElseThrow(() -> new NotFoundException("Learning path not found"));
+        return pathMapper.toDto(path);
+    }
 
     @Transactional
     @Override
@@ -121,8 +140,11 @@ public class LearningPathService implements ILearningPathService {
                 .distinct()
                 .toList();
 
-        ApiResponse<List<CheckEnrollmentStatus>> checkRes = enrollmentClient.checkEnrollmentStatus(courseIdsInPath);
-        boolean allEnrolled = checkRes.data().stream().allMatch(CheckEnrollmentStatus::isEnrolled);
+        long enrolledCourseCount = courseProgressRepository.findAllByUserIdAndCourseIdIn(userId, courseIdsInPath).stream()
+                .map(com.cinx.learning.model.CourseProgress::getCourseId)
+                .distinct()
+                .count();
+        boolean allEnrolled = enrolledCourseCount == courseIdsInPath.size();
 
         if (allEnrolled) {
             path.setStatus(LearningPathStatus.ACTIVE);

@@ -11,6 +11,8 @@ public record UpdateCourseRequest(
         Boolean isPublished,
         Boolean isInSubscription,
         Long duration,
+        Boolean hasCertificate,
+        String certificateTitle,
         List<UpdateSectionRequest> sections
 ) {
 }

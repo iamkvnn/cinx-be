@@ -10,6 +10,8 @@ public record QuizLessonResponse (
         Integer numberOfQuestionPerQuizSession,
         Integer maxAttempt,
         Integer duration,
+        Boolean isReviewAllowed,
+        Boolean isShowAnswersOnReview,
         List<QuizQuestionResponse> questions
 ){
 }
