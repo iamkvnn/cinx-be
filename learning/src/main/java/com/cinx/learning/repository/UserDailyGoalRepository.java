@@ -11,5 +11,6 @@ import java.util.Optional;
 @Repository
 public interface UserDailyGoalRepository extends JpaRepository<UserDailyGoal, String> {
     Optional<UserDailyGoal> findByUserIdAndGoalDate(String userId, LocalDate goalDate);
+    List<UserDailyGoal> findByUserIdAndGoalDateBetween(String userId, LocalDate startDate, LocalDate endDate);
     List<UserDailyGoal> findByGoalDateAndIsCompletedFalse(LocalDate goalDate);
 }

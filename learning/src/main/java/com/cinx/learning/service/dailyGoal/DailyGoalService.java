@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 
 import com.cinx.learning.service.user.UserService;
 
@@ -27,12 +28,12 @@ public class DailyGoalService implements IDailyGoalService {
     }
 
     @Override
-    public UserDailyGoal setDailyGoal(String userId, Integer targetXp) {
-        LocalDate today = LocalDate.now();
-        UserDailyGoal goal = dailyGoalRepository.findByUserIdAndGoalDate(userId, today)
+    public UserDailyGoal setDailyGoal(String userId, Integer targetXp, LocalDate date) {
+        LocalDate goalDate = date != null ? date : LocalDate.now();
+        UserDailyGoal goal = dailyGoalRepository.findByUserIdAndGoalDate(userId, goalDate)
                 .orElse(UserDailyGoal.builder()
                         .userId(userId)
-                        .goalDate(today)
+                        .goalDate(goalDate)
                         .currentXp(0)
                         .isCompleted(false)
                         .build());
@@ -69,9 +70,17 @@ public class DailyGoalService implements IDailyGoalService {
     }
 
     @Override
-    public void deleteDailyGoal(String userId) {
-        LocalDate today = LocalDate.now();
-        dailyGoalRepository.findByUserIdAndGoalDate(userId, today)
+    public void deleteDailyGoal(String userId, LocalDate date) {
+        LocalDate goalDate = date != null ? date : LocalDate.now();
+        dailyGoalRepository.findByUserIdAndGoalDate(userId, goalDate)
                 .ifPresent(dailyGoalRepository::delete);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<UserDailyGoal> getUserDailyGoalsInMonth(String userId, int year, int month) {
+        LocalDate startDate = LocalDate.of(year, month, 1);
+        LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
+        return dailyGoalRepository.findByUserIdAndGoalDateBetween(userId, startDate, endDate);
     }
 }

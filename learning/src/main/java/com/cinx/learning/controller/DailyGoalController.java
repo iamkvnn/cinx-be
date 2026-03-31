@@ -13,6 +13,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDate;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/daily-goals")
@@ -21,14 +23,15 @@ public class DailyGoalController {
 
     private final IDailyGoalService dailyGoalService;
 
-    @Operation(summary = "Get current user's daily goal", security = @SecurityRequirement(name = "bearer-jwt"))
+    @Operation(summary = "Get current user's daily goal for a specific date", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ApiResponse<DailyGoalResponse> getDailyGoal() {
+    public ApiResponse<DailyGoalResponse> getDailyGoal(@RequestParam(required = false) LocalDate date) {
         String userId = AuthenticationUtil.extractUserId();
-        UserDailyGoal goal = dailyGoalService.getUserDailyGoal(userId, LocalDate.now());
+        LocalDate goalDate = date != null ? date : LocalDate.now();
+        UserDailyGoal goal = dailyGoalService.getUserDailyGoal(userId, goalDate);
         
         if (goal == null) {
-            return new ApiResponse<>(true, "No daily goal explicitly set for today", null);
+            return new ApiResponse<>(true, "No daily goal explicitly set for the specified date", null);
         }
 
         DailyGoalResponse response = new DailyGoalResponse(
@@ -43,11 +46,29 @@ public class DailyGoalController {
         return new ApiResponse<>(true, "Daily goal fetched successfully", response);
     }
 
+    @Operation(summary = "Get current user's daily goals for a specific month", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/month")
+    public ApiResponse<List<DailyGoalResponse>> getDailyGoalsInMonth(@RequestParam int year, @RequestParam int month) {
+        String userId = AuthenticationUtil.extractUserId();
+        List<UserDailyGoal> goals = dailyGoalService.getUserDailyGoalsInMonth(userId, year, month);
+        
+        List<DailyGoalResponse> responses = goals.stream().map(goal -> new DailyGoalResponse(
+                goal.getId(),
+                goal.getUserId(),
+                goal.getTargetXp(),
+                goal.getCurrentXp(),
+                goal.getGoalDate(),
+                goal.getIsCompleted()
+        )).collect(Collectors.toList());
+        
+        return new ApiResponse<>(true, "Monthly daily goals fetched successfully", responses);
+    }
+
     @Operation(summary = "Set current user's daily goal target", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ApiResponse<DailyGoalResponse> setDailyGoal(@Valid @RequestBody SetDailyGoalRequest request) {
         String userId = AuthenticationUtil.extractUserId();
-        UserDailyGoal goal = dailyGoalService.setDailyGoal(userId, request.targetXp());
+        UserDailyGoal goal = dailyGoalService.setDailyGoal(userId, request.targetXp(), request.goalDate());
         
         DailyGoalResponse response = new DailyGoalResponse(
                 goal.getId(),
@@ -65,7 +86,7 @@ public class DailyGoalController {
     @PutMapping
     public ApiResponse<DailyGoalResponse> editDailyGoal(@Valid @RequestBody SetDailyGoalRequest request) {
         String userId = AuthenticationUtil.extractUserId();
-        UserDailyGoal goal = dailyGoalService.setDailyGoal(userId, request.targetXp());
+        UserDailyGoal goal = dailyGoalService.setDailyGoal(userId, request.targetXp(), request.goalDate());
         
         DailyGoalResponse response = new DailyGoalResponse(
                 goal.getId(),
@@ -79,11 +100,11 @@ public class DailyGoalController {
         return new ApiResponse<>(true, "Daily goal updated successfully", response);
     }
 
-    @Operation(summary = "Delete current user's daily goal", security = @SecurityRequirement(name = "bearer-jwt"))
+    @Operation(summary = "Delete current user's daily goal for a specific date", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
-    public ApiResponse<Void> deleteDailyGoal() {
+    public ApiResponse<Void> deleteDailyGoal(@RequestParam(required = false) LocalDate date) {
         String userId = AuthenticationUtil.extractUserId();
-        dailyGoalService.deleteDailyGoal(userId);
+        dailyGoalService.deleteDailyGoal(userId, date);
         return new ApiResponse<>(true, "Daily goal deleted successfully", null);
     }
 }
