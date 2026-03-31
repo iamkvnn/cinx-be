@@ -19,10 +19,12 @@ public interface CourseRepository extends JpaRepository<Course, String> {
                 c.title LIKE %:query%
                 OR c.description LIKE %:query%)
             AND (:categoryId IS NULL OR cat.id = :categoryId)
+            AND (:instructorId IS NULL OR c.instructorId = :instructorId)
     """)
     Page<Course> findAll(
             @Param("query") String query,
             @Param("categoryId") String categoryId,
+            @Param("instructorId") String instructorId,
             Pageable pageable
     );
 

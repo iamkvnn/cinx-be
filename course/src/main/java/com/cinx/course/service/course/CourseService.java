@@ -60,11 +60,11 @@ public class CourseService implements ICourseService {
     }
 
     @Override
-    public Page<CourseResponse> getAllCourses(String query, String categoryId, Pageable pageable) {
-        Page<Course> courses = courseRepository.findAll(query, categoryId, pageable);
+    public Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, Pageable pageable) {
+        Page<Course> courses = courseRepository.findAll(query, categoryId, instructorId, pageable);
         Map<String, UserDto> instructorMap = userService.getInstructorsByIds(courses.stream().map(Course::getInstructorId).toList()).data()
                 .stream().collect(java.util.stream.Collectors.toMap(UserDto::userId, instructor -> instructor));
-        return courses.map(course -> courseMapper.toDto(new CourseAggregate(
+        return courses.map(course -> courseMapper.toDto(new CourseAggregate(    
                 course,
                 instructorMap.get(course.getInstructorId())
         )));
