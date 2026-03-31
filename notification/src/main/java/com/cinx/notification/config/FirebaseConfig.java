@@ -5,7 +5,9 @@ import com.google.firebase.FirebaseApp;
 import com.google.firebase.FirebaseOptions;
 import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ClassPathResource;
 
 import java.io.InputStream;
 
@@ -13,18 +15,17 @@ import java.io.InputStream;
 @Slf4j
 public class FirebaseConfig {
 
+    @Value("${firebase.config-path}")
+    private String firebaseConfigPath;
+
     @PostConstruct
     public void initialize() {
         try {
             if (FirebaseApp.getApps().isEmpty()) {
-                // To run successfully locally without a file, you'd load the JSON key from resource.
-                // Assuming it's in resources/firebase-service-account.json
-                // InputStream serviceAccount = getClass().getClassLoader().getResourceAsStream("firebase-service-account.json");
-                
-                // For now, attempting application default credentials or minimal setup
-                // In production, GOOGLE_APPLICATION_CREDENTIALS environment variable should be set
+                 InputStream serviceAccount = new ClassPathResource(firebaseConfigPath).getInputStream();
+
                 FirebaseOptions options = FirebaseOptions.builder()
-                        .setCredentials(GoogleCredentials.getApplicationDefault())
+                        .setCredentials(GoogleCredentials.fromStream(serviceAccount))
                         .build();
 
                 FirebaseApp.initializeApp(options);

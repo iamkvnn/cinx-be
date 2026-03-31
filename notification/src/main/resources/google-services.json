@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "297140807930",
+    "project_id": "cinx-d9301",
+    "storage_bucket": "cinx-d9301.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:297140807930:android:54e94ac82d55924e370143",
+        "android_client_info": {
+          "package_name": "com.app.cinx"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB7a29AdXkbUC7OQIPfHXtTyAy8ePC-sFk"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
