@@ -14,6 +14,7 @@ import com.cinx.social.model.ReviewReport;
 import com.cinx.social.repository.ReviewReactionRepository;
 import com.cinx.social.repository.ReviewReportRepository;
 import com.cinx.social.repository.ReviewRepository;
+import com.cinx.social.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -26,6 +27,7 @@ public class ReviewService implements IReviewService {
     private final ReviewReportRepository reviewReportRepository;
     private final ReviewReactionRepository reviewReactionRepository;
     private final ReviewMapper reviewMapper;
+    private final CourseService courseService;
 
     @Override
     public List<ReviewResponse> getReviewsByCourseId(String courseId) {
@@ -50,6 +52,18 @@ public class ReviewService implements IReviewService {
                 .content(request.content())
                 .rating(request.rating())
                 .build());
+
+        updateCourseRatingInCourseService(request.courseId());
+    }
+
+    private void updateCourseRatingInCourseService(String courseId) {
+        Double averageRating = reviewRepository.getAverageRatingByCourseId(courseId);
+        if (averageRating == null) averageRating = 0.0;
+        try {
+            courseService.updateCourseRating(courseId, averageRating);
+        } catch (Exception e) {
+            // Log issue
+        }
     }
 
     @Override
@@ -63,12 +77,19 @@ public class ReviewService implements IReviewService {
         review.setContent(request.content());
         review.setRating(request.rating());
         reviewRepository.save(review);
+        updateCourseRatingInCourseService(review.getCourseId());
     }
 
     @Override
     public void deleteReview(String reviewId) {
         String userId = AuthenticationUtil.extractUserId();
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NotFoundException("Review not found"));
+        if (!review.getUserId().equals(userId)) {
+            throw new NotFoundException("Review not found");
+        }
         reviewRepository.deleteById(reviewId);
+        updateCourseRatingInCourseService(review.getCourseId());
     }
 
     @Override

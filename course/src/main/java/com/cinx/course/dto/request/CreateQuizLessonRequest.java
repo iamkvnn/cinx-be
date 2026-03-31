@@ -12,5 +12,7 @@ public class CreateQuizLessonRequest {
     private Integer numberOfQuestionPerQuizSession;
     private Integer maxAttempt;
     private Integer duration;
+    private Boolean isReviewAllowed;
+    private Boolean isShowAnswersOnReview;
     private List<CreateQuizQuestionRequest> questions;
 }

@@ -25,5 +25,8 @@ public class User {
     private Boolean isInstructorVerified;
     private String avatarUrl;
 
+    @Builder.Default
+    private Integer xp = 0;
+
     private String userId;
 }

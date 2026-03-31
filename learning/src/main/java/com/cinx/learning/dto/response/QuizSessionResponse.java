@@ -10,6 +10,8 @@ public record QuizSessionResponse(
         LocalDateTime startTime,
         LocalDateTime endTime,
         QuizSessionStatus status,
+        Boolean isReviewAllowed,
+        Boolean isShowAnswersOnReview,
         QuizSessionSubmissionResponse quizSessionSubmission
 ) {
 }

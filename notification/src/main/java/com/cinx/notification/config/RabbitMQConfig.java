@@ -49,4 +49,28 @@ public class RabbitMQConfig {
                 .to(deadLetterExchange())
                 .with("notification.order.dead");
     }
+
+    // --- Learning Events Configuration ---
+
+    @Bean
+    public Queue learningReminderQueue() {
+        return QueueBuilder.durable("notification.learning.reminder.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "notification.learning.dead")
+                .build();
+    }
+
+    @Bean
+    public TopicExchange learningEventsExchange() {
+        return ExchangeBuilder.topicExchange("learning.events.exchange")
+                .durable(true)
+                .build();
+    }
+
+    @Bean
+    public Binding learningReminderBinding() {
+        return BindingBuilder.bind(learningReminderQueue())
+                .to(learningEventsExchange())
+                .with("learning.reminder.#");
+    }
 }

@@ -26,6 +26,8 @@ public class QuizSession extends BaseEntity {
     private LocalDateTime startTime;
     private LocalDateTime endTime;
     private QuizSessionStatus status;
+    private Boolean isReviewAllowed;
+    private Boolean isShowAnswersOnReview;
 
     @OneToMany(mappedBy = "quizSession")
     private List<QuizSessionQuestion> questions;

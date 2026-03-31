@@ -15,4 +15,7 @@ public interface CourseService {
 
     @GetMapping("/quiz-lessons")
     ApiResponse<QuizLessonResponse> getQuizLessonById(@RequestParam String lessonId);
+
+    @GetMapping("/video-lessons")
+    ApiResponse<com.cinx.learning.dto.response.VideoLessonResponse> getVideoLessonById(@RequestParam String lessonId);
 }

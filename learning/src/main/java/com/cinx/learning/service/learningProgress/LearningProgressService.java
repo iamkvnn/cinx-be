@@ -1,5 +1,6 @@
 package com.cinx.learning.service.learningProgress;
 
+import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseDetailResponse;
@@ -12,6 +13,9 @@ import com.cinx.learning.model.LearningItemProgress;
 import com.cinx.learning.repository.CourseProgressRepository;
 import com.cinx.learning.repository.LearningItemProgressRepository;
 import com.cinx.learning.service.course.CourseService;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
+import com.cinx.learning.service.learningPath.ILearningPathService;
+import com.cinx.learning.service.streak.IStreakService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,6 +31,9 @@ public class LearningProgressService implements ILearningProgressService{
     private final CourseProgressMapper courseProgressMapper;
     private final LearningItemProgressMapper learningItemProgressMapper;        
     private final CourseService courseService;
+    private final ILearningPathService learningPathService;
+    private final IStreakService streakService;
+    private final IDailyGoalService dailyGoalService;
 
     @Override
     public List<CourseProgressResponse> getCourseProgressByCourseIds(String userId, List<String> courseIds) {
@@ -80,29 +87,42 @@ public class LearningProgressService implements ILearningProgressService{
     @Transactional
     @Override
     public void updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request) {
-        learningItemProgressRepository.findByItemIdAndUserId(itemId, userId)
-                .ifPresentOrElse(
-                        (existingProgress) -> {
-                            learningItemProgressMapper.partialUpdate(existingProgress, request);
-                            if (request.isCompleted() != null && request.isCompleted() && !existingProgress.getIsCompleted()) {
-                                CourseProgress courseProgress = existingProgress.getCourseProgress();
-                                courseProgress.setCompletedItems(courseProgress.getCompletedItems() + 1);
-                                if (request.score() != null) {
-                                    courseProgress.setAvgScore(courseProgress.getAvgScore() == null
-                                            ? request.score()
-                                            : (courseProgress.getAvgScore() * (courseProgress.getCompletedItems() - 1) + request.score()) / courseProgress.getCompletedItems());
-                                }
-                                if (courseProgress.getCompletedItems().equals(courseProgress.getTotalItems())) {
-                                    courseProgress.setIsCompleted(true);
-                                    courseProgress.setCompletionTime(LocalDateTime.now());
-                                }
-                                courseProgressRepository.save(courseProgress);
-                            }
-                            learningItemProgressRepository.save(existingProgress);
-                        },
-                        () -> {
-                            throw new NotFoundException("Learning item progress not found");
-                        }
-                );
+        LearningItemProgress progress = learningItemProgressRepository
+                .findByItemIdAndUserId(itemId, userId)
+                .orElseThrow(() -> new NotFoundException("Learning item progress not found"));
+
+        CourseProgress course = progress.getCourseProgress();
+        Boolean oldCompleted = progress.getIsCompleted();
+        Double oldScore = progress.getScore();
+        Boolean newCompleted = request.isCompleted() != null ? request.isCompleted() : oldCompleted;
+        Double newScore = request.score();
+
+        int completedItems = course.getCompletedItems() != null ? course.getCompletedItems() : 0;
+        double totalScore = (course.getAvgScore() != null ? course.getAvgScore() : 0.0) * completedItems;
+
+        if (!Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
+            completedItems++;
+            if (newScore != null) totalScore += newScore;
+            progress.setIsCompleted(true);
+            progress.setScore(newScore);
+            streakService.updateStreakOnActivity(userId);
+            dailyGoalService.addXp(userId, 50);
+            learningPathService.updatePathProgress(userId, itemId);
+        } else if (Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
+            if (newScore == null) throw new BadRequestException("Score must be provided for completed items");
+            totalScore = totalScore - (oldScore != null ? oldScore : 0.0) + newScore;
+            progress.setScore(newScore);
+        }
+
+        course.setCompletedItems(completedItems);
+        course.setAvgScore(completedItems > 0 ? totalScore / completedItems : 0.0);
+
+        if (course.getTotalItems() != null && completedItems == course.getTotalItems()) {
+            course.setIsCompleted(true);
+            course.setCompletionTime(LocalDateTime.now());
+        }
+
+        learningItemProgressRepository.save(progress);
+        courseProgressRepository.save(course);
     }
 }

@@ -75,4 +75,11 @@ public class CourseController {
                 new ApiResponse<>(true, "Course updated successfully", courseService.updateCourse(courseId, request))
         );
     }
+
+    @Operation(summary = "Internal API to update course rating", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{id}/update-rating")
+    public ResponseEntity<ApiResponse<Void>> updateCourseRating(@PathVariable("id") String courseId, @RequestParam Double rating) {
+        courseService.updateCourseRating(courseId, rating);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Rating updated successfully", null));
+    }
 }

@@ -8,6 +8,9 @@ public record QuizSessionQuestionResponse(
         String questionId,
         QuizQuestionType questionType,
         Integer questionOrder,
-        String userAnswer
+        String userAnswer,
+        String correctAnswer,
+        Boolean isCorrect,
+        Short score
 ) {
 }

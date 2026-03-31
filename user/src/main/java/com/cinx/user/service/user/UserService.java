@@ -7,12 +7,16 @@ import com.cinx.common.exception.NotFoundException;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.mapper.UserMapper;
 import com.cinx.user.model.User;
+import com.cinx.user.model.UserDeviceToken;
 import com.cinx.user.repository.UserRepository;
+import com.cinx.user.repository.UserDeviceTokenRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import java.util.Optional;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -27,6 +31,7 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class UserService implements IUserService {
     private final UserRepository userRepository;
+    private final UserDeviceTokenRepository userDeviceTokenRepository;
     private final UserMapper userMapper;
 
     private User getOrThrowByEmail(String email) {
@@ -120,6 +125,44 @@ public class UserService implements IUserService {
     @Override
     public List<UserDto> findByIds(List<String> ids) {
         return userRepository.findAllByUserIdIn(ids).stream().map(userMapper::toDto).toList();
+    }
+
+    @Override
+    public void saveDeviceToken(String userId, com.cinx.user.dto.request.DeviceTokenRequest request) {
+        Optional<UserDeviceToken> existingToken = userDeviceTokenRepository.findByFcmToken(request.fcmToken());
+        if (existingToken.isPresent()) {
+            UserDeviceToken token = existingToken.get();
+            if (!token.getUserId().equals(userId)) {
+                // Token adopted by new user
+                token.setUserId(userId);
+                userDeviceTokenRepository.save(token);
+            }
+        } else {
+            UserDeviceToken newToken = UserDeviceToken.builder()
+                .userId(userId)
+                .fcmToken(request.fcmToken())
+                .deviceInfo(request.deviceInfo())
+                .build();
+            userDeviceTokenRepository.save(newToken);
+        }
+    }
+
+    @Override
+    public List<String> getUserTokens(String userId) {
+        return userDeviceTokenRepository.findByUserId(userId).stream()
+                .map(UserDeviceToken::getFcmToken)
+                .toList();
+    }
+
+    @Override
+    @Transactional
+    public UserDto addXp(String userId, Integer xpAmount) {
+        User user = getOrThrowByUserId(userId);
+        if (user.getXp() == null) {
+            user.setXp(0);
+        }
+        user.setXp(user.getXp() + xpAmount);
+        return userMapper.toDto(userRepository.save(user));
     }
 
     private String getFileExtension(String fileName) {

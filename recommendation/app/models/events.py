@@ -1,6 +1,22 @@
 from pydantic import BaseModel
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
+
+
+class LessonPayload(BaseModel):
+    id: str
+    title: str
+    lessonType: Optional[str] = None # 'video', 'article', 'quiz', 'assignment'
+    orderIndex: int
+    duration: Optional[int] = 0
+    description: Optional[str] = None
+
+class SectionPayload(BaseModel):
+    id: str
+    title: str
+    description: Optional[str] = None
+    orderIndex: int
+    lessons: List[LessonPayload] = []
 
 
 class CoursePayload(BaseModel):
@@ -16,6 +32,7 @@ class CoursePayload(BaseModel):
     isPublished: bool = False
     isInSubscription: bool = False
     duration: Optional[int] = None
+    sections: List[SectionPayload] = []
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
 

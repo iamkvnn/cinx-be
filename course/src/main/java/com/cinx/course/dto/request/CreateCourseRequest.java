@@ -11,6 +11,8 @@ public record CreateCourseRequest (
         Boolean isPublished,
         Boolean isInSubscription,
         Long duration,
+        Boolean hasCertificate,
+        String certificateTitle,
         List<CreateSectionRequest> sections
 ) {
 }

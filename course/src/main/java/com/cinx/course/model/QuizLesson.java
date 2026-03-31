@@ -20,6 +20,12 @@ public class QuizLesson {
     private Integer duration;
     private Integer numberOfQuestionPerQuizSession;
     private Integer maxAttempt;
+    
+    @Builder.Default
+    private Boolean isReviewAllowed = false;
+    
+    @Builder.Default
+    private Boolean isShowAnswersOnReview = false;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)

@@ -49,4 +49,11 @@ public class RabbitMQConfig {
                 .to(deadLetterExchange())
                 .with("learning.enrollment.dead");
     }
+
+    @Bean
+    public TopicExchange learningEventsExchange() {
+        return ExchangeBuilder.topicExchange("learning.events.exchange")
+                .durable(true)
+                .build();
+    }
 }
