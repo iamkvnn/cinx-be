@@ -13,7 +13,7 @@ import java.util.List;
 public interface ICourseService {
     CourseDetailResponse getCourseById(String courseId);
     List<CourseResponse> getCourseByIds(List<String> courseIds);
-    Page<CourseResponse> getAllCourses(String query, String categoryId, Pageable pageable);
+    Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, Pageable pageable);
     CourseResponse createCourse(CreateCourseRequest request);
     CourseResponse updateCourse(String courseId, UpdateCourseRequest request);
     void updateCourseRating(String courseId, Double rating);

@@ -38,12 +38,11 @@ public class CourseController {
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getAllCourses(
             @Valid @ModelAttribute PaginatedApiQuery apiQuery,
-            @RequestParam(required = false) String categoryId
+            @RequestParam(required = false) String categoryId,
+            @RequestParam(required = false) String instructorId
     ) {
-        Page<CourseResponse> courses = courseService.getAllCourses(apiQuery.getQuery(), categoryId, apiQuery.toPageable());
-        return ResponseEntity.ok().body(
-                PaginationWrapper.wrap(courses)
-        );
+        Page<CourseResponse> courses = courseService.getAllCourses(apiQuery.getQuery(), categoryId, instructorId, apiQuery.toPageable());
+        return ResponseEntity.ok(PaginationWrapper.wrap(courses));
     }
 
     @GetMapping("/{id}")
