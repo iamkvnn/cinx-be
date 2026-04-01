@@ -1,6 +1,7 @@
 package com.cinx.auth.service.userProfile;
 
 import com.cinx.auth.dto.request.CreateUserProfileRequest;
+import com.cinx.common.dto.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -13,5 +14,5 @@ public interface IUserProfileService {
     void createUser(@RequestBody CreateUserProfileRequest user);
 
     @GetMapping("/users/{userId}/instructor-verified")
-    boolean checkInstructorVerified(@PathVariable String userId);
+    ApiResponse<Boolean> checkInstructorVerified(@PathVariable String userId);
 }
