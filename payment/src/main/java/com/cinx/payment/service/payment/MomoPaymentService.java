@@ -98,6 +98,7 @@ public class MomoPaymentService extends PaymentTemplate {
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }
+        System.out.println("Momo request: " + request);
         String response = momoConfig.sendToMomo(request);
         System.out.println("Momo response: " + response);
         if (response == null) {

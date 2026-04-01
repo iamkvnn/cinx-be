@@ -105,6 +105,7 @@ public class SectionService implements ISectionService{
                 .title(lessonRequest.title())
                 .duration(lessonRequest.duration())
                 .orderIndex(lessonRequest.orderIndex())
+                .lessonType(lessonRequest.lessonType())
                 .section(section)
                 .build();
     }

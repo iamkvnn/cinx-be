@@ -57,6 +57,21 @@ public class CertificateController {
         ));
     }
 
+    @Operation(summary = "Get all certificate requests", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/requests")
+    public ResponseEntity<PaginatedApiResponse<CertificateRequestResponse>> getAllRequests(
+            @RequestParam(required = false) CertificateStatus status,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size
+    ) {
+        Page<CertificateRequestResponse> result = certificateService.getAllRequests(status, page, size);
+        return ResponseEntity.ok(new PaginatedApiResponse<>(
+                true, "Success",
+                result.getContent(),
+                new com.cinx.common.dto.PaginatedMetadata(result.getNumber() + 1, size, result.getTotalElements(), result.getTotalPages())
+        ));
+    }
+
     @Operation(summary = "Approve certificate request (For Instructor)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/requests/{requestId}/approve")
     public ResponseEntity<ApiResponse<CertificateRequestResponse>> approveCertificate(@PathVariable String requestId) {
