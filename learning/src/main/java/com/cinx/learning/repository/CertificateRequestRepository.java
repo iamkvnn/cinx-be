@@ -15,5 +15,6 @@ public interface CertificateRequestRepository extends JpaRepository<CertificateR
     Optional<CertificateRequest> findByUserIdAndCourseId(String userId, String courseId);
     Page<CertificateRequest> findByCourseId(String courseId, Pageable pageable);
     Page<CertificateRequest> findByCourseIdAndStatus(String courseId, CertificateStatus status, Pageable pageable);
+    Page<CertificateRequest> findByStatus(CertificateStatus status, Pageable pageable);
     List<CertificateRequest> findByUserIdAndStatus(String userId, CertificateStatus status);
 }

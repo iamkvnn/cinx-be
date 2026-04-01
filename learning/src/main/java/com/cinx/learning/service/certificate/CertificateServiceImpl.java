@@ -73,6 +73,16 @@ public class CertificateServiceImpl implements ICertificateService {
     }
 
     @Override
+    public Page<CertificateRequestResponse> getAllRequests(CertificateStatus status, int page, int size) {
+        if (status != null) {
+            return certificateRequestRepository.findByStatus(status, PageRequest.of(page - 1, size))
+                    .map(certificateRequestMapper::toDto);
+        }
+        return certificateRequestRepository.findAll(PageRequest.of(page - 1, size))
+                .map(certificateRequestMapper::toDto);
+    }
+
+    @Override
     @Transactional
     public CertificateRequestResponse approveCertificate(String requestId) {
         CertificateRequest request = certificateRequestRepository.findById(requestId)
