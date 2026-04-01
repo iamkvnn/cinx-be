@@ -47,6 +47,7 @@ public class PaymentController {
 
     @PostMapping("/momo-callback")
     public ResponseEntity<ApiResponse<Void>> handleMoMoCallback(@RequestBody Map<String, String> response) {
+        System.out.println("MoMo callback received: " + response);
         factory.getPaymentService(PaymentMethod.MOMO).handleCallback(response);
         return ResponseEntity.status(204).build();
     }
