@@ -74,7 +74,7 @@ public class AuthenticationService implements IAuthenticationService {
         if (user.getIsVerified() == null || !user.getIsVerified()) {
             throw new BadRequestException("User email is not verified");
         }
-        if (user.getRole() == Role.INSTRUCTOR && !userProfileService.checkInstructorVerified(user.getId())) {
+        if (user.getRole() == Role.INSTRUCTOR && !userProfileService.checkInstructorVerified(user.getId()).data()) {
             throw new BadRequestException("Instructor account is not verified by admin");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
