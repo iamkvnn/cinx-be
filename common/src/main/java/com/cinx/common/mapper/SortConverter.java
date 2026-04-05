@@ -1,38 +1,21 @@
-package com.cinx.common.dto;
+package com.cinx.common.mapper;
 
 import com.cinx.common.exception.BadRequestException;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.validation.constraints.Max;
-import jakarta.validation.constraints.Min;
-import lombok.Data;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Data
-public class PaginatedApiQuery {
-    @Min(1)
-    private int page = 1;
-    @Min(1) @Max(1000)
-    private int size = 10;
-    private String query;
-    private String sort;
+public class SortConverter {
 
-    public static PaginatedApiQuery of(int page, int size, String query, String sort) {
-        PaginatedApiQuery apiQuery = new PaginatedApiQuery();
-        apiQuery.setPage(page);
-        apiQuery.setSize(size);
-        apiQuery.setQuery(query);
-        apiQuery.setSort(sort);
-        return apiQuery;
-    }
-
-    public Pageable toPageable() {
+    /**
+     * Expects a JSON string in the format: {"field1": "ASC", "field2": "DESC"}
+     * Returns a Sort object that can be used in Spring Data queries.
+     */
+    public static Sort toSort(String sort) {
         Sort s = Sort.unsorted();
         if (sort != null && !sort.isBlank()) {
             ObjectMapper mapper = new ObjectMapper();
@@ -47,6 +30,6 @@ public class PaginatedApiQuery {
                     .collect(Collectors.collectingAndThen(Collectors.toList(), Sort::by));
         }
 
-        return PageRequest.of(page - 1, size, s);
+        return s;
     }
 }

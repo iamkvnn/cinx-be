@@ -18,5 +18,6 @@ public class ArticleLesson {
     @JoinColumn(name = "lessonId")
     private Lesson lesson;
 
+    @Column(length = 10000)
     private String content;
 }

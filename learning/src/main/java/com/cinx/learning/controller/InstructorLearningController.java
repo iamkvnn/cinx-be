@@ -49,8 +49,10 @@ public class InstructorLearningController {
     @GetMapping("/assignments/{assignmentId}/submissions")
     public ResponseEntity<PaginatedApiResponse<AssignmentSubmissionResponse>> getAssignmentSubmissions(
             @PathVariable String assignmentId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort) {
         Page<AssignmentSubmissionResponse> submissions = assignmentService.getAssignmentSubmissions(assignmentId, page, size);
         return ResponseEntity.ok(PaginationWrapper.wrap(submissions));
     }

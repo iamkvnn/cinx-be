@@ -22,7 +22,12 @@ public class NotificationController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<UserNotificationResponse>> getNotifications(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<PaginatedApiResponse<UserNotificationResponse>> getNotifications(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
+    ) {
         return ResponseEntity.ok(PaginationWrapper.wrap(notificationService.getNotifications(page, size)));
     }
 

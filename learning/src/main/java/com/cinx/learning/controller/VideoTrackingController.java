@@ -24,7 +24,9 @@ public class VideoTrackingController {
     public ResponseEntity<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> getVideoLessonTrackingHistories(
             @RequestParam String videoLessonId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size) {
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort) {
         return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(videoLessonId, page, size)));
     }
 

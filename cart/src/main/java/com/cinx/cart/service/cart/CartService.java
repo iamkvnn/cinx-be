@@ -9,7 +9,6 @@ import com.cinx.cart.service.course.CourseService;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.utils.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -58,6 +57,7 @@ public class CartService implements ICartService {
         );
     }
 
+    @Transactional
     @Override
     public void removeFromCart(String itemId) {
         String userId = AuthenticationUtil.extractUserId();
