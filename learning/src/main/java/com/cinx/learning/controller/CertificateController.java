@@ -47,7 +47,9 @@ public class CertificateController {
             @PathVariable String courseId,
             @RequestParam(required = false) CertificateStatus status,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
     ) {
         Page<CertificateRequestResponse> result = certificateService.getRequestsByCourse(courseId, status, page, size);
         return ResponseEntity.ok(new PaginatedApiResponse<>(
@@ -62,7 +64,9 @@ public class CertificateController {
     public ResponseEntity<PaginatedApiResponse<CertificateRequestResponse>> getAllRequests(
             @RequestParam(required = false) CertificateStatus status,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
     ) {
         Page<CertificateRequestResponse> result = certificateService.getAllRequests(status, page, size);
         return ResponseEntity.ok(new PaginatedApiResponse<>(

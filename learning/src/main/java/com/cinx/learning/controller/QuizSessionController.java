@@ -27,7 +27,9 @@ public class QuizSessionController {
             @RequestParam(required = false) String userId,
             @RequestParam String quizLessonId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
     ) {
         return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessions(userId, quizLessonId, page, size)));
     }
@@ -43,7 +45,9 @@ public class QuizSessionController {
     public ResponseEntity<PaginatedApiResponse<QuizSessionQuestionResponse>> getQuizSessionQuestions(
             @PathVariable String quizSessionId,
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
     ) {
         return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessionQuestions(quizSessionId, page, size)));
     }

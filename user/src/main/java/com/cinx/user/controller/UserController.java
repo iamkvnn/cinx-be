@@ -37,7 +37,9 @@ public class UserController {
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<UserDto>> getAllUsers(
             @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
     ) {
         return ResponseEntity.ok().body(
                 PaginationWrapper.wrap(userService.findAll(page, size))

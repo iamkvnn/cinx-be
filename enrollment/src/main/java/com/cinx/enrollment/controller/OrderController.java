@@ -22,8 +22,13 @@ public class OrderController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<OrderDetailResponse>> getOrders() {
-        Page<OrderDetailResponse> orders = orderService.getOrdersByUserId(1, 10);
+    public ResponseEntity<PaginatedApiResponse<OrderDetailResponse>> getOrders(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
+    ) {
+        Page<OrderDetailResponse> orders = orderService.getOrdersByUserId(page, size);
         return ResponseEntity.ok(PaginationWrapper.wrap(orders));
     }
 

@@ -18,35 +18,27 @@ public class ArticleLessonController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<ArticleLessonResponse>> getArticleByLessonId(@RequestParam String lessonId) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", articleService.getArticleByLessonId(lessonId))
-        );
+        return ResponseEntity.ok(ApiResponse.success("Success", articleService.getArticleByLessonId(lessonId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createArticleLesson(@RequestParam String lessonId, @RequestBody CreateArticleLessonRequest request) {
         articleService.createArticle(lessonId, request);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
+        return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
     public ResponseEntity<ApiResponse<?>> updateArticleLesson(@RequestParam String lessonId, @RequestBody CreateArticleLessonRequest request) {
         articleService.updateArticle(lessonId, request);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
+        return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
     public ResponseEntity<ApiResponse<?>> deleteArticleLesson(@RequestParam String lessonId) {
         articleService.deleteArticle(lessonId);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
+        return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 }

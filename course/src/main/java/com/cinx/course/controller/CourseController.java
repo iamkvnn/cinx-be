@@ -1,33 +1,21 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
-import com.cinx.common.dto.PaginatedApiQuery;
 import com.cinx.common.dto.PaginatedApiResponse;
-import com.cinx.common.dto.PaginatedMetadata;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.service.course.ICourseService;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
-import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
-import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
-import java.util.Map;
-import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/v1/courses")
@@ -37,11 +25,14 @@ public class CourseController {
 
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getAllCourses(
-            @Valid @ModelAttribute PaginatedApiQuery apiQuery,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort,
             @RequestParam(required = false) String categoryId,
             @RequestParam(required = false) String instructorId
     ) {
-        Page<CourseResponse> courses = courseService.getAllCourses(apiQuery.getQuery(), categoryId, instructorId, apiQuery.toPageable());
+        Page<CourseResponse> courses = courseService.getAllCourses(query, categoryId, instructorId, page, size, sort);
         return ResponseEntity.ok(PaginationWrapper.wrap(courses));
     }
 

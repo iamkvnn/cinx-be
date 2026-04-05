@@ -1,6 +1,7 @@
 package com.cinx.course.service.course;
 
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
@@ -18,6 +19,7 @@ import com.cinx.course.service.section.ISectionService;
 import com.cinx.course.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -60,7 +62,8 @@ public class CourseService implements ICourseService {
     }
 
     @Override
-    public Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, Pageable pageable) {
+    public Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, int page, int size, String sort) {
+        Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
         Page<Course> courses = courseRepository.findAll(query, categoryId, instructorId, pageable);
         Map<String, UserDto> instructorMap = userService.getInstructorsByIds(courses.stream().map(Course::getInstructorId).toList()).data()
                 .stream().collect(java.util.stream.Collectors.toMap(UserDto::userId, instructor -> instructor));

@@ -1,7 +1,6 @@
 package com.cinx.enrollment.controller;
 
 import com.cinx.common.dto.ApiResponse;
-import com.cinx.common.dto.PaginatedApiQuery;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.enrollment.dto.request.CreateVoucherRequest;
@@ -22,8 +21,13 @@ public class VoucherController {
     private final IVoucherService voucherService;
 
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<VoucherResponse>> getVouchers(@Valid @ModelAttribute PaginatedApiQuery query) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(voucherService.getVouchers(query)));
+    public ResponseEntity<PaginatedApiResponse<VoucherResponse>> getVouchers(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
+    ) {
+        return ResponseEntity.ok(PaginationWrapper.wrap(voucherService.getVouchers(page, size, query, sort)));
     }
 
     @GetMapping("/{id}")
