@@ -1,6 +1,7 @@
 package com.cinx.course.model;
 
 import com.cinx.common.model.AuditableEntity;
+import com.cinx.course.consts.CourseStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -31,6 +32,7 @@ public class Course extends AuditableEntity {
     @Builder.Default
     private Boolean hasCertificate = false;
     private String certificateTitle;
+    private CourseStatus status;
 
     @ManyToOne
     private Category category;

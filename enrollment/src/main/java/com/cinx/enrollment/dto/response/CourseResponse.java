@@ -7,7 +7,7 @@ public record CourseResponse(
         String id,
         String title,
         String description,
-        String category,
+        CategoryResponse category,
         InstructorResponse instructor,
         List<CourseImageResponse> images,
         Long price,

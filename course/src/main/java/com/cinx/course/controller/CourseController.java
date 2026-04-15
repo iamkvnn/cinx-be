@@ -3,10 +3,13 @@ package com.cinx.course.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.request.RejectCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
+import com.cinx.course.dto.response.RejectCourseResponse;
 import com.cinx.course.service.course.ICourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -29,10 +32,24 @@ public class CourseController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort,
+            @RequestParam(required = false) Integer rating,
+            @RequestParam(required = false) Integer priceFrom,
+            @RequestParam(required = false) Integer priceTo,
+            @RequestParam(required = false) CourseStatus status,
             @RequestParam(required = false) String categoryId,
             @RequestParam(required = false) String instructorId
     ) {
-        Page<CourseResponse> courses = courseService.getAllCourses(query, categoryId, instructorId, page, size, sort);
+        Page<CourseResponse> courses = courseService.getAllCourses(
+                query,
+                categoryId,
+                instructorId,
+                rating,
+                priceFrom,
+                priceTo,
+                status,
+                page,
+                size,
+                sort);
         return ResponseEntity.ok(PaginationWrapper.wrap(courses));
     }
 
@@ -63,6 +80,27 @@ public class CourseController {
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable("id") String courseId, @RequestBody UpdateCourseRequest request) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course updated successfully", courseService.updateCourse(courseId, request))
+        );
+    }
+
+    @PostMapping("/{id}/approve")
+    public ResponseEntity<ApiResponse<CourseResponse>> approveCourse(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course approved successfully", courseService.approveCourse(courseId))
+        );
+    }
+
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<ApiResponse<CourseResponse>> rejectCourse(@PathVariable("id") String courseId, @RequestBody RejectCourseRequest request) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course rejected successfully", courseService.rejectCourse(courseId, request))
+        );
+    }
+
+    @GetMapping("/{id}/reject-reason")
+    public ResponseEntity<ApiResponse<RejectCourseResponse>> getRejectReason(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Reject reason fetched successfully", courseService.getRejectReason(courseId))
         );
     }
 
