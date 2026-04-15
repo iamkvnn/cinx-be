@@ -6,6 +6,7 @@ import jakarta.validation.constraints.NotBlank;
 public record UpdateProfileRequest(
         @NotBlank(message = "Họ và tên không được để trống")
         String name,
-        Gender gender
+        Gender gender,
+        Boolean isReceivePushNotification
 ) {
 }

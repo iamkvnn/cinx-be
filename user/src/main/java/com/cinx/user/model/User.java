@@ -2,10 +2,7 @@ package com.cinx.user.model;
 
 import com.cinx.user.consts.Gender;
 import com.cinx.user.consts.Role;
-import jakarta.persistence.Entity;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
+import jakarta.persistence.*;
 import lombok.*;
 
 @Entity
@@ -24,6 +21,9 @@ public class User {
     private Role role;
     private Boolean isInstructorVerified;
     private String avatarUrl;
+    @Builder.Default
+    @Column(columnDefinition = "boolean default false")
+    private Boolean isReceivePushNotification = false;
 
     @Builder.Default
     private Integer xp = 0;
