@@ -146,4 +146,12 @@ public class VNPayPaymentService extends PaymentTemplate {
     protected void updatePayment(Payment payment) {
         vnPayPaymentRepository.save((VNPayPayment) payment);
     }
+
+    @Override
+    public PaymentResponse cancelPayment(String orderId) {
+            VNPayPayment payment = vnPayPaymentRepository.findByOrderId(orderId)
+                    .orElseThrow(() -> new RuntimeException("Payment not found for orderId: " + orderId));
+            payment.setStatus(PaymentStatus.CANCELLED);
+            return paymentMapper.toDto(vnPayPaymentRepository.save(payment));
+    }
 }

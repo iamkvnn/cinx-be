@@ -5,9 +5,6 @@ import com.cinx.payment.messaging.event.PaymentEvent;
 import com.cinx.payment.model.Payment;
 import lombok.RequiredArgsConstructor;
 
-import java.text.NumberFormat;
-import java.util.Currency;
-import java.util.Locale;
 import java.util.Map;
 
 @RequiredArgsConstructor
@@ -30,10 +27,4 @@ public abstract class PaymentTemplate implements IPaymentStrategyService{
     }
 
     protected abstract void updatePayment(Payment payment);
-
-    protected void sendNotification() {
-        Locale localeVN = Locale.forLanguageTag("vi-VN");
-        NumberFormat currencyFormatter = NumberFormat.getCurrencyInstance(localeVN);
-        currencyFormatter.setCurrency(Currency.getInstance("VND"));
-    }
 }

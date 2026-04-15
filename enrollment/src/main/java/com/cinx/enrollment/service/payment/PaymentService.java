@@ -6,6 +6,7 @@ import com.cinx.enrollment.consts.PaymentMethod;
 import com.cinx.enrollment.dto.response.PaymentResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -17,4 +18,7 @@ public interface PaymentService {
 
     @GetMapping("/ids")
     ApiResponse<List<PaymentResponse>> getPaymentByIds(@RequestParam List<String> orderIds);
+
+    @PutMapping("/cancel")
+    ApiResponse<PaymentResponse> cancelPayment(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod);
 }

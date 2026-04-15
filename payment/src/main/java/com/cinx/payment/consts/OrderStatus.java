@@ -1,7 +1,7 @@
 package com.cinx.payment.consts;
 
-public enum PaymentStatus {
-    PROCESSING,
+public enum OrderStatus {
+    PENDING,
     PAID,
     CANCELLED,
     REFUNDED

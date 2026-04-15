@@ -1,7 +1,7 @@
-package com.cinx.notification.messaging.event;
+package com.cinx.payment.messaging.event;
 
-import com.cinx.notification.consts.OrderStatus;
-import com.cinx.notification.consts.PaymentMethod;
+import com.cinx.payment.consts.OrderStatus;
+import com.cinx.payment.consts.PaymentMethod;
 import lombok.Data;
 
 import java.time.LocalDateTime;
