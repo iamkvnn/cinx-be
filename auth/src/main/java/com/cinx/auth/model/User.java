@@ -1,6 +1,7 @@
 package com.cinx.auth.model;
 
 import com.cinx.auth.consts.Role;
+import com.cinx.auth.consts.UserStatus;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -22,7 +23,7 @@ public class User {
     private String email;
     private String password;
     private Role role;
-    private Boolean isVerified;
+    private UserStatus status;
     private String otp;
     private LocalDateTime otpExpireAt;
 }

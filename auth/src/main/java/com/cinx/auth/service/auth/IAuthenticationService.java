@@ -9,6 +9,7 @@ public interface IAuthenticationService {
     void sendForgotPasswordOtp(String email);
     void sendChangePasswordOtp(String email);
     void sendChangeEmailOtp(String email);
+    TokenResponseDto authenticateWithGoogle(OAuthRequest request);
     TokenResponseDto authenticate(AuthRequestDto request);
     TokenResponseDto generateTokens(JWTPayload payload);
     TokenResponseDto refreshToken(String refreshToken);

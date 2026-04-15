@@ -1,8 +1,11 @@
 package com.cinx.auth.service.auth;
 
 import com.cinx.auth.consts.Role;
+import com.cinx.auth.consts.UserStatus;
 import com.cinx.auth.dto.*;
 import com.cinx.auth.dto.request.*;
+import com.cinx.auth.dto.response.GoogleProfileResponse;
+import com.cinx.auth.dto.response.GoogleTokenResponse;
 import com.cinx.auth.dto.response.TokenResponseDto;
 import com.cinx.auth.service.user.IUserService;
 import com.cinx.auth.service.userProfile.IUserProfileService;
@@ -40,6 +43,7 @@ public class AuthenticationService implements IAuthenticationService {
     private final IUserService userService;
     private final EmailQueueService emailQueueService;
     private final IUserProfileService userProfileService;
+    private final IGoogleAuthenticationService googleAuthenticationService;
 
     @Override
     public void sendVerifyOtp(String email) {
@@ -71,14 +75,25 @@ public class AuthenticationService implements IAuthenticationService {
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BadRequestException("Invalid email or password");
         }
-        if (user.getIsVerified() == null || !user.getIsVerified()) {
+        if (user.getStatus().equals(UserStatus.UNVERIFIED)) {
             throw new BadRequestException("User email is not verified");
+        }
+        if (user.getStatus().equals(UserStatus.BANNED)) {
+            throw new BadRequestException("User account is banned");
         }
         if (user.getRole() == Role.INSTRUCTOR && !userProfileService.checkInstructorVerified(user.getId()).data()) {
             throw new BadRequestException("Instructor account is not verified by admin");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
         return generateTokens(payload);
+    }
+
+    @Override
+    public TokenResponseDto authenticateWithGoogle(OAuthRequest request) {
+        GoogleTokenResponse tokenResponse = googleAuthenticationService.exchangeCodeForToken(request);
+        GoogleProfileResponse profileResponse = googleAuthenticationService.getGoogleUserProfile(tokenResponse.accessToken());
+        User user = userService.findOrCreateUserByGoogleProfile(profileResponse);
+        return generateTokens(new JWTPayload(user.getId(), user.getRole().name()));
     }
 
     @Override
@@ -129,6 +144,9 @@ public class AuthenticationService implements IAuthenticationService {
             }
             String userId = signedJWT.getJWTClaimsSet().getSubject();
             User user = userService.findById(userId);
+            if (user.getStatus().equals(UserStatus.BANNED)) {
+                throw new BadRequestException("User account is banned");
+            }
             JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
             return generateTokens(payload);
         }
