@@ -1,5 +1,6 @@
 package com.cinx.enrollment.messaging.event;
 
+import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.consts.PaymentMethod;
 import lombok.Data;
 
@@ -12,5 +13,6 @@ public class OrderEvent {
     private Long totalPrice;
     private Long discounted;
     private LocalDateTime orderDate;
+    private OrderStatus status;
     private PaymentMethod paymentMethod;
 }

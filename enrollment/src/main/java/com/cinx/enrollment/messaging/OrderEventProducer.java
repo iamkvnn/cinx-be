@@ -14,4 +14,9 @@ public class OrderEventProducer {
         System.out.println("Publishing OrderEvent: " + event);
         rabbitTemplate.convertAndSend("order.events.exchange", "order.order.created", event);
     }
+
+    public void publishOrderCancelledEvent(OrderEvent event) {
+        System.out.println("Publishing OrderEvent: " + event);
+        rabbitTemplate.convertAndSend("order.events.exchange", "order.order.cancelled", event);
+    }
 }

@@ -1,5 +1,6 @@
 package com.cinx.course.repository;
 
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.model.Course;
 import org.springframework.data.domain.Page;
@@ -20,11 +21,19 @@ public interface CourseRepository extends JpaRepository<Course, String> {
                 OR c.description LIKE %:query%)
             AND (:categoryId IS NULL OR cat.id = :categoryId)
             AND (:instructorId IS NULL OR c.instructorId = :instructorId)
+            AND (:rating IS NULL OR c.rating >= :rating)
+            AND (:priceFrom IS NULL OR c.price >= :priceFrom)
+            AND (:priceTo IS NULL OR c.price <= :priceTo)
+            AND (:status IS NULL OR c.status = :status)
     """)
     Page<Course> findAll(
             @Param("query") String query,
             @Param("categoryId") String categoryId,
             @Param("instructorId") String instructorId,
+            @Param("rating") Integer rating,
+            @Param("priceFrom") Integer priceFrom,
+            @Param("priceTo") Integer priceTo,
+            @Param("status") CourseStatus status,
             Pageable pageable
     );
 

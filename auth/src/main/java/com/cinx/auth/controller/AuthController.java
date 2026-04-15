@@ -35,6 +35,27 @@ public class AuthController {
         );
     }
 
+    @PostMapping("/login/google")
+    public ResponseEntity<ApiResponse<TokenResponseDto>> loginWithGoogle(
+            @Valid @RequestBody OAuthRequest request
+    ) {
+        TokenResponseDto authResponse = authenticationService.authenticateWithGoogle(request);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "User logged in with Google successfully", authResponse)
+        );
+    }
+
+    @PostMapping("/{userId}/ban")
+    public ResponseEntity<ApiResponse<?>> banUser(
+            @PathVariable String userId,
+            @Valid @RequestBody BanUserRequest request
+    ) {
+        userService.banUser(userId, request);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "User banned successfully", null)
+        );
+    }
+
     @PostMapping("/refresh-token")
     public ResponseEntity<ApiResponse<TokenResponseDto>> refreshToken(
             @Valid @RequestBody RefreshTokenRequest request
@@ -52,6 +73,16 @@ public class AuthController {
         userService.verifyEmail(request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "User verified successfully", null)
+        );
+    }
+
+    @PostMapping("/{userId}/unban")
+    public ResponseEntity<ApiResponse<?>> unbanUser(
+            @PathVariable String userId
+    ) {
+        userService.unbanUser(userId);
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "User unbanned successfully", null)
         );
     }
 

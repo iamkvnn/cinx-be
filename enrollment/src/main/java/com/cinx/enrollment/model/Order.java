@@ -1,6 +1,7 @@
 package com.cinx.enrollment.model;
 
 import com.cinx.common.model.BaseEntity;
+import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.consts.PaymentMethod;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,6 +22,7 @@ public class Order extends BaseEntity {
     private Long totalPrice;
     private Long discounted;
     private LocalDateTime orderDate;
+    private OrderStatus status;
     private PaymentMethod paymentMethod;
     private String voucherId;
 
@@ -28,6 +30,6 @@ public class Order extends BaseEntity {
     @JoinColumn(name = "voucher_id", insertable = false, updatable = false)
     private Voucher voucher;
 
-    @OneToMany(mappedBy = "orderId", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "orderId")
     private List<OrderItem> items;
 }

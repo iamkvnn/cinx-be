@@ -23,46 +23,10 @@ import java.util.List;
 @RequestMapping("/api/v1/instructor")
 public class InstructorLearningController {
     private final IInstructorService instructorService;
-    private final IAssignmentService assignmentService;
-
-    @Operation(summary = "Get overview progress of students in a course", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/courses/{courseId}/progress")
-    public ResponseEntity<ApiResponse<List<CourseProgressResponse>>> getCourseProgress(@PathVariable String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", instructorService.getCourseProgressByCourseId(courseId)));
-    }
-
-    @Operation(summary = "Get detailed progress of a student in a course", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/courses/{courseId}/students/{studentId}/progress")
-    public ResponseEntity<ApiResponse<List<LearningItemProgressResponse>>> getStudentProgress(
-            @PathVariable String courseId,
-            @PathVariable String studentId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", instructorService.getStudentProgressByCourseIdAndStudentId(courseId, studentId)));
-    }
 
     @Operation(summary = "Get analytical statistics for a quiz", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/quizzes/{quizId}/analytics")
     public ResponseEntity<ApiResponse<List<QuizQuestionAnalyticsResponse>>> getQuizAnalytics(@PathVariable String quizId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", instructorService.getQuizAnalytics(quizId)));
-    }
-
-    @Operation(summary = "Get submissions for an assignment", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/assignments/{assignmentId}/submissions")
-    public ResponseEntity<PaginatedApiResponse<AssignmentSubmissionResponse>> getAssignmentSubmissions(
-            @PathVariable String assignmentId,
-            @RequestParam(defaultValue = "1") int page,
-            @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String query,
-            @RequestParam(required = false) String sort) {
-        Page<AssignmentSubmissionResponse> submissions = assignmentService.getAssignmentSubmissions(assignmentId, page, size);
-        return ResponseEntity.ok(PaginationWrapper.wrap(submissions));
-    }
-
-    @Operation(summary = "Grade an assignment submission", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/assignments/submissions/{submissionId}/grade")
-    public ResponseEntity<ApiResponse<Void>> scoreAssignmentSubmission(
-            @PathVariable String submissionId,
-            @RequestParam Double score) {
-        assignmentService.scoreAssignmentSubmission(submissionId, score);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Graded successfully", null));
     }
 }

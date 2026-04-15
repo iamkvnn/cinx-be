@@ -1,20 +1,21 @@
 package com.cinx.course.service.course;
 
+import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.request.RejectCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
-import com.cinx.course.dto.response.CourseAggregate;
-import com.cinx.course.dto.response.CourseDetailResponse;
-import com.cinx.course.dto.response.CourseResponse;
-import com.cinx.course.dto.response.UserDto;
+import com.cinx.course.dto.response.*;
 import com.cinx.course.mapper.CourseMapper;
 import com.cinx.course.messaging.CourseEventProducer;
 import com.cinx.course.messaging.event.CourseEvent;
 import com.cinx.course.model.*;
 import com.cinx.course.repository.CategoryRepository;
 import com.cinx.course.repository.CourseRepository;
+import com.cinx.course.repository.RejectCourseReasonRepository;
 import com.cinx.course.service.section.ISectionService;
 import com.cinx.course.service.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +34,7 @@ import java.util.Map;
 public class CourseService implements ICourseService {
     private final CourseRepository courseRepository;
     private final CategoryRepository categoryRepository;
+    private final RejectCourseReasonRepository rejectCourseReasonRepository;
     private final ISectionService sectionService;
     private final CourseMapper courseMapper;
     private final CourseEventProducer courseEventProducer;
@@ -43,7 +45,6 @@ public class CourseService implements ICourseService {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         course.setSections(sectionService.getSectionsByCourseId(courseId));
         UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
-        System.out.println("Instructor: " + instructor);
         return courseMapper.toDetailDto(new CourseAggregate(
                 course,
                 instructor
@@ -62,9 +63,17 @@ public class CourseService implements ICourseService {
     }
 
     @Override
-    public Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, int page, int size, String sort) {
+    public Page<CourseResponse> getAllCourses(
+            String query,
+            String categoryId,
+            String instructorId,
+            Integer rating,
+            Integer priceFrom,
+            Integer priceTo,
+            CourseStatus status,
+            int page, int size, String sort) {
         Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
-        Page<Course> courses = courseRepository.findAll(query, categoryId, instructorId, pageable);
+        Page<Course> courses = courseRepository.findAll(query, categoryId, instructorId, rating, priceFrom, priceTo, status, pageable);
         Map<String, UserDto> instructorMap = userService.getInstructorsByIds(courses.stream().map(Course::getInstructorId).toList()).data()
                 .stream().collect(java.util.stream.Collectors.toMap(UserDto::userId, instructor -> instructor));
         return courses.map(course -> courseMapper.toDto(new CourseAggregate(    
@@ -97,6 +106,7 @@ public class CourseService implements ICourseService {
         course.setCategory(category);
         course.setInstructorId(userId);
         course.setEnrollmentCount(0L);
+        course.setStatus(request.isPublished() ? CourseStatus.WAITING_APPROVAL : CourseStatus.DRAFT);
         course.setDiscountRate((long) ((course.getPrice() - course.getDiscountedPrice()) / (double) course.getPrice() * 100));
         return course;
     }
@@ -106,18 +116,66 @@ public class CourseService implements ICourseService {
     public CourseResponse updateCourse(String courseId, UpdateCourseRequest request) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         courseMapper.partialUpdate(course, request);
+        course.setStatus(request.isPublished() ? CourseStatus.WAITING_APPROVAL : CourseStatus.DRAFT);
+        if (request.isPublished()) {
+            rejectCourseReasonRepository.deleteByCourseId(courseId);
+        }
+        if (request.price() != null && request.discountedPrice() != null) {
+            course.setDiscountRate((long) ((course.getPrice() - course.getDiscountedPrice()) / (double) course.getPrice() * 100));
+        }
         course.setCategory(categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.categoryId())));
         courseRepository.save(course);
         course.setSections(sectionService.updateSections(course, request.sections()));
         UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
         CourseAggregate aggregate = new CourseAggregate(course, instructor);
-        
+
         courseEventProducer.publishCourseUpdatedEvent(new CourseEvent(
                 courseMapper.toDetailDto(aggregate),
                 LocalDateTime.now()
         ));
         return courseMapper.toDto(aggregate);
+    }
+
+    @Override
+    public CourseResponse approveCourse(String courseId) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() != CourseStatus.WAITING_APPROVAL) {
+            throw new BadRequestException("Only courses waiting for approval can be approved");
+        }
+        course.setStatus(CourseStatus.PUBLISHED);
+        return courseMapper.toDto(new CourseAggregate(
+                courseRepository.save(course),
+                userService.getInstructorById(course.getInstructorId()).data()
+        ));
+    }
+
+    @Transactional
+    @Override
+    public CourseResponse rejectCourse(String courseId, RejectCourseRequest request) {
+        if (rejectCourseReasonRepository.findByCourseId(courseId).isPresent()) {
+            throw new BadRequestException("Course has already been rejected");
+        }
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        course.setStatus(CourseStatus.REJECTED);
+        rejectCourseReasonRepository.save(RejectCourseReason.builder()
+                .courseId(courseId)
+                .reason(request.reason())
+                .build());
+        return courseMapper.toDto(new CourseAggregate(
+                courseRepository.save(course),
+                userService.getInstructorById(course.getInstructorId()).data()
+        ));
+    }
+
+    @Override
+    public RejectCourseResponse getRejectReason(String courseId) {
+        RejectCourseReason reason = rejectCourseReasonRepository.findByCourseId(courseId)
+                .orElseThrow(() -> new NotFoundException("Reject reason not found for course id: " + courseId));
+        return new RejectCourseResponse(
+                reason.getCourseId(),
+                reason.getReason()
+        );
     }
 
     @Override

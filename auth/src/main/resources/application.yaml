@@ -13,8 +13,8 @@ spring:
   mail:
     host: smtp.gmail.com
     port: 587
-    username: ${SPRING_MAIL_USERNAME:shinyjewelry39@gmail.com}
-    password: ${SPRING_MAIL_PASSWORD:juxx vpev tszm nrlf}
+    username: ${SPRING_MAIL_USERNAME:iamkvnn.cinehub@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:bqfg xerx gfaw bcrb}
     properties:
       mail:
         smtp:
@@ -43,5 +43,13 @@ eureka:
   client:
     serviceUrl:
       defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
+
+google:
+  token-uri: ${GOOGLE_TOKEN_URI:https://oauth2.googleapis.com/token}
+  mobile-redirect-uri: ${GOOGLE_MOBILE_REDIRECT_URI:com.example.app:/oauth2redirect}
+  web-redirect-uri: ${GOOGLE_WEB_REDIRECT_URI:http://localhost:5173/oauth2/callback}
+  user-info-uri: ${GOOGLE_USER_INFO_URL:https://www.googleapis.com/oauth2/v3/userinfo}
+  client-id: ${GOOGLE_CLIENT_ID:YOUR_GOOGLE_CLIENT_ID}
+  client-secret: ${GOOGLE_CLIENT_SECRET:YOUR_GOOGLE_CLIENT_SECRET}
 
 gateway.url: ${GATEWAY_URL:http://localhost:9090}

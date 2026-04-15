@@ -10,6 +10,7 @@ public interface ILearningProgressService {
     List<CourseProgressResponse> getCourseProgressByCourseIds(String userId, List<String> courseIds);
     CourseProgressResponse getCourseProgress(String userId, String courseId);
     List<LearningItemProgressResponse> getLearningItemProgressByCourseId(String userId, String courseId);
+    List<CourseProgressResponse> getCourseProgressByCourseId(String courseId);
     void createCourseProgress(String userId, String courseId);
     void updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request);
 }

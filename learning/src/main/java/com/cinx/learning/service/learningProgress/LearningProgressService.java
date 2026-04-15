@@ -22,6 +22,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -55,6 +56,14 @@ public class LearningProgressService implements ILearningProgressService{
         return learningItemProgressRepository.findAllByUserIdAndCourseId(userId, courseId)
                 .stream()
                 .map(learningItemProgressMapper::toDto)
+                .toList();
+    }
+
+    @Override
+    public List<CourseProgressResponse> getCourseProgressByCourseId(String courseId) {
+        return courseProgressRepository.findAllByCourseId(courseId)
+                .stream()
+                .map(courseProgressMapper::toDto)
                 .toList();
     }
 

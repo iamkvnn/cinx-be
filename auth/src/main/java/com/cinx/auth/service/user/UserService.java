@@ -1,7 +1,9 @@
 package com.cinx.auth.service.user;
 
 import com.cinx.auth.consts.Role;
+import com.cinx.auth.consts.UserStatus;
 import com.cinx.auth.dto.request.*;
+import com.cinx.auth.dto.response.GoogleProfileResponse;
 import com.cinx.auth.model.User;
 import com.cinx.auth.repository.UserRepository;
 import com.cinx.auth.service.mail.EmailQueueService;
@@ -13,6 +15,7 @@ import com.cinx.common.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.Objects;
@@ -35,6 +38,7 @@ public class UserService implements IUserService {
         return userRepository.findByEmail(email).orElseThrow(() -> new NotFoundException("User not found with email: " + email));
     }
 
+    @Transactional
     @Override
     public void createUser(RegisterRequest dto) {
         if (userRepository.existsByEmail(dto.email())) {
@@ -49,11 +53,43 @@ public class UserService implements IUserService {
                 .email(dto.email())
                 .password(passwordEncoder.encode(dto.password()))
                 .role(dto.role())
-                .isVerified(false)
+                .status(UserStatus.UNVERIFIED)
                 .otp(otp)
                 .otpExpireAt(LocalDateTime.now().plusSeconds(90))
                 .build());
         userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.role(), dto.gender()));
+    }
+
+    @Transactional
+    @Override
+    public User findOrCreateUserByGoogleProfile(GoogleProfileResponse profile) {
+        return userRepository.findByEmail(profile.email())
+                .orElseGet(() -> {
+                    User savedUser = userRepository.save(User.builder()
+                            .email(profile.email())
+                            .password(null)
+                            .role(Role.USER)
+                            .status(UserStatus.ACTIVE)
+                            .build());
+                    userProfileService.createUser(new CreateUserProfileRequest(savedUser.getId(), profile.name(), profile.email(), Role.USER, null));
+                    return savedUser;
+                });
+    }
+
+    @Override
+    public User banUser(String userId, BanUserRequest request) {
+        User user = findById(userId);
+        user.setStatus(UserStatus.BANNED);
+        emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Thông báo tài khoản bị khóa", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()));
+        return userRepository.save(user);
+    }
+
+    @Override
+    public User unbanUser(String userId) {
+        User user = findById(userId);
+        user.setStatus(UserStatus.ACTIVE);
+        emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Thông báo tài khoản được mở khóa", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."));
+        return userRepository.save(user);
     }
 
     @Override
@@ -70,7 +106,7 @@ public class UserService implements IUserService {
     public void verifyEmail(VerifyEmailRequest request) {
         User user = findByEmail(request.email());
         verifyOtp(user, request.otp());
-        user.setIsVerified(true);
+        user.setStatus(UserStatus.ACTIVE);
         user.setOtp(null);
         user.setOtpExpireAt(null);
         userRepository.save(user);

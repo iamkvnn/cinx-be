@@ -2,7 +2,9 @@ package com.cinx.enrollment.service.order;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CartItemDto;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
 import com.cinx.enrollment.dto.response.*;
@@ -19,6 +21,7 @@ import com.cinx.enrollment.utils.OrderIdGenerator;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -40,9 +43,10 @@ public class OrderService implements IOrderService {
     private final IVoucherService voucherService;
 
     @Override
-    public Page<OrderDetailResponse> getOrdersByUserId(int page, int size) {
+    public Page<OrderDetailResponse> getOrdersByUserId(int page, int size, String query, String sort) {
+        Sort s = SortConverter.toSort(sort);
         String userId = AuthenticationUtil.extractUserId();
-        Page<Order> orders = orderRepository.findAllByUserId(userId, PageRequest.of(page - 1, size));
+        Page<Order> orders = orderRepository.findAllByUserIdAndQuery(userId, query, PageRequest.of(page - 1, size, s));
         List<String> orderIds = orders.stream().map(Order::getId).toList();
         Map<String, PaymentResponse> payments = paymentService.getPaymentByIds(orderIds).data().stream()
                 .collect(Collectors.toMap(PaymentResponse::orderId, p -> p));
@@ -63,7 +67,6 @@ public class OrderService implements IOrderService {
                 .map(o ->{
                     try {
                         PaymentResponse payment = paymentService.getPaymentByOrderId(o.getId(), o.getPaymentMethod()).data();
-                        System.out.println("Payment found for order " + o.getId() + ": " + payment);
                         return orderMapper.toDetailDto(new OrderAggregate(o, payment));
                     }
                     catch (Exception e) {
@@ -94,6 +97,7 @@ public class OrderService implements IOrderService {
                         .totalPrice(totalPrice)
                         .discounted(discounted)
                         .paymentMethod(request.paymentMethod())
+                        .status(OrderStatus.PENDING)
                         .voucherId(voucherResponse != null ? voucherResponse.id() : null)
                         .build()
         );
@@ -103,6 +107,32 @@ public class OrderService implements IOrderService {
         cartService.removeAllFromCartByIds(request.cartItems().stream().map(CartItemDto::id).toList());
         orderEventProducer.publishOrderCreatedEvent(orderMapper.toEvent(order));
         return orderMapper.toDto(order);
+    }
+
+    @Transactional
+    @Override
+    public OrderDetailResponse updateOrderStatus(String orderId, OrderStatus status) {
+        return orderRepository.findById(orderId)
+                .map(order -> {
+                    order.setStatus(status);
+                    orderRepository.save(order);
+                    if (status == OrderStatus.CANCELLED) {
+                        paymentService.cancelPayment(order.getId(), order.getPaymentMethod());
+                        orderEventProducer.publishOrderCancelledEvent(orderMapper.toEvent(order));
+                    }
+                    return order;
+                })
+                .map(o -> {
+                    o.setItems(orderItemRepository.findAllByOrderId(o.getId()));
+                    try {
+                        PaymentResponse payment = paymentService.getPaymentByOrderId(o.getId(), o.getPaymentMethod()).data();
+                        return orderMapper.toDetailDto(new OrderAggregate(o, payment));
+                    }
+                    catch (Exception e) {
+                        return orderMapper.toDetailDto(new OrderAggregate(o, null));
+                    }
+                })
+                .orElseThrow(() -> new NotFoundException("Order not found"));
     }
 
     private void validateCreateOrderRequest(CreateOrderRequest request) {

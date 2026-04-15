@@ -29,7 +29,7 @@ public class LearningProgressController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{courseId}")
-    public ResponseEntity<ApiResponse<CourseProgressResponse>> getCourseProgress(@PathVariable String courseId) {
+    public ResponseEntity<ApiResponse<CourseProgressResponse>> getMyCourseProgress(@PathVariable String courseId) {
         String userId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "", learningProgressService.getCourseProgress(userId, courseId)));
     }
@@ -47,5 +47,19 @@ public class LearningProgressController {
         String userId = AuthenticationUtil.extractUserId();
         learningProgressService.updateLearningItemProgress(userId, itemId, new UpdateLearningItemRequest(true, true, 10.0));
         return ResponseEntity.ok(new ApiResponse<>(true, "Marked complete", null));
+    }
+
+    @Operation(summary = "Get overview progress of students in a course", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/courses/{courseId}/progress")
+    public ResponseEntity<ApiResponse<List<CourseProgressResponse>>> getCourseProgress(@PathVariable String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", learningProgressService.getCourseProgressByCourseId(courseId)));
+    }
+
+    @Operation(summary = "Get detailed progress of a student in a course", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/courses/{courseId}/students/{studentId}/progress")
+    public ResponseEntity<ApiResponse<List<LearningItemProgressResponse>>> getStudentProgress(
+            @PathVariable String courseId,
+            @PathVariable String studentId) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", learningProgressService.getLearningItemProgressByCourseId(studentId, courseId)));
     }
 }

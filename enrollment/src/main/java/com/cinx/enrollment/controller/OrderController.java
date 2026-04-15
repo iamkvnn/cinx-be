@@ -3,6 +3,7 @@ package com.cinx.enrollment.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
+import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
 import com.cinx.enrollment.dto.response.OrderDetailResponse;
 import com.cinx.enrollment.dto.response.OrderResponse;
@@ -28,7 +29,7 @@ public class OrderController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        Page<OrderDetailResponse> orders = orderService.getOrdersByUserId(page, size);
+        Page<OrderDetailResponse> orders = orderService.getOrdersByUserId(page, size, query, sort);
         return ResponseEntity.ok(PaginationWrapper.wrap(orders));
     }
 
@@ -43,5 +44,12 @@ public class OrderController {
     public ResponseEntity<ApiResponse<OrderResponse>> createOrder(@RequestBody CreateOrderRequest request) {
         OrderResponse response = orderService.createOrder(request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order created successfully", response));
+    }
+
+    @PutMapping("/{orderId}/cancel")
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> cancelOrder(
+            @PathVariable String orderId
+    ) {        OrderDetailResponse response = orderService.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Order cancelled successfully", response));
     }
 }

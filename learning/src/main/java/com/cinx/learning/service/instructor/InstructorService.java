@@ -17,27 +17,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class InstructorService implements IInstructorService {
-    private final CourseProgressRepository courseProgressRepository;
-    private final LearningItemProgressRepository learningItemProgressRepository;
     private final QuizSessionQuestionRepository quizSessionQuestionRepository;
-    private final CourseProgressMapper courseProgressMapper;
-    private final LearningItemProgressMapper learningItemProgressMapper;
-
-    @Override
-    public List<CourseProgressResponse> getCourseProgressByCourseId(String courseId) {
-        return courseProgressRepository.findAllByCourseId(courseId)
-                .stream()
-                .map(courseProgressMapper::toDto)
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    public List<LearningItemProgressResponse> getStudentProgressByCourseIdAndStudentId(String courseId, String studentId) {
-        return learningItemProgressRepository.findAllByUserIdAndCourseId(studentId, courseId)
-                .stream()
-                .map(learningItemProgressMapper::toDto)
-                .collect(Collectors.toList());
-    }
 
     @Override
     public List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String quizId) {

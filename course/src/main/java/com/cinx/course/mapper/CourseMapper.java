@@ -28,17 +28,16 @@ public interface CourseMapper extends BaseMapper<Course, CourseResponse>,
         CreateMapper<Course, CreateCourseRequest>,
         UpdateMapper<Course, UpdateCourseRequest> {
     @Override
-    @Mapping(source = "category.name", target = "category")
     CourseResponse toDto(Course entity);
 
 
     @Mapping(target = ".", source = "course")
-    @Mapping(target = "category", source = "course.category.name")
+    @Mapping(target = "category", source = "course.category")
     @Mapping(target = "instructor", source = "instructor")
     CourseResponse toDto(CourseAggregate aggregate);
 
     @Mapping(target = ".", source = "course")
-    @Mapping(target = "category", source = "course.category.name")
+    @Mapping(target = "category", source = "course.category")
     @Mapping(target = "instructor", source = "instructor")
     CourseDetailResponse toDetailDto(CourseAggregate aggregate);
 

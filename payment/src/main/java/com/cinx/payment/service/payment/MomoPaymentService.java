@@ -26,6 +26,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 
 @Service
 public class MomoPaymentService extends PaymentTemplate {
@@ -94,7 +95,7 @@ public class MomoPaymentService extends PaymentTemplate {
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),
-                        momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM, momoPayment.getRequestId());
+                        momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_CC, momoPayment.getRequestId());
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }
@@ -128,5 +129,19 @@ public class MomoPaymentService extends PaymentTemplate {
             return payment;
         }
         return null;
+    }
+
+    @Override
+    public PaymentResponse cancelPayment(String orderId) {
+            Optional<MomoPayment> opt = momoPaymentRepository.findByOrderId(orderId);
+            if (opt.isEmpty()) {
+                return null;
+            }
+            MomoPayment payment = opt.get();
+            if (payment.getStatus() == PaymentStatus.PAID) {
+                throw new BadRequestException("Cannot cancel a paid payment");
+            }
+            payment.setStatus(PaymentStatus.CANCELLED);
+            return paymentMapper.toDto(momoPaymentRepository.save(payment));
     }
 }

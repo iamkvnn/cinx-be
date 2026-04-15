@@ -16,6 +16,8 @@ public interface OrderMapper {
     @Mapping(target = "totalPrice", source = "order.totalPrice")
     @Mapping(target = "discounted", source = "order.discounted")
     @Mapping(target = "orderDate", source = "order.orderDate")
+    @Mapping(target = "status", source = "order.status")
+    @Mapping(target = "paymentMethod", source = "order.paymentMethod")
     @Mapping(target = "items", source = "order.items")
     @Mapping(target = "voucher", source = "order.voucher")
     @Mapping(target = "payment", source = "payment")

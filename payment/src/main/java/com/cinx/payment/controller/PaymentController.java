@@ -7,6 +7,7 @@ import com.cinx.payment.dto.response.PaymentResponse;
 import com.cinx.payment.dto.response.VNPayIPNResponse;
 import com.cinx.payment.service.payment.PaymentServiceFactory;
 import com.cinx.payment.service.payment.adapter.VNPayCallbackAdapter;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.servlet.http.HttpServletRequest;
@@ -23,6 +24,7 @@ import java.util.Map;
 public class PaymentController {
     private final PaymentServiceFactory factory;
 
+    @Hidden
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
     public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod) {
@@ -30,6 +32,7 @@ public class PaymentController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
     }
 
+    @Hidden
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/ids")
     public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentByOrderIds(@RequestParam List<String> orderIds) {
@@ -59,5 +62,10 @@ public class PaymentController {
         } else {
             return ResponseEntity.ok(new VNPayIPNResponse("99", "Failed"));
         }
+    }
+
+    @PutMapping("/cancel")
+    public ResponseEntity<ApiResponse<PaymentResponse>> cancelPayment(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Payment cancelled successfully", factory.getPaymentService(paymentMethod).cancelPayment(orderId)));
     }
 }

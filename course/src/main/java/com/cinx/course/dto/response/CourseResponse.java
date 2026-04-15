@@ -1,5 +1,7 @@
 package com.cinx.course.dto.response;
 
+import com.cinx.course.consts.CourseStatus;
+
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -7,7 +9,7 @@ public record CourseResponse (
         String id,
         String title,
         String description,
-        String category,
+        CategoryResponse category,
         InstructorResponse instructor,
         List<CourseImageResponse> images,
         Long price,
@@ -20,6 +22,7 @@ public record CourseResponse (
         Long duration,
         Boolean hasCertificate,
         String certificateTitle,
+        CourseStatus status,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

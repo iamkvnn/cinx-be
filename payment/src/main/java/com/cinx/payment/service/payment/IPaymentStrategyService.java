@@ -14,4 +14,5 @@ public interface IPaymentStrategyService {
     boolean handleCallback(Map<String, String> callbackData);
     Payment validateCallback(Map<String, String> callbackData);
     List<PaymentResponse> getPaymentByIds(List<String> orderIds);
+    PaymentResponse cancelPayment(String orderId);
 }

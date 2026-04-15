@@ -7,7 +7,5 @@ import com.cinx.learning.dto.response.QuizQuestionAnalyticsResponse;
 import java.util.List;
 
 public interface IInstructorService {
-    List<CourseProgressResponse> getCourseProgressByCourseId(String courseId);
-    List<LearningItemProgressResponse> getStudentProgressByCourseIdAndStudentId(String courseId, String studentId);
     List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String quizId);
 }

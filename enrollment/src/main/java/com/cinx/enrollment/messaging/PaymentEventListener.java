@@ -1,6 +1,7 @@
 package com.cinx.enrollment.messaging;
 
 
+import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.enrollment.dto.response.OrderDetailResponse;
 import com.cinx.enrollment.messaging.event.PaymentEvent;
@@ -17,9 +18,9 @@ public class PaymentEventListener {
     private final IOrderService orderService;
 
     @RabbitListener(queues = "enrollment.payment.queue", containerFactory = "rabbitListenerContainerFactory")
-    public void receiveOrderMessage(PaymentEvent paymentEvent) {
+    public void receivePaymentMessage(PaymentEvent paymentEvent) {
         System.out.println("Received payment message: " + paymentEvent);
-        OrderDetailResponse orderDetail = orderService.getOrderById(paymentEvent.getOrderId());
+        OrderDetailResponse orderDetail = orderService.updateOrderStatus(paymentEvent.getOrderId(), OrderStatus.PAID);
         enrollmentService.enrollCourses(orderDetail.items().stream()
                 .map(item ->
                         new CreateEnrolledCourseRequest(item.courseId(), orderDetail.userId())
