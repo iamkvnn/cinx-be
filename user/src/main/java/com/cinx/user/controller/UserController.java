@@ -100,6 +100,18 @@ public class UserController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping(value = "/{id}/reject-instructor")
+    public ResponseEntity<ApiResponse<?>> rejectInstructor(
+            @PathVariable String id,
+            @RequestParam String reason
+    ) {
+        userService.rejectInstructor(id, reason);
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Instructor rejected successfully", null)
+        );
+    }
+
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping(value = "/{id}")
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserDto>> updateUser(

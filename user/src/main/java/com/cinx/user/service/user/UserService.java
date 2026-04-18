@@ -92,6 +92,27 @@ public class UserService implements IUserService {
     }
 
     @Override
+    public void rejectInstructor(String id, String reason) {
+        User user = getOrThrowByUserId(id);
+        // Note: Depending on logic, user role may be reverted down to USER or just denied check. We will set verify to false & remove cv
+        user.setIsInstructorVerified(false);
+        String oldCvUrl = user.getCvUrl();
+        if (oldCvUrl != null && !oldCvUrl.trim().isEmpty() && oldCvUrl.contains("amazonaws.com")) {
+            try {
+                String[] urlParts = oldCvUrl.split("/");
+                String key = "cvs/" + urlParts[urlParts.length - 1];
+                s3Service.deleteObject(key);
+            } catch (Exception e) {
+                System.err.println("Error parsing/deleting S3 CV URL: " + e.getMessage());
+            }
+        }
+        user.setCvUrl(null);
+        userRepository.save(user);
+        // We might want to send an email notification using an event publisher or an email service here. 
+        System.out.println("Instructor request rejected for user " + id + " due to: " + reason);
+    }
+
+    @Override
     public UserDto updateProfile(String id, UpdateProfileRequest dto) {
         User existingUser = getOrThrowByUserId(id);
         
@@ -119,6 +140,21 @@ public class UserService implements IUserService {
             }
         }
         
+        if (dto.cvUrl() != null && !dto.cvUrl().equals(existingUser.getCvUrl())) {
+            String oldCvUrl = existingUser.getCvUrl();
+            if (oldCvUrl != null && !oldCvUrl.trim().isEmpty()) {       
+                if (oldCvUrl.contains("amazonaws.com")) {
+                    try {
+                        String[] urlParts = oldCvUrl.split("/");
+                        String key = "cvs/" + urlParts[urlParts.length - 1];
+                        s3Service.deleteObject(key);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing/deleting S3 CV URL: " + e.getMessage());
+                    }
+                }
+            }
+        }
+
         userMapper.partialUpdate(existingUser, dto);
         User user = userRepository.save(existingUser);
         return userMapper.toDto(user);

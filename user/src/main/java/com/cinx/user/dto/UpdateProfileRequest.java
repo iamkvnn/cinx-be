@@ -8,6 +8,7 @@ public record UpdateProfileRequest(
         String name,
         Gender gender,
         Boolean isReceivePushNotification,
-        String avatarUrl
+        String avatarUrl,
+        String cvUrl
 ) {
 }

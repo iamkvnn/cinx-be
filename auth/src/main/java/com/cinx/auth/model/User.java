@@ -26,5 +26,4 @@ public class User {
     private UserStatus status;
     private String otp;
     private LocalDateTime otpExpireAt;
-    private String cvUrl;
 }

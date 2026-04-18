@@ -15,6 +15,7 @@ public interface IUserService {
     Boolean checkInstructorVerified(String id);
     UserDto createUser(CreateUserRequest user);
     void verifyInstructor(String id);
+    void rejectInstructor(String id, String reason);
 
     UserDto updateProfile(String id, UpdateProfileRequest dto);
 
