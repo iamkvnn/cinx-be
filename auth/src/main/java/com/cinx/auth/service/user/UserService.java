@@ -56,8 +56,9 @@ public class UserService implements IUserService {
                 .status(UserStatus.UNVERIFIED)
                 .otp(otp)
                 .otpExpireAt(LocalDateTime.now().plusSeconds(90))
+                .cvUrl(dto.cvUrl())
                 .build());
-        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.role(), dto.gender()));
+        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.role(), dto.gender(), dto.cvUrl()));
     }
 
     @Transactional
@@ -71,7 +72,7 @@ public class UserService implements IUserService {
                             .role(Role.USER)
                             .status(UserStatus.ACTIVE)
                             .build());
-                    userProfileService.createUser(new CreateUserProfileRequest(savedUser.getId(), profile.name(), profile.email(), Role.USER, null));
+                    userProfileService.createUser(new CreateUserProfileRequest(savedUser.getId(), profile.name(), profile.email(), Role.USER, null, null));
                     return savedUser;
                 });
     }

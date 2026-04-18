@@ -10,6 +10,7 @@ import com.cinx.user.model.User;
 import com.cinx.user.model.UserDeviceToken;
 import com.cinx.user.repository.UserRepository;
 import com.cinx.user.repository.UserDeviceTokenRepository;
+import com.cinx.user.service.s3.S3Service;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -33,6 +34,7 @@ public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final UserDeviceTokenRepository userDeviceTokenRepository;
     private final UserMapper userMapper;
+    private final S3Service s3Service;
 
     private User getOrThrowByEmail(String email) {
         return userRepository.findByEmail(email)
@@ -77,6 +79,7 @@ public class UserService implements IUserService {
                 .role(request.role())
                 .isInstructorVerified(false)
                 .gender(request.gender())
+                .cvUrl(request.cvUrl())
                 .build());
         return userMapper.toDto(user);
     }
@@ -89,37 +92,36 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public UserDto updateUser(String id, UpdateProfileRequest dto, String avatarUrl) {
+    public UserDto updateProfile(String id, UpdateProfileRequest dto) {
         User existingUser = getOrThrowByUserId(id);
-        userMapper.partialUpdate(existingUser, dto);
-        if (avatarUrl != null) {
-            existingUser.setAvatarUrl(avatarUrl);
-        }
-        User user = userRepository.save(existingUser);
-        return userMapper.toDto(user);
-    }
-
-    @Override
-    public UserDto updateProfile(String id, UpdateProfileRequest dto, MultipartFile avatar) {
-        String fileName = null;
-        if (Objects.nonNull(avatar) && !avatar.isEmpty()) {
-            try {
-                Path uploadPath = Paths.get("uploads/avatars/");
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
+        
+        if (dto.avatarUrl() != null && !dto.avatarUrl().equals(existingUser.getAvatarUrl())) {
+            String oldAvatarUrl = existingUser.getAvatarUrl();
+            if (oldAvatarUrl != null && !oldAvatarUrl.trim().isEmpty()) {
+                if (oldAvatarUrl.contains("amazonaws.com")) {
+                    try {
+                        String[] urlParts = oldAvatarUrl.split("/");
+                        String key = "avatars/" + urlParts[urlParts.length - 1];
+                        s3Service.deleteObject(key);
+                    } catch (Exception e) {
+                        System.err.println("Error parsing/deleting S3 avatar URL: " + e.getMessage());
+                    }
+                } else if (oldAvatarUrl.contains("localhost:9090") || oldAvatarUrl.contains("/avatars/")) {
+                    String[] parts = oldAvatarUrl.split("/");
+                    String fileName = parts[parts.length - 1].split("\\?")[0];
+                    try {
+                        Path imagePath = Paths.get("uploads/avatars/").resolve(fileName).normalize();
+                        Files.deleteIfExists(imagePath);
+                    } catch (IOException e) {
+                        System.err.println("Failed to delete local avatar: " + e.getMessage());
+                    }
                 }
-                fileName = avatar.getOriginalFilename();
-                assert fileName != null;
-                String extension = getFileExtension(fileName);
-                fileName = UUID.randomUUID() + "." + extension;
-                Path filePath = uploadPath.resolve(fileName);
-                Files.copy(avatar.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                throw new RuntimeException(e.getMessage());
             }
         }
-        String avatarUrl = fileName != null ? "http://localhost:9090/api/v1/users/avatars/" + fileName : null;
-        return updateUser(id, dto, avatarUrl);
+        
+        userMapper.partialUpdate(existingUser, dto);
+        User user = userRepository.save(existingUser);
+        return userMapper.toDto(user);
     }
 
     @Override
@@ -163,6 +165,16 @@ public class UserService implements IUserService {
         }
         user.setXp(user.getXp() + xpAmount);
         return userMapper.toDto(userRepository.save(user));
+    }
+
+    @Override
+    public long countTotalUsers() {
+        return userRepository.countTotalUsers();
+    }
+
+    @Override
+    public long countUsersBetween(java.time.LocalDateTime start, java.time.LocalDateTime end) {
+        return userRepository.countUsersBetween(start, end);
     }
 
     private String getFileExtension(String fileName) {

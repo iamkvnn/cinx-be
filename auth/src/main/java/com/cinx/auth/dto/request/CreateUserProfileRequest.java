@@ -14,6 +14,7 @@ public record CreateUserProfileRequest(
         @Email(message = "Email không hợp lệ")
         String email,
         Role role,
-        Gender gender
+        Gender gender,
+        String cvUrl
 ) {
 }

@@ -100,15 +100,14 @@ public class UserController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PutMapping(value = "/{id}", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    @PutMapping(value = "/{id}")
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<UserDto>> updateUser(
             @PathVariable("id") String id,
-            @Valid @RequestPart("user") UpdateProfileRequest dto,
-            @RequestPart(value = "avatar", required = false) MultipartFile avatar
+            @Valid @RequestBody UpdateProfileRequest dto
     ) {
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto, avatar))
+                new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto))
         );
     }
 
@@ -144,5 +143,19 @@ public class UserController {
     @PostMapping("/{userId}/add-xp")
     public ApiResponse<UserDto> addXp(@PathVariable String userId, @RequestParam Integer amount) {
         return new ApiResponse<>(true, "XP added successfully", userService.addXp(userId, amount));
+    }
+
+    @Operation(summary = "Get total users count (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/metrics/total-count")
+    public ApiResponse<Long> getTotalUsersCount() {
+        return new ApiResponse<>(true, "Success", userService.countTotalUsers());
+    }
+
+    @Operation(summary = "Get new users count between dates (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/metrics/new-count")
+    public ApiResponse<Long> getNewUsersCount(
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime start,
+            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime end) {
+        return new ApiResponse<>(true, "Success", userService.countUsersBetween(start, end));
     }
 }

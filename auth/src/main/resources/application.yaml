@@ -53,3 +53,12 @@ google:
   client-secret: ${GOOGLE_CLIENT_SECRET:YOUR_GOOGLE_CLIENT_SECRET}
 
 gateway.url: ${GATEWAY_URL:http://localhost:9090}
+
+aws:
+  region: ${AWS_REGION:ap-southeast-1}
+  credentials:
+    access-key: ${AWS_ACCESS_KEY_ID:}
+    secret-key: ${AWS_SECRET_ACCESS_KEY:}
+  s3:
+    bucket: ${AWS_S3_BUCKET:cinx-dev}
+    endpoint: ${AWS_S3_ENDPOINT:https://s3.ap-southeast-1.amazonaws.com}

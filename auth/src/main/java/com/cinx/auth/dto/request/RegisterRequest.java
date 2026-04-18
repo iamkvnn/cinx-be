@@ -14,6 +14,7 @@ public record RegisterRequest(
         @NotBlank(message = "Mật khẩu không được để trống")
         String password,
         Role role,
-        Gender gender
+        Gender gender,
+        String cvUrl
 ) {
 }
