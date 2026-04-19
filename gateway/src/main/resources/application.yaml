@@ -83,7 +83,7 @@ spring:
             - id: enrollment-service
               uri: lb://enrollment
               predicates:
-                - Path=/api/v1/enrollments/**, /api/v1/orders/**, /api/v1/vouchers/**
+                - Path=/api/v1/enrollments/**, /api/v1/orders/**, /api/v1/vouchers/**, /api/v1/statistics/**
             - id: payment-service
               uri: lb://payment
               predicates:

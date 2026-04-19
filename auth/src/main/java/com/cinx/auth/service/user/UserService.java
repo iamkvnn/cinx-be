@@ -6,7 +6,8 @@ import com.cinx.auth.dto.request.*;
 import com.cinx.auth.dto.response.GoogleProfileResponse;
 import com.cinx.auth.model.User;
 import com.cinx.auth.repository.UserRepository;
-import com.cinx.auth.service.mail.EmailQueueService;
+import java.util.Map;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.auth.utils.OtpGenerator;
 import com.cinx.common.exception.AlreadyExistException;
@@ -26,7 +27,7 @@ public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final IUserProfileService userProfileService;
     private final PasswordEncoder passwordEncoder;
-    private final EmailQueueService emailQueueService;
+    private final RabbitTemplate rabbitTemplate;
 
     @Override
     public User findById(String id) {
@@ -46,7 +47,9 @@ public class UserService implements IUserService {
         }
 
         String otp = OtpGenerator.generateOtp();
-        emailQueueService.enqueue(new EmailRequest(dto.email(), "Ma Xac Nhan OTP", otp));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", dto.email(), "subject", "Mã Xác Nhận OTP", "body", "Mã xác nhận OTP của bạn là: " + otp), 
+                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
 
         User user = userRepository.save(User
                 .builder()
@@ -57,7 +60,7 @@ public class UserService implements IUserService {
                 .otp(otp)
                 .otpExpireAt(LocalDateTime.now().plusSeconds(90))
                 .build());
-        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.role(), dto.gender()));
+        userProfileService.createUser(new CreateUserProfileRequest(user.getId(), dto.name(), dto.email(), dto.role(), dto.gender(), dto.cvFileKey()));
     }
 
     @Transactional
@@ -71,7 +74,7 @@ public class UserService implements IUserService {
                             .role(Role.USER)
                             .status(UserStatus.ACTIVE)
                             .build());
-                    userProfileService.createUser(new CreateUserProfileRequest(savedUser.getId(), profile.name(), profile.email(), Role.USER, null));
+                    userProfileService.createUser(new CreateUserProfileRequest(savedUser.getId(), profile.name(), profile.email(), Role.USER, null, null));
                     return savedUser;
                 });
     }
@@ -80,7 +83,9 @@ public class UserService implements IUserService {
     public User banUser(String userId, BanUserRequest request) {
         User user = findById(userId);
         user.setStatus(UserStatus.BANNED);
-        emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Thông báo tài khoản bị khóa", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()), 
+                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
         return userRepository.save(user);
     }
 
@@ -88,7 +93,9 @@ public class UserService implements IUserService {
     public User unbanUser(String userId) {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
-        emailQueueService.enqueue(new EmailRequest(user.getEmail(), "Thông báo tài khoản được mở khóa", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được mở khóa", "body", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
+                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
         return userRepository.save(user);
     }
 

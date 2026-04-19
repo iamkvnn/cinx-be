@@ -11,7 +11,8 @@ import com.cinx.auth.service.user.IUserService;
 import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.auth.model.User;
-import com.cinx.auth.service.mail.EmailQueueService;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import java.util.Map;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -26,6 +27,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -41,32 +43,40 @@ public class AuthenticationService implements IAuthenticationService {
 
     private final PasswordEncoder passwordEncoder;
     private final IUserService userService;
-    private final EmailQueueService emailQueueService;
+    private final RabbitTemplate rabbitTemplate;
     private final IUserProfileService userProfileService;
     private final IGoogleAuthenticationService googleAuthenticationService;
 
     @Override
     public void sendVerifyOtp(String email) {
         String otp = userService.generateOtp(email);
-        emailQueueService.enqueue(new EmailRequest(email, "Mã xác nhận OTP", "Mã OTP của bạn là: " + otp));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", email, "subject", "Mã xác nhận OTP", "body", "Mã OTP của bạn là: " + otp), 
+                m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }
 
     @Override
     public void sendForgotPasswordOtp(String email) {
         String otp = userService.generateOtp(email);
-        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu quên mật khẩu", "Mã OTP của bạn là: " + otp));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", email, "subject", "Yêu cầu quên mật khẩu", "body", "Mã OTP của bạn là: " + otp), 
+                m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }
 
     @Override
     public void sendChangePasswordOtp(String email) {
         String otp = userService.generateOtp(email);
-        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu đổi mật khẩu", "Mã OTP của bạn là: " + otp));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", email, "subject", "Yêu cầu đổi mật khẩu", "body", "Mã OTP của bạn là: " + otp), 
+                m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }
 
     @Override
     public void sendChangeEmailOtp(String email) {
         String otp = userService.generateOtp(email);
-        emailQueueService.enqueue(new EmailRequest(email, "Yêu cầu đổi email", "Mã OTP của bạn là: " + otp));
+        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+                Map.of("to", email, "subject", "Yêu cầu đổi email", "body", "Mã OTP của bạn là: " + otp), 
+                m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }
 
     @Override

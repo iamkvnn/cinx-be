@@ -14,6 +14,17 @@ spring:
     port: ${RABBITMQ_PORT:5672}
     username: ${RABBITMQ_USERNAME:guest}
     password: ${RABBITMQ_PASSWORD:guest}
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME:iamkvnn.cinehub@gmail.com}
+    password: ${SPRING_MAIL_PASSWORD:bqfg xerx gfaw bcrb}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 server:
   port: 8086
@@ -34,4 +45,4 @@ eureka:
 gateway.url: ${GATEWAY_URL:http://localhost:9090}
 
 firebase:
-  config-path: firebase-service-account.json
+  config-path: ./cinx-d9301-72bfc680e59c.json

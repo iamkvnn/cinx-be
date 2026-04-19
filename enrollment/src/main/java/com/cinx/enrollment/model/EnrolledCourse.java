@@ -1,6 +1,6 @@
 package com.cinx.enrollment.model;
 
-import com.cinx.common.model.BaseEntity;
+import com.cinx.common.model.AuditableEntity;
 import jakarta.persistence.Entity;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -11,7 +11,7 @@ import lombok.experimental.SuperBuilder;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class EnrolledCourse extends BaseEntity {
+public class EnrolledCourse extends AuditableEntity {
     private String courseId;
     private String userId;
 }

@@ -15,10 +15,9 @@ public interface IUserService {
     Boolean checkInstructorVerified(String id);
     UserDto createUser(CreateUserRequest user);
     void verifyInstructor(String id);
+    void rejectInstructor(String id, String reason);
 
-    UserDto updateUser(String id, UpdateProfileRequest dto, String avatarUrl);
-
-    UserDto updateProfile(String id, UpdateProfileRequest dto, MultipartFile avatar);
+    UserDto updateProfile(String id, UpdateProfileRequest dto);
 
     List<UserDto> findByIds(List<String> ids);
     
@@ -26,4 +25,7 @@ public interface IUserService {
     List<String> getUserTokens(String userId);
 
     UserDto addXp(String userId, Integer xpAmount);
+
+    long countTotalUsers();
+    long countUsersBetween(java.time.LocalDateTime start, java.time.LocalDateTime end);
 }

@@ -6,11 +6,14 @@ import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.mapper.UserMapper;
+import com.cinx.user.messaging.UserEventProducer;
 import com.cinx.user.model.User;
 import com.cinx.user.model.UserDeviceToken;
 import com.cinx.user.repository.UserRepository;
 import com.cinx.user.repository.UserDeviceTokenRepository;
+import com.cinx.user.service.s3.S3Service;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
@@ -32,7 +35,12 @@ import java.util.UUID;
 public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final UserDeviceTokenRepository userDeviceTokenRepository;
+    private final UserEventProducer userEventProducer;
     private final UserMapper userMapper;
+    private final S3Service s3Service;
+
+    @Value("${aws.s3.cdn-url}")
+    private String s3CdnUrl;
 
     private User getOrThrowByEmail(String email) {
         return userRepository.findByEmail(email)
@@ -77,6 +85,8 @@ public class UserService implements IUserService {
                 .role(request.role())
                 .isInstructorVerified(false)
                 .gender(request.gender())
+                .cvFileKey(request.cvFileKey())
+                .cvUrl(request.cvFileKey() != null ? s3CdnUrl + "/" + request.cvFileKey() : null)
                 .build());
         return userMapper.toDto(user);
     }
@@ -86,40 +96,47 @@ public class UserService implements IUserService {
         User user = getOrThrowByUserId(id);
         user.setIsInstructorVerified(true);
         userRepository.save(user);
+        userEventProducer.sendInstructorVerifiedEmail(user);
     }
 
     @Override
-    public UserDto updateUser(String id, UpdateProfileRequest dto, String avatarUrl) {
+    public void rejectInstructor(String id, String reason) {
+        User user = getOrThrowByUserId(id);
+        user.setIsInstructorVerified(false);
+        userRepository.save(user);
+        userEventProducer.sendInstructorRejectedEmail(user);
+    }
+
+    @Override
+    public UserDto updateProfile(String id, UpdateProfileRequest dto) {
         User existingUser = getOrThrowByUserId(id);
-        userMapper.partialUpdate(existingUser, dto);
-        if (avatarUrl != null) {
-            existingUser.setAvatarUrl(avatarUrl);
+        
+        if (dto.avatarFileKey() != null && !dto.avatarFileKey().equals(existingUser.getAvatarFileKey())) {
+            if (existingUser.getAvatarFileKey() != null) {
+                try {
+                    s3Service.deleteObject(existingUser.getAvatarFileKey());
+                } catch (Exception e) {
+                    System.err.println("Error parsing/deleting S3 avatar URL: " + e.getMessage());
+                }
+            }
+            existingUser.setAvatarUrl(s3CdnUrl + "/" + dto.avatarFileKey());
         }
+        
+        if (dto.cvFileKey() != null && !dto.cvFileKey().equals(existingUser.getCvFileKey())) {
+            String oldCvUrl = existingUser.getCvUrl();
+            if (oldCvUrl != null) {
+                try {
+                    s3Service.deleteObject(existingUser.getCvFileKey());
+                } catch (Exception e) {
+                    System.err.println("Error parsing/deleting S3 CV URL: " + e.getMessage());
+                }
+            }
+            existingUser.setCvUrl(s3CdnUrl + "/" + dto.cvFileKey());
+        }
+
+        userMapper.partialUpdate(existingUser, dto);
         User user = userRepository.save(existingUser);
         return userMapper.toDto(user);
-    }
-
-    @Override
-    public UserDto updateProfile(String id, UpdateProfileRequest dto, MultipartFile avatar) {
-        String fileName = null;
-        if (Objects.nonNull(avatar) && !avatar.isEmpty()) {
-            try {
-                Path uploadPath = Paths.get("uploads/avatars/");
-                if (!Files.exists(uploadPath)) {
-                    Files.createDirectories(uploadPath);
-                }
-                fileName = avatar.getOriginalFilename();
-                assert fileName != null;
-                String extension = getFileExtension(fileName);
-                fileName = UUID.randomUUID() + "." + extension;
-                Path filePath = uploadPath.resolve(fileName);
-                Files.copy(avatar.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
-            } catch (IOException e) {
-                throw new RuntimeException(e.getMessage());
-            }
-        }
-        String avatarUrl = fileName != null ? "http://localhost:9090/api/v1/users/avatars/" + fileName : null;
-        return updateUser(id, dto, avatarUrl);
     }
 
     @Override
@@ -165,7 +182,13 @@ public class UserService implements IUserService {
         return userMapper.toDto(userRepository.save(user));
     }
 
-    private String getFileExtension(String fileName) {
-        return fileName.split("\\.")[fileName.split("\\.").length - 1];
+    @Override
+    public long countTotalUsers() {
+        return userRepository.countTotalUsers();
+    }
+
+    @Override
+    public long countUsersBetween(java.time.LocalDateTime start, java.time.LocalDateTime end) {
+        return userRepository.countUsersBetween(start, end);
     }
 }

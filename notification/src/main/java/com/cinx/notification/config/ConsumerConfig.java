@@ -4,25 +4,30 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.amqp.core.AcknowledgeMode;
+import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.amqp.rabbit.config.RetryInterceptorBuilder;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
+import org.springframework.amqp.rabbit.retry.RejectAndDontRequeueRecoverer;
+import org.springframework.amqp.rabbit.retry.RepublishMessageRecoverer;
 import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
 import org.springframework.amqp.support.converter.MessageConverter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 
 @Configuration
 public class ConsumerConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory) {
+            ConnectionFactory connectionFactory, AmqpTemplate amqpTemplate) {
 
         SimpleRabbitListenerContainerFactory factory =
                 new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
 
-        // Manual ack — never lose a message silently
-        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        // Auto mode for retry to work correctly with interceptor
+        factory.setAcknowledgeMode(AcknowledgeMode.AUTO);
 
         // Tune prefetch to control how many unacknowledged messages a consumer holds
         factory.setPrefetchCount(10); // start low, increase after load testing
@@ -31,11 +36,19 @@ public class ConsumerConfig {
         factory.setConcurrentConsumers(3);
         factory.setMaxConcurrentConsumers(10);
 
-        // Retry with backoff on listener errors
-        factory.setDefaultRequeueRejected(false); // send failed messages to DLX
         factory.setMessageConverter(jackson2JsonMessageConverter());
+        factory.setAdviceChain(retryInterceptor(amqpTemplate));
 
         return factory;
+    }
+
+    @Bean
+    public RetryOperationsInterceptor retryInterceptor(AmqpTemplate amqpTemplate) {
+        return RetryInterceptorBuilder.stateless()
+                .maxAttempts(3)
+                .backOffOptions(1000, 2.0, 10000) // initial interval, multiplier, max interval
+                .recoverer(new RejectAndDontRequeueRecoverer()) // will route to DLX via x-dead-letter-exchange
+                .build();
     }
 
     @Bean
