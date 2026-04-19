@@ -14,16 +14,16 @@ import software.amazon.awssdk.services.s3.presigner.S3Presigner;
 @Configuration
 public class S3Config {
 
-    @Value("${aws.region:ap-southeast-1}")
+    @Value("${aws.region}")
     private String region;
 
-    @Value("${aws.credentials.access-key:}")
+    @Value("${aws.credentials.access-key}")
     private String accessKey;
 
-    @Value("${aws.credentials.secret-key:}")
+    @Value("${aws.credentials.secret-key}")
     private String secretKey;
 
-    @Value("${aws.s3.endpoint:https://s3.ap-southeast-1.amazonaws.com}")
+    @Value("${aws.s3.endpoint}")
     private String endpoint;
 
     @Bean

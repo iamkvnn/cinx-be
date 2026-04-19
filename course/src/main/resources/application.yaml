@@ -57,7 +57,7 @@ server:
 
 aws:
   s3:
-    endpoint: ${AWS_S3_ENDPOINT:endpoint}
+    endpoint: ${AWS_S3_ENDPOINT:https://s3.amazonaws.com}
     cdn-url: ${AWS_S3_CDN_URL:cdn}
     bucket: ${AWS_S3_BUCKET:bucket}
   region: ${AWS_REGION:us-east-1}
