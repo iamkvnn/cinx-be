@@ -12,11 +12,17 @@ public class OrderEventProducer {
 
     public void publishOrderCreatedEvent(OrderEvent event) {
         System.out.println("Publishing OrderEvent: " + event);
-        rabbitTemplate.convertAndSend("order.events.exchange", "order.order.created", event);
+        rabbitTemplate.convertAndSend("order.events.exchange", "order.order.created", event, m -> {
+            m.getMessageProperties().setMessageId(event.getId() + "-CREATED");
+            return m;
+        });
     }
 
     public void publishOrderCancelledEvent(OrderEvent event) {
         System.out.println("Publishing OrderEvent: " + event);
-        rabbitTemplate.convertAndSend("order.events.exchange", "order.order.cancelled", event);
+        rabbitTemplate.convertAndSend("order.events.exchange", "order.order.cancelled", event, m -> {
+            m.getMessageProperties().setMessageId(event.getId() + "-CANCELLED");
+            return m;
+        });
     }
 }

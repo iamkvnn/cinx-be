@@ -15,6 +15,6 @@ public record CreateUserRequest(
         String email,
         Role role,
         Gender gender,
-        String cvUrl
+        String cvFileKey
 ) {
 }

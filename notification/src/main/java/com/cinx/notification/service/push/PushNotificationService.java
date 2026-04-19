@@ -27,11 +27,6 @@ public class PushNotificationService {
             
             if (response != null && response.data() != null && !response.data().isEmpty()) {
                 List<String> tokens = response.data();
-                notificationService.sendNotification(new CreateNotificationRequest(
-                        title,
-                        body,
-                        List.of(userId)
-                ));
                 
                 Notification notification = Notification.builder()
                         .setTitle(title)

@@ -15,6 +15,6 @@ public record RegisterRequest(
         String password,
         Role role,
         Gender gender,
-        String cvUrl
+        String cvFileKey
 ) {
 }

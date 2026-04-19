@@ -9,6 +9,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.io.ClassPathResource;
 
+import java.io.FileInputStream;
 import java.io.InputStream;
 
 @Configuration
@@ -22,7 +23,7 @@ public class FirebaseConfig {
     public void initialize() {
         try {
             if (FirebaseApp.getApps().isEmpty()) {
-                 InputStream serviceAccount = new ClassPathResource(firebaseConfigPath).getInputStream();
+                InputStream serviceAccount = new FileInputStream(firebaseConfigPath);
 
                 FirebaseOptions options = FirebaseOptions.builder()
                         .setCredentials(GoogleCredentials.fromStream(serviceAccount))

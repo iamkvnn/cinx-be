@@ -19,6 +19,7 @@ public class User extends AuditableEntity {
     private Gender gender;
     private Role role;
     private Boolean isInstructorVerified;
+    private String avatarFileKey;
     private String avatarUrl;
     @Builder.Default
     @Column(columnDefinition = "boolean default false")
@@ -28,5 +29,6 @@ public class User extends AuditableEntity {
     private Integer xp = 0;
 
     private String userId;
+    private String cvFileKey;
     private String cvUrl;
 }

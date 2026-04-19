@@ -12,6 +12,9 @@ public class EnrolledCourseEventProducer {
 
     public void publishEnrolledCourseCreatedEvent(EnrolledCourseEvent event) {
         System.out.println("Publishing EnrolledCourseEvent: " + event);
-        rabbitTemplate.convertAndSend("enrollment.events.exchange", "enrollment.enrollment.created", event);
+        rabbitTemplate.convertAndSend("enrollment.events.exchange", "enrollment.enrollment.created", event, m -> {
+            m.getMessageProperties().setMessageId(event.getUserId() + "-" + event.getCourseId() + "-ENROLLED");
+            return m;
+        });
     }
 }
