@@ -135,9 +135,8 @@ public class UserService implements IUserService {
     public void changePassword(ChangePasswordRequest request) {
         User user = findByEmail(request.email());
         if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
-            throw new BadRequestException("Invalid password");
+            throw new BadRequestException("Invalid old password");
         }
-        verifyOtp(user, request.otp());
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setOtp(null);
         user.setOtpExpireAt(null);

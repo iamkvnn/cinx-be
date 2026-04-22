@@ -8,9 +8,6 @@ public record ChangePasswordRequest(
         @NotBlank(message = "Email không được để trống")
         String email,
 
-        @NotBlank(message = "Mã OTP không được để trống")
-        String otp,
-
         @NotBlank(message = "Mật khẩu cũ không được để trống")
         String oldPassword,
 

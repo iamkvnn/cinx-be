@@ -64,14 +64,6 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public void sendChangePasswordOtp(String email) {
-        String otp = userService.generateOtp(email);
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
-                Map.of("to", email, "subject", "Yêu cầu đổi mật khẩu", "body", "Mã OTP của bạn là: " + otp), 
-                m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
-    }
-
-    @Override
     public void sendChangeEmailOtp(String email) {
         String otp = userService.generateOtp(email);
         rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
