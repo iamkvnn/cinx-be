@@ -17,7 +17,6 @@ public record CourseResponse (
         Long discountRate,
         Double rating,
         Long enrollmentCount,
-        Boolean isPublished,
         Boolean isInSubscription,
         Long duration,
         Boolean hasCertificate,

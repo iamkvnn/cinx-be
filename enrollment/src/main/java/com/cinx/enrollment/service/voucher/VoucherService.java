@@ -23,7 +23,7 @@ public class VoucherService implements IVoucherService{
 
     @Override
     public Page<VoucherResponse> getVouchers(int page, int size, String query, String sort) {
-        return voucherRepository.findAll(PageRequest.of(page - 1, size, SortConverter.toSort(sort))).map(voucherMapper::toDto);
+        return voucherRepository.findAll(query, PageRequest.of(page - 1, size, SortConverter.toSort(sort))).map(voucherMapper::toDto);
     }
 
     @Override

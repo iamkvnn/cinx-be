@@ -1,5 +1,7 @@
 package com.cinx.user.service.user;
 
+import com.cinx.common.mapper.SortConverter;
+import com.cinx.user.consts.Role;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.common.exception.AlreadyExistException;
@@ -53,8 +55,8 @@ public class UserService implements IUserService {
     }
 
     @Override
-    public Page<UserDto> findAll(int page, int size) {
-        return userRepository.findAll(PageRequest.of(page - 1, size)).map(userMapper::toDto);
+    public Page<UserDto> findAll(int page, int size, String query, Role role, Boolean isInstructorVerified, String sort) {
+        return userRepository.findAll(query, role, isInstructorVerified, PageRequest.of(page - 1, size, SortConverter.toSort(sort))).map(userMapper::toDto);
     }
 
     @Override
