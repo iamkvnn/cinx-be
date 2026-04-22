@@ -2,6 +2,7 @@ package com.cinx.user.service.user;
 
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.user.consts.Role;
+import com.cinx.user.consts.UserStatus;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.common.exception.AlreadyExistException;
@@ -86,6 +87,7 @@ public class UserService implements IUserService {
                 .name(request.name())
                 .role(request.role())
                 .isInstructorVerified(false)
+                .status(UserStatus.ACTIVE)
                 .gender(request.gender())
                 .cvFileKey(request.cvFileKey())
                 .cvUrl(request.cvFileKey() != null ? s3CdnUrl + "/" + request.cvFileKey() : null)
@@ -107,6 +109,17 @@ public class UserService implements IUserService {
         user.setIsInstructorVerified(false);
         userRepository.save(user);
         userEventProducer.sendInstructorRejectedEmail(user);
+    }
+
+    @Override
+    public void toggleBan(String id) {
+        User user = getOrThrowByUserId(id);
+        if (user.getStatus() == null || user.getStatus() != UserStatus.BANNED) {
+            user.setStatus(UserStatus.BANNED);
+        } else {
+            user.setStatus(UserStatus.ACTIVE);
+        }
+        userRepository.save(user);
     }
 
     @Override

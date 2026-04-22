@@ -3,6 +3,7 @@ package com.cinx.user.model;
 import com.cinx.common.model.AuditableEntity;
 import com.cinx.user.consts.Gender;
 import com.cinx.user.consts.Role;
+import com.cinx.user.consts.UserStatus;
 import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
@@ -19,6 +20,7 @@ public class User extends AuditableEntity {
     private Gender gender;
     private Role role;
     private Boolean isInstructorVerified;
+    private UserStatus status;
     private String avatarFileKey;
     private String avatarUrl;
     @Builder.Default

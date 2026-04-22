@@ -17,7 +17,7 @@ public interface IUserService {
     UserDto createUser(CreateUserRequest user);
     void verifyInstructor(String id);
     void rejectInstructor(String id, String reason);
-
+    void toggleBan(String id);
     UserDto updateProfile(String id, UpdateProfileRequest dto);
 
     List<UserDto> findByIds(List<String> ids);

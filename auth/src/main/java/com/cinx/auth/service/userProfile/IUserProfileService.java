@@ -15,4 +15,7 @@ public interface IUserProfileService {
 
     @GetMapping("/users/{userId}/instructor-verified")
     ApiResponse<Boolean> checkInstructorVerified(@PathVariable String userId);
+
+    @PostMapping("/users/{userId}/toggle-ban")
+    void toggleBanUser(@PathVariable String userId);
 }
