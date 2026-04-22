@@ -10,6 +10,7 @@ import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.dto.request.DeviceTokenRequest;
 import com.cinx.user.service.user.IUserService;
+import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -114,6 +115,15 @@ public class UserController {
         );
     }
 
+    @Hidden
+    @PostMapping("/{id}/toggle-ban")
+    public ResponseEntity<ApiResponse<?>> toggleBanUser(@PathVariable String id) {
+        userService.toggleBan(id);
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "User ban status toggled successfully", null)
+        );
+    }
+
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping(value = "/{id}")
     //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
@@ -124,20 +134,6 @@ public class UserController {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto))
         );
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/avatars/{fileName:.+}")
-    public ResponseEntity<Resource> getAvatarImage(@PathVariable String fileName) throws IOException {
-        Path imagePath = Paths.get("uploads/avatars/").resolve(fileName).normalize();
-        if (!Files.exists(imagePath)) {
-            return ResponseEntity.notFound().build();
-        }
-        String contentType = Files.probeContentType(imagePath);
-        Resource resource = new UrlResource(imagePath.toUri());
-        return ResponseEntity.ok()
-                .contentType(MediaType.parseMediaType(contentType))
-                .body(resource);
     }
 
     @Operation(summary = "Save user FCM device token", security = @SecurityRequirement(name = "bearer-jwt"))

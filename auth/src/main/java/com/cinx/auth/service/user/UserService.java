@@ -86,6 +86,7 @@ public class UserService implements IUserService {
         rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
                 Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()), 
                 m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        userProfileService.toggleBanUser(userId);
         return userRepository.save(user);
     }
 
@@ -96,6 +97,7 @@ public class UserService implements IUserService {
         rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
                 Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được mở khóa", "body", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
                 m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        userProfileService.toggleBanUser(userId);
         return userRepository.save(user);
     }
 
