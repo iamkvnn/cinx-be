@@ -25,7 +25,6 @@ public class Course extends AuditableEntity {
     private Long discountRate;
     private Double rating;
     private Long enrollmentCount;
-    private Boolean isPublished;
     private Boolean isInSubscription;
     private String instructorId;
 

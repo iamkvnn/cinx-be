@@ -4,6 +4,7 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.user.consts.Role;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
@@ -39,10 +40,12 @@ public class UserController {
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
-            @RequestParam(required = false) String sort
+            @RequestParam(required = false) String sort,
+            @RequestParam(required = false) Role role,
+            @RequestParam(required = false) Boolean isInstructorVerified
     ) {
         return ResponseEntity.ok().body(
-                PaginationWrapper.wrap(userService.findAll(page, size))
+                PaginationWrapper.wrap(userService.findAll(page, size, query, role, isInstructorVerified, sort))
         );
     }
 

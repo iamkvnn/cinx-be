@@ -28,7 +28,7 @@ public class NotificationController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(notificationService.getNotifications(page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(notificationService.getNotifications(query, page, size, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))

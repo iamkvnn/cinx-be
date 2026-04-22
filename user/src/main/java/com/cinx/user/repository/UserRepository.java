@@ -1,6 +1,9 @@
 package com.cinx.user.repository;
 
+import com.cinx.user.consts.Role;
 import com.cinx.user.model.User;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
@@ -9,6 +12,14 @@ import java.util.List;
 import java.util.Optional;
 
 public interface UserRepository extends JpaRepository<User, String> {
+    @Query("""
+        SELECT u FROM User u
+        WHERE (:query IS NULL OR u.name LIKE %:query% OR u.email LIKE %:query%)
+        AND (:role IS NULL OR u.role = :role)
+        AND (:isInstructorVerified IS NULL OR u.isInstructorVerified = :isInstructorVerified)
+    """)
+    Page<User> findAll(String query, Role role, Boolean isInstructorVerified, Pageable pageable);
+
     Optional<User> findByEmail(String email);
     Optional<User> findByUserId(String userId);
     boolean existsByEmail(String email);

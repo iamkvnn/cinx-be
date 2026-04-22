@@ -1,5 +1,6 @@
 package com.cinx.notification.service.notification;
 
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.notification.dto.request.CreateNotificationRequest;
 import com.cinx.notification.dto.response.UserNotificationResponse;
@@ -22,9 +23,9 @@ public class NotificationService implements INotificationService{
     private final UserNotificationMapper userNotificationMapper;
 
     @Override
-    public Page<UserNotificationResponse> getNotifications(int page, int size) {
+    public Page<UserNotificationResponse> getNotifications(String query, int page, int size, String sort) {
         String userId = AuthenticationUtil.extractUserId();
-        return userNotificationRepository.findByUserId(userId, PageRequest.of(page - 1, size))
+        return userNotificationRepository.findByUserId(query, userId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(userNotificationMapper::toDto);
     }
 
