@@ -106,16 +106,6 @@ public class AuthController {
         );
     }
 
-    @PostMapping("/send-change-password-otp")
-    public ResponseEntity<ApiResponse<?>> sendChangePasswordOtp(
-            @Valid @RequestBody SendOtpRequest request
-    ) {
-        authenticationService.sendChangePasswordOtp(request.email());
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Otp for change password sent successfully", null)
-        );
-    }
-
     @PostMapping("/change-password")
     public ResponseEntity<ApiResponse<?>> changePassword(
             @Valid @RequestBody ChangePasswordRequest request
