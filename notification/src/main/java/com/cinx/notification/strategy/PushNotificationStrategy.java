@@ -18,8 +18,7 @@ public class PushNotificationStrategy implements NotificationChannelStrategy {
     @Override
     public void send(Map<String, Object> payload) {
         List<String> userIds = null;
-        if (payload.containsKey("userId")) userIds = String.valueOf(payload.get("userIds")).lines().toList();
-        else if (payload.containsKey("toUser")) userIds = String.valueOf(payload.get("toUsers")).lines().toList();
+        if (payload.containsKey("userIds")) userIds = payload.get("userIds") instanceof List<?> list ? list.stream().map(String::valueOf).toList() : null;
 
         String title = (String) payload.get("title");
         String message = (String) payload.get("message");
