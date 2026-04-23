@@ -47,7 +47,7 @@ public class UserService implements IUserService {
         }
 
         String otp = OtpGenerator.generateOtp();
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", dto.email(), "subject", "Mã Xác Nhận OTP", "body", "Mã xác nhận OTP của bạn là: " + otp), 
                 m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
 
@@ -83,7 +83,7 @@ public class UserService implements IUserService {
     public User banUser(String userId, BanUserRequest request) {
         User user = findById(userId);
         user.setStatus(UserStatus.BANNED);
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()), 
                 m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
         userProfileService.toggleBanUser(userId);
@@ -94,7 +94,7 @@ public class UserService implements IUserService {
     public User unbanUser(String userId) {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được mở khóa", "body", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
                 m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
         userProfileService.toggleBanUser(userId);

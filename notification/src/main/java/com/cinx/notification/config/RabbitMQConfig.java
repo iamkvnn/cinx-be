@@ -9,23 +9,8 @@ public class RabbitMQConfig {
 
     // --- Exchanges ---
     @Bean
-    public TopicExchange orderExchange() {
-        return ExchangeBuilder.topicExchange("order.events.exchange").durable(true).build();
-    }
-
-    @Bean
-    public TopicExchange authEventsExchange() {
-        return ExchangeBuilder.topicExchange("auth.events.exchange").durable(true).build();
-    }
-
-    @Bean
-    public TopicExchange learningEventsExchange() {
-        return ExchangeBuilder.topicExchange("learning.events.exchange").durable(true).build();
-    }
-
-    @Bean
-    public TopicExchange userEventsExchange() {
-        return ExchangeBuilder.topicExchange("user.events.exchange").durable(true).build();
+    public TopicExchange notificationExchange() {
+        return ExchangeBuilder.topicExchange("notification.send.exchange").durable(true).build();
     }
 
     @Bean
@@ -67,45 +52,24 @@ public class RabbitMQConfig {
     // --- Bindings ---
 
     @Bean
-    public Binding emailAuthBinding() {
+    public Binding emailBinding() {
         return BindingBuilder.bind(emailQueue())
-                .to(authEventsExchange())
-                .with("auth.email.#");
+                .to(notificationExchange())
+                .with("notification.email.send");
     }
 
     @Bean
-    public Binding pushOrderBinding() {
-        return BindingBuilder.bind(pushQueue())
-                .to(orderExchange())
-                .with("order.order.#");
-    }
-
-    @Bean
-    public Binding inAppOrderBinding() {
+    public Binding inAppBinding() {
         return BindingBuilder.bind(inAppQueue())
-                .to(orderExchange())
-                .with("order.order.#");
+                .to(notificationExchange())
+                .with("notification.in-app.send");
     }
 
     @Bean
-    public Binding pushLearningBinding() {
+    public Binding pushBinding() {
         return BindingBuilder.bind(pushQueue())
-                .to(learningEventsExchange())
-                .with("learning.reminder.#");
-    }
-
-    @Bean
-    public Binding inAppLearningBinding() {
-        return BindingBuilder.bind(inAppQueue())
-                .to(learningEventsExchange())
-                .with("learning.reminder.#");
-    }
-
-    @Bean
-    public Binding emailUserBinding() {
-        return BindingBuilder.bind(emailQueue())
-                .to(userEventsExchange())
-                .with("user.email.#");
+                .to(notificationExchange())
+                .with("notification.push.send");
     }
 
     @Bean
