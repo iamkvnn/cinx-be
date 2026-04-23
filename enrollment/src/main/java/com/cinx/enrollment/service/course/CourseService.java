@@ -5,6 +5,7 @@ import com.cinx.common.dto.ApiResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
@@ -16,4 +17,7 @@ public interface CourseService {
 
     @GetMapping("/courses/ids")
     ApiResponse<List<CourseResponse>> getCoursesByIds(@RequestParam List<String> ids);
+
+    @PostMapping("/courses/{id}/increase-enrollment")
+    ApiResponse<Void> increaseEnrollmentCount(@PathVariable String id);
 }

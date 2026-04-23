@@ -185,4 +185,11 @@ public class CourseService implements ICourseService {
         course.setRating(rating);
         courseRepository.save(course);
     }
+
+    @Override
+    public void increaseEnrollmentCount(String courseId) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found"));
+        course.setEnrollmentCount(course.getEnrollmentCount() + 1);
+        courseRepository.save(course);
+    }
 }
