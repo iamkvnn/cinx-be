@@ -50,7 +50,7 @@ public class AuthenticationService implements IAuthenticationService {
     @Override
     public void sendVerifyOtp(String email) {
         String otp = userService.generateOtp(email);
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", email, "subject", "Mã xác nhận OTP", "body", "Mã OTP của bạn là: " + otp), 
                 m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }
@@ -58,7 +58,7 @@ public class AuthenticationService implements IAuthenticationService {
     @Override
     public void sendForgotPasswordOtp(String email) {
         String otp = userService.generateOtp(email);
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", email, "subject", "Yêu cầu quên mật khẩu", "body", "Mã OTP của bạn là: " + otp), 
                 m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }
@@ -66,7 +66,7 @@ public class AuthenticationService implements IAuthenticationService {
     @Override
     public void sendChangeEmailOtp(String email) {
         String otp = userService.generateOtp(email);
-        rabbitTemplate.convertAndSend("auth.events.exchange", "auth.email.send", 
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", email, "subject", "Yêu cầu đổi email", "body", "Mã OTP của bạn là: " + otp), 
                 m -> { m.getMessageProperties().setMessageId(UUID.randomUUID().toString()); return m; });
     }

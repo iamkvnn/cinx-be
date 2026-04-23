@@ -6,6 +6,7 @@ import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.notification.dto.response.UserNotificationResponse;
 import com.cinx.notification.service.notification.INotificationService;
 import com.cinx.notification.service.push.PushNotificationService;
+import com.cinx.notification.strategy.InAppNotificationStrategy;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -13,12 +14,16 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import com.cinx.common.utils.AuthenticationUtil;
 
+import java.util.List;
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/api/v1/notifications")
 public class NotificationController {
     private final INotificationService notificationService;
     private final PushNotificationService pushNotificationService;
+    private final InAppNotificationStrategy inAppNotificationStrategy;
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
@@ -57,5 +62,15 @@ public class NotificationController {
         String userId = AuthenticationUtil.extractUserId();
         pushNotificationService.sendPushNotificationToUser(userId, title, body);
         return ResponseEntity.ok(new ApiResponse<>(true, "Push notification sent", null));
+    }
+
+    @PostMapping("/test-in-app")
+    public ResponseEntity<ApiResponse<Void>> testInAppNotification(@RequestParam String userId, @RequestParam String title, @RequestParam String body) {
+        inAppNotificationStrategy.send(Map.of(
+                "userIds", List.of(userId),
+                "title", title,
+                "message", body
+        ));
+        return ResponseEntity.ok(new ApiResponse<>(true, "In-app notification sent", null));
     }
 }
