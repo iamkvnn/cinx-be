@@ -21,4 +21,5 @@ public interface ICourseService {
     CourseResponse rejectCourse(String courseId, RejectCourseRequest request);
     RejectCourseResponse getRejectReason(String courseId);
     void updateCourseRating(String courseId, Double rating);
+    void increaseEnrollmentCount(String courseId);
 }

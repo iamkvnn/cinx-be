@@ -43,15 +43,13 @@ public class MorningReminderJob {
     private void sendReminderEvent(String userId, Integer targetXp, Integer currentXp) {
         try {
             Map<String, Object> payload = Map.of(
-                    "userId", userId,
-                    "targetXp", targetXp,
-                    "currentXp", currentXp,
-                    "type", "DAILY_GOAL_REMINDER",
+                    "userIds", List.of(userId),
                     "title", "Don't break your momentum!",
                     "message", "You have a goal of " + targetXp + " XP today. Keep learning!"
             );
 
-            rabbitTemplate.convertAndSend("learning.events.exchange", "learning.reminder.morning", payload);
+            rabbitTemplate.convertAndSend("notification.send.exchange", "notification.push.send", payload);
+            rabbitTemplate.convertAndSend("notification.send.exchange", "notification.in-app.send", payload);
             log.info("Sent morning reminder event for user {}", userId);
         } catch (Exception e) {
             log.error("Failed to send reminder event for user {}: {}", userId, e.getMessage());

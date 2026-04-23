@@ -72,12 +72,6 @@ public class AssignmentService implements IAssignmentService {
                             .build())
                     .toList());
         }
-
-        learningProgressService.updateLearningItemProgress(
-                userId,
-                assignmentId,
-                new UpdateLearningItemRequest(true, null, null)
-        );
     }
 
     @Transactional

@@ -1,6 +1,5 @@
 package com.cinx.learning.service.learningProgress;
 
-import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseDetailResponse;
@@ -22,7 +21,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -106,19 +104,23 @@ public class LearningProgressService implements ILearningProgressService{
         Boolean newCompleted = request.isCompleted() != null ? request.isCompleted() : oldCompleted;
         Double newScore = request.score();
 
+        if (oldScore != null && newScore <= oldScore) {
+            return;
+        }
+
         int completedItems = course.getCompletedItems() != null ? course.getCompletedItems() : 0;
         double totalScore = (course.getAvgScore() != null ? course.getAvgScore() : 0.0) * completedItems;
 
         if (!Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
             completedItems++;
-            if (newScore != null) totalScore += newScore;
+            totalScore += newScore;
             progress.setIsCompleted(true);
             progress.setScore(newScore);
+            progress.setIsPassed(request.isPassed());
             streakService.updateStreakOnActivity(userId);
             dailyGoalService.addXp(userId, 50);
             learningPathService.updatePathProgress(userId, itemId);
         } else if (Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
-            if (newScore == null) throw new BadRequestException("Score must be provided for completed items");
             totalScore = totalScore - (oldScore != null ? oldScore : 0.0) + newScore;
             progress.setScore(newScore);
         }
