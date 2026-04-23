@@ -101,7 +101,7 @@ public class QuizService implements IQuizService {
     @Override
     public QuizSessionResponse createQuizSession(String userId, String quizLessonId) {
         QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(quizLessonId).data();
-        if (quizLessonResponse.maxAttempt() < quizSessionRepository.countByQuizLessonId(quizLessonId)) {
+        if (quizLessonResponse.maxAttempt() <= quizSessionRepository.countByQuizLessonId(quizLessonId)) {
             throw new BadRequestException("You have reached the maximum number of attempts for this quiz lesson");
         }
         QuizSession quizSession = quizSessionRepository.save(
