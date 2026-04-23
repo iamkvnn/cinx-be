@@ -16,7 +16,7 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry config) {
-        config.enableSimpleBroker("/topic");
+        config.enableSimpleBroker("/topic", "/queue");
         config.setApplicationDestinationPrefixes("/cinx");
         config.setUserDestinationPrefix("/user");
     }
@@ -25,6 +25,9 @@ public class WebsocketConfig implements WebSocketMessageBrokerConfigurer {
     public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws/notifications")
                 .setAllowedOriginPatterns("*");
+        registry.addEndpoint("/sockjs/notifications")
+                .setAllowedOriginPatterns("*")
+                .withSockJS();
     }
 
     @Override

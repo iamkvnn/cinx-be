@@ -99,7 +99,11 @@ spring:
             - id: notification-websocket
               uri: lb:ws://notification
               predicates:
-                - Path=/ws/notifications/**
+                - Path=/ws/**
+            - id: notification-sockjs
+              uri: lb://notification
+              predicates:
+                - Path=/sockjs/**
             - id: social-service
               uri: lb://social
               predicates:

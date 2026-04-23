@@ -21,8 +21,7 @@ public class InAppNotificationStrategy implements NotificationChannelStrategy {
     @Override
     public void send(Map<String, Object> payload) {
         List<String> userIds = null;
-        if (payload.containsKey("userIds")) userIds = String.valueOf(payload.get("userIds")).lines().toList();
-        else if (payload.containsKey("toUsers")) userIds = String.valueOf(payload.get("toUsers")).lines().toList();
+        if (payload.containsKey("userIds")) userIds = payload.get("userIds") instanceof List<?> list ? list.stream().map(String::valueOf).toList() : null;
 
         String title = (String) payload.get("title");
         String message = (String) payload.get("message");
@@ -34,7 +33,7 @@ public class InAppNotificationStrategy implements NotificationChannelStrategy {
 
         try {
             CreateNotificationRequest request = new CreateNotificationRequest(title, message, userIds);
-            userIds.forEach(userId -> messagingTemplate.convertAndSendToUser(userId, "/topic/notifications", Map.of(
+            userIds.forEach(userId -> messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", Map.of(
                     "title", title,
                     "message", message
             )));

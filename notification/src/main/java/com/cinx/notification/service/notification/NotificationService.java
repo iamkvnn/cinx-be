@@ -44,6 +44,7 @@ public class NotificationService implements INotificationService{
         userNotificationRepository.saveAll(request.userIds().stream()
                 .map(userId -> UserNotification.builder()
                         .userId(userId)
+                        .notificationId(notification.getId())
                         .notification(notification)
                         .isRead(false)
                         .build())
