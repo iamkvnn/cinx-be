@@ -48,7 +48,7 @@ public class S3Config {
                 .region(Region.of(region))
                 .httpClientBuilder(UrlConnectionHttpClient.builder());
 
-        if (!accessKey.isEmpty() && secretKey.isEmpty()) {
+        if (!accessKey.isEmpty() && !secretKey.isEmpty()) {
             AwsBasicCredentials credentials = AwsBasicCredentials.create(accessKey, secretKey);
             builder.credentialsProvider(StaticCredentialsProvider.create(credentials));
         }
