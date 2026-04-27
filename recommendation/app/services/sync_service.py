@@ -10,20 +10,39 @@ class SyncService:
         self.interaction_repo = InteractionRepository(db)
 
     def handle_course_upsert(self, payload):
+        category = payload.category or {}
+        instructor = payload.instructor or {}
+
         data = {
             "id": payload.id,
             "title": payload.title,
             "description": payload.description,
-            "category": payload.category,
+
+            # Category (flattened)
+            "category_id": category.get("id") if isinstance(category, dict) else getattr(category, "id", None),
+            "category_name": category.get("name") if isinstance(category, dict) else getattr(category, "name", None),
+
+            # Instructor (flattened)
+            "instructor_id": instructor.get("id") if isinstance(instructor, dict) else getattr(instructor, "id", None),
+            "instructor_name": instructor.get("name") if isinstance(instructor, dict) else getattr(instructor, "name", None),
+            "instructor_email": instructor.get("email") if isinstance(instructor, dict) else getattr(instructor, "email", None),
+            "instructor_gender": instructor.get("gender") if isinstance(instructor, dict) else getattr(instructor, "gender", None),
+            "instructor_avatar_url": instructor.get("avatarUrl") if isinstance(instructor, dict) else getattr(instructor, "avatarUrl", None),
+
+            # Images
+            "images": [img.model_dump() for img in payload.images] if hasattr(payload, "images") and payload.images else None,
+
             "price": payload.price,
             "discounted_price": payload.discountedPrice,
             "discount_rate": payload.discountRate,
             "rating": payload.rating if payload.rating is not None else 0.0,
             "enrollment_count": payload.enrollmentCount if payload.enrollmentCount is not None else 0,
-            "is_published": payload.isPublished,
             "is_in_subscription": payload.isInSubscription,
+            "status": payload.status,  # "DRAFT" | "PUBLISHED" | ...
             "duration": payload.duration,
-            "sections": [s.model_dump() for s in payload.sections] if hasattr(payload, 'sections') else None,
+            "has_certificate": payload.hasCertificate if payload.hasCertificate is not None else False,
+            "certificate_title": payload.certificateTitle,
+            "sections": [s.model_dump() for s in payload.sections] if hasattr(payload, "sections") and payload.sections else None,
             "created_at": payload.createdAt,
             "updated_at": payload.updatedAt,
         }

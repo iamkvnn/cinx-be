@@ -5,37 +5,28 @@ import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.user.consts.Role;
-import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.dto.request.DeviceTokenRequest;
 import com.cinx.user.service.user.IUserService;
-import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.core.io.Resource;
-import org.springframework.core.io.UrlResource;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.security.Principal;
-import java.util.List;
 
 @RestController
 @RequestMapping("/api/v1/users")
 @RequiredArgsConstructor
 public class UserController {
+
     private final IUserService userService;
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    // ─── Admin endpoints ───────────────────────────────────────────────────────
+
+    /** List all users — admin only */
+    @Operation(summary = "List all users (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<UserDto>> getAllUsers(
             @RequestParam(defaultValue = "1") int page,
@@ -45,128 +36,63 @@ public class UserController {
             @RequestParam(required = false) Role role,
             @RequestParam(required = false) Boolean isInstructorVerified
     ) {
-        return ResponseEntity.ok().body(
+        return ResponseEntity.ok(
                 PaginationWrapper.wrap(userService.findAll(page, size, query, role, isInstructorVerified, sort))
         );
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/me")
-    public ResponseEntity<ApiResponse<UserDto>> getCurrentUser(Principal principal) {
-        UserDto user = userService.findByUserId(principal.getName());
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Current user fetched successfully", user)
-        );
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/ids")
-    public ResponseEntity<ApiResponse<List<UserDto>>> getUsersByIds(@RequestParam("ids") List<String> ids) {
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Users fetched successfully", userService.findByIds(ids))
-        );
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    /** Get any user by ID — admin only */
+    @Operation(summary = "Get user by ID (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable String id) {
-        UserDto user = userService.findByUserId(id);
-        System.out.println("User: " + user);
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User fetched successfully", user)
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "User fetched successfully", userService.findByUserId(id)));
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/instructor-verified")
-    public ResponseEntity<ApiResponse<Boolean>> checkInstructorVerified(@PathVariable String id) {
-        boolean isVerified = userService.checkInstructorVerified(id);
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Instructor verification status fetched successfully", isVerified)
-        );
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping
-    public ResponseEntity<ApiResponse<UserDto>> createUser(@RequestBody CreateUserRequest registerDto) {
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User created successfully", userService.createUser(registerDto))
-        );
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping(value = "/{id}/verify-instructor")
+    /** Approve instructor verification — admin only */
+    @Operation(summary = "Approve instructor (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{id}/verify-instructor")
     public ResponseEntity<ApiResponse<?>> verifyInstructor(@PathVariable String id) {
         userService.verifyInstructor(id);
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Instructor verified successfully", null)
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "Instructor verified successfully", null));
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping(value = "/{id}/reject-instructor")
+    /** Reject instructor verification — admin only */
+    @Operation(summary = "Reject instructor (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{id}/reject-instructor")
     public ResponseEntity<ApiResponse<?>> rejectInstructor(
             @PathVariable String id,
             @RequestParam String reason
     ) {
         userService.rejectInstructor(id, reason);
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Instructor rejected successfully", null)
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "Instructor rejected successfully", null));
     }
 
-    @Hidden
-    @PostMapping("/{id}/toggle-ban")
-    public ResponseEntity<ApiResponse<?>> toggleBanUser(@PathVariable String id) {
-        userService.toggleBan(id);
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User ban status toggled successfully", null)
-        );
+    // ─── Authenticated user endpoints ──────────────────────────────────────────
+
+    /** Get the currently authenticated user's profile */
+    @Operation(summary = "Get current user profile", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/me")
+    public ResponseEntity<ApiResponse<UserDto>> getCurrentUser() {
+        String userId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Current user fetched successfully", userService.findByUserId(userId)));
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PutMapping(value = "/{id}")
-    //@PreAuthorize("#id == authentication.name or hasRole('ADMIN')")
+    /** Update any user's profile (own or admin) */
+    @Operation(summary = "Update user profile", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<UserDto>> updateUser(
-            @PathVariable("id") String id,
+            @PathVariable String id,
             @Valid @RequestBody UpdateProfileRequest dto
     ) {
-        return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto))
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "User updated successfully", userService.updateProfile(id, dto)));
     }
 
-    @Operation(summary = "Save user FCM device token", security = @SecurityRequirement(name = "bearer-jwt"))
+    /** Save / register an FCM device token for push notifications */
+    @Operation(summary = "Save FCM device token", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/device-tokens")
     public ApiResponse<Void> saveDeviceToken(@Valid @RequestBody DeviceTokenRequest request) {
         String userId = AuthenticationUtil.extractUserId();
         userService.saveDeviceToken(userId, request);
         return new ApiResponse<>(true, "Device token saved successfully", null);
-    }
-
-    @Operation(summary = "Get user FCM device tokens (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{userId}/fcm-tokens")
-    public ApiResponse<List<String>> getUserTokens(@PathVariable String userId) {
-        return new ApiResponse<>(true, "Success", userService.getUserTokens(userId));
-    }
-
-    @Operation(summary = "Add XP to user profile (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/{userId}/add-xp")
-    public ApiResponse<UserDto> addXp(@PathVariable String userId, @RequestParam Integer amount) {
-        return new ApiResponse<>(true, "XP added successfully", userService.addXp(userId, amount));
-    }
-
-    @Operation(summary = "Get total users count (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/metrics/total-count")
-    public ApiResponse<Long> getTotalUsersCount() {
-        return new ApiResponse<>(true, "Success", userService.countTotalUsers());
-    }
-
-    @Operation(summary = "Get new users count between dates (internal)", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/metrics/new-count")
-    public ApiResponse<Long> getNewUsersCount(
-            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime start,
-            @RequestParam @org.springframework.format.annotation.DateTimeFormat(iso = org.springframework.format.annotation.DateTimeFormat.ISO.DATE_TIME) java.time.LocalDateTime end) {
-        return new ApiResponse<>(true, "Success", userService.countUsersBetween(start, end));
     }
 }

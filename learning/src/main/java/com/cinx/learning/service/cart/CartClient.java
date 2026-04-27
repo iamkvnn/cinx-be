@@ -6,9 +6,9 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "cart", path = "/api/v1")
+@FeignClient(name = "cart", path = "/internal/cart")
 public interface CartClient {
     
-    @PostMapping("/cart")
+    @PostMapping
     ApiResponse<Void> addToCart(@RequestBody AddToCartRequest request);
 }

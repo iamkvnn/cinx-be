@@ -16,13 +16,6 @@ import org.springframework.web.bind.annotation.*;
 public class QuizLessonController {
     private final IQuizService quizService;
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<QuizLessonResponse>> getQuizByLessonId(@RequestParam String lessonId) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", quizService.getQuizByLessonId(lessonId))
-        );
-    }
-
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createQuizLesson(@RequestParam String lessonId, @RequestBody CreateQuizLessonRequest request) {

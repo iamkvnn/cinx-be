@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "cart", path = "/api/v1/cart", configuration = FeignConfig.class)
+@FeignClient(name = "cart", path = "/internal/cart", configuration = FeignConfig.class)
 public interface CartService {
     @DeleteMapping("/ids")
     void removeAllFromCartByIds(@RequestParam List<String> itemIds);

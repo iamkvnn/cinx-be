@@ -30,7 +30,7 @@ class CourseRepository:
             
         self.db.commit()
 
-        if sections is not None:
+        if sections is not None and course.status == "PUBLISHED":
             self._upsert_course_chunks(course.id, str(course.title), str(course.description or ''), sections)
             
         return course
@@ -67,15 +67,12 @@ class CourseRepository:
         self.db.commit()
 
     def get_published_courses(self):
-        stmt = select(Course).where(Course.is_published == True)
+        stmt = select(Course).where(Course.status == "PUBLISHED")
         return self.db.execute(stmt).scalars().all()
 
-    def get_published_courses_by_categories(self, categories: list[str]):
+    def get_published_courses_by_categoryId(self, categoryIds: list[str]):
         stmt = select(Course).where(
-            Course.is_published == True,
-            Course.category.in_(categories)
+            Course.status == "PUBLISHED",
+            Course.category_id.in_(categoryIds)
         )
         return self.db.execute(stmt).scalars().all()
-
-    def get_course_by_id(self, course_id: str):
-        return self.db.get(Course, course_id)

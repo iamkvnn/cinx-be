@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
 
-@FeignClient(name = "enrollment", path = "/api/v1")
+@FeignClient(name = "enrollment", path = "/internal")
 public interface EnrollmentClient {
 
     @PostMapping("/enrollments/check")

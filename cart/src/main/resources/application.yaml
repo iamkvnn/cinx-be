@@ -1,29 +1,10 @@
 spring:
   application:
     name: cart
-  datasource:
-    url: ${SPRING_DATASOURCE_URL:jdbc:mysql://localhost:3306/cartdb}
-    username: ${SPRING_DATASOURCE_USERNAME:root}
-    password: ${SPRING_DATASOURCE_PASSWORD:taolao123}
-  jpa:
-    hibernate:
-      ddl-auto: update
-    show-sql: true
-
 server:
   port: 8082
-
 jwt:
   access:
-    secret: ${JWT_ACCESS_SECRET:mysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff}
     expire: 1
   refresh:
-    secret: ${JWT_REFRESH_SECRET:myrefreshsecretkeymysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffffmysecretkeygfhfffffffffffffffffffffffffffffffffffff}
     expire: 7
-
-eureka:
-  client:
-    serviceUrl:
-      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE:http://localhost:8761/eureka/}
-
-gateway.url: ${GATEWAY_URL:http://localhost:9090}

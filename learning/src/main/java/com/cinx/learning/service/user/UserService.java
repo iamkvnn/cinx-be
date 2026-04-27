@@ -8,7 +8,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-@FeignClient(name = "user", path = "/api/v1/users")
+@FeignClient(name = "user", path = "/internal/users")
 public interface UserService {
     @GetMapping("/{id}")
     ApiResponse<UserDto> getUserById(@PathVariable("id") String id);

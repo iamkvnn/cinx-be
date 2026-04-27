@@ -30,5 +30,7 @@ hs_err_pid*
 .vscode
 *.iml
 
+application-dev.yaml
 .env
 cinx-d9301-72bfc680e59c.json
+AGENTS.md

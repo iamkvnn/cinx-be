@@ -14,13 +14,6 @@ import org.springframework.web.bind.annotation.*;
 public class VideoLessonController {
     private final IVideoService videoService;
 
-    @GetMapping
-    public ResponseEntity<ApiResponse<VideoLessonResponse>> getVideoByLessonId(@RequestParam String lessonId) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", videoService.getVideoByLessonId(lessonId))
-        );
-    }
-
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createVideoLesson(@RequestParam String lessonId, @RequestBody CreateVideoLessonRequest request) {
         videoService.createVideo(lessonId, request);

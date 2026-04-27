@@ -52,9 +52,6 @@ public class VideoService implements IVideoService {
                     if (request.currentPosition() < existing.getCurrentPosition()) {
                         return existing; // Do not update if the new position is less than the existing position
                     }
-                    if (existing.getLastTrackingTime().plusSeconds(request.currentPosition() - existing.getCurrentPosition()).isAfter(LocalDateTime.now())) {
-                        throw new BadRequestException("Tracking update is too frequent. Please wait before updating again.");
-                    }
                     videoLessonTrackingHistoryMapper.partialUpdate(existing, request);
                     existing.setLastTrackingTime(LocalDateTime.now());
                     return existing;

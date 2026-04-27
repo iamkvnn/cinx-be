@@ -27,24 +27,10 @@ public class CartController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping
-    public ResponseEntity<ApiResponse<Void>> addToCart(@RequestBody AddToCartRequest request) {
-        cartService.addToCart(request);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Item added to cart successfully", null));
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping("/{itemId}")
     public ResponseEntity<ApiResponse<Void>> removeFromCart(@PathVariable String itemId) {
         cartService.removeFromCart(itemId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Item removed from cart successfully", null));
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @DeleteMapping("/ids")
-    public ResponseEntity<ApiResponse<Void>> removeFromCart(@RequestParam List<String> itemIds) {
-        cartService.removeAllFromCartByIds(itemIds);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Items removed from cart successfully", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))

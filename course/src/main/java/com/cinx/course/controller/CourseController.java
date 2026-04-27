@@ -104,20 +104,4 @@ public class CourseController {
                 new ApiResponse<>(true, "Reject reason fetched successfully", courseService.getRejectReason(courseId))
         );
     }
-
-    @Hidden
-    @Operation(summary = "Internal API to update course rating", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/{id}/update-rating")
-    public ResponseEntity<ApiResponse<Void>> updateCourseRating(@PathVariable("id") String courseId, @RequestParam Double rating) {
-        courseService.updateCourseRating(courseId, rating);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Rating updated successfully", null));
-    }
-
-    @Hidden
-    @Operation(summary = "Internal API to increase enrollment count", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/{id}/increase-enrollment")
-    public ResponseEntity<ApiResponse<Void>> increaseEnrollmentCount(@PathVariable("id") String courseId) {
-        courseService.increaseEnrollmentCount(courseId);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Enrollment count increased successfully", null));
-    }
 }
