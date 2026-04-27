@@ -17,6 +17,7 @@ public interface ICourseService {
     Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, Integer rating, Integer priceFrom, Integer priceTo, CourseStatus status, int page, int size, String sort);
     CourseResponse createCourse(CreateCourseRequest request);
     CourseResponse updateCourse(String courseId, UpdateCourseRequest request);
+    CourseResponse publishCourse(String courseId);
     CourseResponse approveCourse(String courseId);
     CourseResponse rejectCourse(String courseId, RejectCourseRequest request);
     RejectCourseResponse getRejectReason(String courseId);

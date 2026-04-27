@@ -3,7 +3,9 @@ package com.cinx.course.service.quiz;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateQuizLessonRequest;
+import com.cinx.course.dto.request.UpdateQuizLessonRequest;
 import com.cinx.course.dto.response.QuizLessonResponse;
 import com.cinx.course.mapper.QuizMapper;
 import com.cinx.course.model.QuizLesson;
@@ -11,6 +13,7 @@ import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.QuizLessonRepository;
 import com.cinx.course.repository.QuizOptionRepository;
 import com.cinx.course.repository.QuizQuestionRepository;
+import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -21,7 +24,7 @@ public class QuizService implements IQuizService {
     private final QuizLessonRepository quizLessonRepository;
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizOptionRepository quizOptionRepository;
-    private final LessonRepository lessonRepository;
+    private final ILessonService lessonService;
     private final QuizMapper quizMapper;
 
     @Override
@@ -44,7 +47,7 @@ public class QuizService implements IQuizService {
             throw new AlreadyExistException("Quiz already exists for lessonId: " + lessonId);
         },() -> {
             QuizLesson quizLesson = quizMapper.toModel(request);
-            quizLesson.setLesson(lessonRepository.findById(lessonId).orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId)));
+            quizLesson.setLesson(lessonService.getForUpdate(lessonId, LessonType.QUIZ));
             QuizLesson saved = quizLessonRepository.save(quizLesson);
             saved.setQuestions(quizQuestionRepository.saveAll(saved.getQuestions().stream()
                     .peek(q -> q.setQuizLesson(saved))
@@ -58,7 +61,14 @@ public class QuizService implements IQuizService {
 
     @Transactional
     @Override
-    public void updateQuiz(String lessonId, CreateQuizLessonRequest request) {
+    public void updateQuiz(String lessonId, UpdateQuizLessonRequest request) {
+        lessonService.getForUpdate(lessonId, LessonType.QUIZ);
+        if (request.getQuestions() == null || request.getQuestions().isEmpty()) {
+            throw new BadRequestException("Quiz must contain at least one question");
+        }
+        if (request.getQuestions().size() < request.getNumberOfQuestionPerQuizSession()) {
+            throw new BadRequestException("Number of questions must be greater than or equal to numberOfQuestionPerQuizSession");
+        }
         quizLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             quizMapper.partialUpdate(existing, request);
             quizLessonRepository.save(existing);
@@ -80,6 +90,7 @@ public class QuizService implements IQuizService {
 
     @Override
     public void deleteQuiz(String lessonId) {
+        lessonService.getForUpdate(lessonId, LessonType.QUIZ);
         quizLessonRepository.findByLessonId(lessonId)
                 .ifPresentOrElse(quizLessonRepository::delete, () -> {
                     throw new NotFoundException("Quiz not found for lessonId: " + lessonId);

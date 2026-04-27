@@ -11,9 +11,9 @@ import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.dto.response.RejectCourseResponse;
 import com.cinx.course.service.course.ICourseService;
-import io.swagger.v3.oas.annotations.Hidden;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -78,9 +78,16 @@ public class CourseController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable("id") String courseId, @RequestBody UpdateCourseRequest request) {
+    public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable("id") String courseId, @Valid @RequestBody UpdateCourseRequest request) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course updated successfully", courseService.updateCourse(courseId, request))
+        );
+    }
+
+    @PostMapping("/{id}/publish")
+    public ResponseEntity<ApiResponse<CourseResponse>> publishCourse(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course published successfully", courseService.publishCourse(courseId))
         );
     }
 

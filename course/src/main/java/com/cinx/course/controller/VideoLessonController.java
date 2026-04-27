@@ -2,7 +2,7 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.request.CreateVideoLessonRequest;
-import com.cinx.course.dto.response.VideoLessonResponse;
+import com.cinx.course.dto.request.UpdateVideoLessonRequest;
 import com.cinx.course.service.video.IVideoService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +23,7 @@ public class VideoLessonController {
     }
 
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateVideoLesson(@RequestParam String lessonId, @RequestBody CreateVideoLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> updateVideoLesson(@RequestParam String lessonId, @RequestBody UpdateVideoLessonRequest request) {
         videoService.updateVideo(lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)

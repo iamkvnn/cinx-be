@@ -2,11 +2,17 @@ package com.cinx.course.service.article;
 
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.CourseStatus;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateArticleLessonRequest;
+import com.cinx.course.dto.request.UpdateArticleLessonRequest;
 import com.cinx.course.dto.response.ArticleLessonResponse;
 import com.cinx.course.mapper.ArticleMapper;
+import com.cinx.course.model.Lesson;
 import com.cinx.course.repository.ArticleLessonRepository;
+import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
+import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
@@ -15,7 +21,7 @@ import org.springframework.stereotype.Service;
 public class ArticleService implements IArticleService {
     private final ArticleLessonRepository articleLessonRepository;
     private final ArticleMapper articleLessonMapper;
-    private final LessonRepository lessonRepository;
+    private final ILessonService lessonService;
 
     @Override
     public ArticleLessonResponse getArticleByLessonId(String lessonId) {
@@ -30,13 +36,14 @@ public class ArticleService implements IArticleService {
             throw new AlreadyExistException("Article already exists for lessonId: " + lessonId);
         },() -> {
             var articleLesson = articleLessonMapper.toModel(request);
-            articleLesson.setLesson(lessonRepository.findById(lessonId).orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId)));
+            articleLesson.setLesson(lessonService.getForUpdate(lessonId, LessonType.ARTICLE));
             articleLessonRepository.save(articleLesson);
         });
     }
 
     @Override
-    public void updateArticle(String lessonId, CreateArticleLessonRequest request) {
+    public void updateArticle(String lessonId, UpdateArticleLessonRequest request) {
+        lessonService.getForUpdate(lessonId, LessonType.ARTICLE);
             articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
                 articleLessonMapper.partialUpdate(existing, request);
                 articleLessonRepository.save(existing);
@@ -47,6 +54,7 @@ public class ArticleService implements IArticleService {
 
     @Override
     public void deleteArticle(String lessonId) {
+        lessonService.getForUpdate(lessonId, LessonType.ARTICLE);
         articleLessonRepository.findByLessonId(lessonId)
                 .ifPresentOrElse(articleLessonRepository::delete, () -> {
                     throw new NotFoundException("Article not found for lessonId: " + lessonId);

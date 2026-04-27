@@ -2,6 +2,7 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.request.CreateArticleLessonRequest;
+import com.cinx.course.dto.request.UpdateArticleLessonRequest;
 import com.cinx.course.dto.response.ArticleLessonResponse;
 import com.cinx.course.service.article.IArticleService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +31,7 @@ public class ArticleLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateArticleLesson(@RequestParam String lessonId, @RequestBody CreateArticleLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> updateArticleLesson(@RequestParam String lessonId, @RequestBody UpdateArticleLessonRequest request) {
         articleService.updateArticle(lessonId, request);
         return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
