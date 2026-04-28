@@ -145,6 +145,7 @@ public class OrderService implements IOrderService {
         return request.cartItems().stream()
                 .map(item -> OrderItem.builder()
                         .courseId(item.course().id())
+                        .instructorId(item.course().instructor() != null ? item.course().instructor().id() : null)
                         .title(item.course().title())
                         .price(item.course().price())
                         .discountedPrice(item.course().discountedPrice())

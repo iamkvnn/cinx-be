@@ -1,4 +1,4 @@
-spring:
+﻿spring:
   application:
     name: enrollment
   rabbitmq:
@@ -22,3 +22,6 @@ jwt:
     expire: 1
   refresh:
     expire: 7
+platform:
+  fee:
+    percentage: 20
