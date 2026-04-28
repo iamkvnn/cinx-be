@@ -8,6 +8,7 @@ import com.cinx.course.dto.response.VideoLessonResponse;
 import com.cinx.course.service.course.ICourseService;
 import com.cinx.course.service.quiz.IQuizService;
 import com.cinx.course.service.video.IVideoService;
+import com.cinx.course.service.videoquestion.IVideoQuestionService;
 import io.swagger.v3.oas.annotations.Hidden;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +28,7 @@ public class InternalCourseController {
     private final ICourseService courseService;
     private final IQuizService quizService;
     private final IVideoService videoService;
+    private final IVideoQuestionService videoQuestionService;
 
     @GetMapping("/courses/{id}")
     public ApiResponse<CourseDetailResponse> getCourseById(@PathVariable String id) {
@@ -58,5 +60,10 @@ public class InternalCourseController {
     @GetMapping("/video-lessons")
     public ApiResponse<VideoLessonResponse> getVideoLessonById(@RequestParam String lessonId) {
         return new ApiResponse<>(true, "Video lesson fetched successfully", videoService.getVideoByLessonId(lessonId));
+    }
+
+    @GetMapping("/video-questions/{id}/check-answer")
+    public ApiResponse<Boolean> checkVideoQuestionAnswer(@PathVariable String id, @RequestParam String answer) {
+        return new ApiResponse<>(true, "Answer checked successfully", videoQuestionService.checkAnswer(id, answer));
     }
 }
