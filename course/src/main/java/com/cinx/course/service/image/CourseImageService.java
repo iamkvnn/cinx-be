@@ -50,8 +50,6 @@ public class CourseImageService implements ICourseImageService{
 
     @Override
     public void deleteImage(String imageId) {
-        courseImageRepository.findById(imageId).ifPresent(image -> {
-            courseImageRepository.delete(image);
-        });
+        courseImageRepository.findById(imageId).ifPresent(courseImageRepository::delete);
     }
 }

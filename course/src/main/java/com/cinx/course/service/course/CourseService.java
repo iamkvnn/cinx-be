@@ -16,6 +16,7 @@ import com.cinx.course.model.*;
 import com.cinx.course.repository.CategoryRepository;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.RejectCourseReasonRepository;
+import com.cinx.course.service.change.ICourseChangeAuditService;
 import com.cinx.course.service.section.ISectionService;
 import com.cinx.course.service.user.UserService;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +26,6 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -39,13 +39,13 @@ public class CourseService implements ICourseService {
     private final CourseMapper courseMapper;
     private final CourseEventProducer courseEventProducer;
     private final UserService userService;
+    private final ICourseChangeAuditService courseChangeAuditService;
 
     @Override
-    public CourseDetailResponse getCourseById(String courseId) {
+    public CourseResponse getCourseById(String courseId) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        course.setSections(sectionService.getSectionsByCourseId(courseId));
         UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
-        return courseMapper.toDetailDto(new CourseAggregate(
+        return courseMapper.toDto(new CourseAggregate(
                 course,
                 instructor
         ));
@@ -88,11 +88,6 @@ public class CourseService implements ICourseService {
         Course course = courseRepository.save(buildCourseFromRequest(request));
         UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
         CourseAggregate aggregate = new CourseAggregate(course, instructor);
-        
-        courseEventProducer.publishOrderCreatedEvent(new CourseEvent(
-                courseMapper.toDetailDto(aggregate),
-                LocalDateTime.now()
-        ));
         return courseMapper.toDto(aggregate);
     }
 
@@ -113,7 +108,8 @@ public class CourseService implements ICourseService {
     @Override
     public CourseResponse updateCourse(String courseId, UpdateCourseRequest request) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-
+        UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
+        CourseResponse oldValue = courseMapper.toDto(new CourseAggregate(course, instructor));
         courseMapper.partialUpdate(course, request);
         course.setStatus(CourseStatus.DRAFT);
         if (request.price() != null && request.discountedPrice() != null) {
@@ -122,14 +118,10 @@ public class CourseService implements ICourseService {
         course.setCategory(categoryRepository.findById(request.categoryId())
                 .orElseThrow(() -> new NotFoundException("Category not found with id: " + request.categoryId())));
         courseRepository.save(course);
-        UserDto instructor = userService.getInstructorById(course.getInstructorId()).data();
         CourseAggregate aggregate = new CourseAggregate(course, instructor);
-
-        courseEventProducer.publishCourseUpdatedEvent(new CourseEvent(
-                courseMapper.toDetailDto(aggregate),
-                LocalDateTime.now()
-        ));
-        return courseMapper.toDto(aggregate);
+        CourseResponse newValue = courseMapper.toDto(aggregate);
+        courseChangeAuditService.auditCourseChange(courseId, oldValue, newValue);
+        return newValue;
     }
 
     @Override
@@ -145,7 +137,7 @@ public class CourseService implements ICourseService {
         ));
     }
 
-
+    @Transactional
     @Override
     public CourseResponse approveCourse(String courseId) {
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
@@ -153,6 +145,7 @@ public class CourseService implements ICourseService {
             throw new BadRequestException("Only courses waiting for approval can be approved");
         }
         course.setStatus(CourseStatus.PUBLISHED);
+        courseChangeAuditService.deleteCourseChangeHistory(courseId);
         return courseMapper.toDto(new CourseAggregate(
                 courseRepository.save(course),
                 userService.getInstructorById(course.getInstructorId()).data()
@@ -185,6 +178,13 @@ public class CourseService implements ICourseService {
                 reason.getCourseId(),
                 reason.getReason()
         );
+    }
+
+    @Override
+    public void draftCourse(String courseId) {
+        Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        course.setStatus(CourseStatus.DRAFT);
+        courseRepository.save(course);
     }
 
     @Override

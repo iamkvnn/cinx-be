@@ -7,9 +7,11 @@ import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.RejectCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
+import com.cinx.course.dto.response.CourseChangeResponse;
 import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.dto.response.RejectCourseResponse;
+import com.cinx.course.service.change.ICourseChangeAuditService;
 import com.cinx.course.service.course.ICourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -26,6 +28,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class CourseController {
     private final ICourseService courseService;
+    private final ICourseChangeAuditService courseChangeAuditService;
 
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getAllCourses(
@@ -55,7 +58,7 @@ public class CourseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CourseDetailResponse>> getCourseById(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(courseId))
         );
@@ -65,6 +68,13 @@ public class CourseController {
     public ResponseEntity<ApiResponse<List<CourseResponse>>> getCourseById(@RequestParam("ids") List<String> courseIds) {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseByIds(courseIds))
+        );
+    }
+
+    @GetMapping("/{id}/change-history")
+    public ResponseEntity<ApiResponse<List<CourseChangeResponse>>> getCourseChangeHistory(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok().body(
+                new ApiResponse<>(true, "Course change history fetched successfully", courseChangeAuditService.getCourseChangeHistory(courseId))
         );
     }
 

@@ -31,7 +31,7 @@ public class InternalCourseController {
     private final IVideoQuestionService videoQuestionService;
 
     @GetMapping("/courses/{id}")
-    public ApiResponse<CourseDetailResponse> getCourseById(@PathVariable String id) {
+    public ApiResponse<CourseResponse> getCourseById(@PathVariable String id) {
         return new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(id));
     }
 

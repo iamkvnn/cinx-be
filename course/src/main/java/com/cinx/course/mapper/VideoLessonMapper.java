@@ -18,5 +18,6 @@ public interface VideoLessonMapper extends
 
     @Mapping(target = "hasQuestions", expression = "java(model.getQuestions() != null && !model.getQuestions().isEmpty())")
     @Mapping(target = "questionCount", expression = "java(model.getQuestions() != null ? model.getQuestions().size() : 0)")
+    @Override
     VideoLessonResponse toDto(VideoLesson model);
 }

@@ -5,15 +5,19 @@ import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateLessonRequest;
 import com.cinx.course.dto.request.UpdateLessonRequest;
+import com.cinx.course.dto.response.LessonResponse;
+import com.cinx.course.mapper.LessonMapper;
 import com.cinx.course.model.Lesson;
 import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
+import com.cinx.course.service.change.ICourseChangeAuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -22,6 +26,8 @@ public class LessonService implements ILessonService {
     private final LessonRepository lessonRepository;
     private final SectionRepository sectionRepository;
     private final CourseRepository courseRepository;
+    private final LessonMapper lessonMapper;
+    private final ICourseChangeAuditService courseChangeAuditService;
 
     @Override
     public List<Lesson> getLessonsBySectionId(String sectionId) {
@@ -34,6 +40,7 @@ public class LessonService implements ILessonService {
                 .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
     }
 
+    @Transactional
     @Override
     public Lesson getForUpdate(String lessonId, LessonType lessonType) {
         Lesson lesson = lessonRepository.findByIdAndLessonType(lessonId, lessonType)
@@ -58,7 +65,9 @@ public class LessonService implements ILessonService {
                 .lessonType(request.lessonType())
                 .section(section)
                 .build();
-        return lessonRepository.save(lesson);
+        Lesson saved = lessonRepository.save(lesson);
+        courseChangeAuditService.auditCourseItemChange(section.getCourse().getId(), saved.getId(), null, lessonMapper.toDto(saved));
+        return saved;
     }
 
     @Transactional
@@ -66,19 +75,11 @@ public class LessonService implements ILessonService {
     public Lesson updateLesson(String sectionId, String lessonId, UpdateLessonRequest request) {
         Lesson lesson = lessonRepository.findByIdAndSectionId(lessonId, sectionId)
                 .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
+        LessonResponse oldValue = lessonMapper.toDto(lesson);
         lesson.getSection().getCourse().setStatus(CourseStatus.DRAFT);
         courseRepository.save(lesson.getSection().getCourse());
-
-        if (request.title() != null) {
-            lesson.setTitle(request.title());
-        }
-        if (request.duration() != null) {
-            lesson.setDuration(request.duration());
-        }
-        if (request.orderIndex() != null) {
-            lesson.setOrderIndex(request.orderIndex());
-        }
-
+        lessonMapper.partialUpdate(lesson, request);
+        courseChangeAuditService.auditCourseItemChange(lesson.getSection().getCourse().getId(), lesson.getId(), oldValue, lessonMapper.toDto(lesson));
         return lessonRepository.save(lesson);
     }
 
@@ -89,6 +90,7 @@ public class LessonService implements ILessonService {
                 .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
         lesson.getSection().getCourse().setStatus(CourseStatus.DRAFT);
         courseRepository.save(lesson.getSection().getCourse());
+        courseChangeAuditService.auditCourseItemChange(lesson.getSection().getCourse().getId(), lesson.getId(), lessonMapper.toDto(lesson), null);
         lessonRepository.delete(lesson);
     }
 }

@@ -4,12 +4,15 @@ import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateSectionRequest;
 import com.cinx.course.dto.request.UpdateSectionRequest;
+import com.cinx.course.dto.response.SectionResponse;
+import com.cinx.course.mapper.SectionMapper;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.Lesson;
 import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
+import com.cinx.course.service.change.ICourseChangeAuditService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,6 +27,8 @@ public class SectionService implements ISectionService{
     private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
     private final CourseRepository courseRepository;
+    private final ICourseChangeAuditService courseChangeAuditService;
+    private final SectionMapper sectionMapper;
 
     @Override
     public List<Section> getSectionsByCourseId(String courseId) {
@@ -58,7 +63,9 @@ public class SectionService implements ISectionService{
                 .orderIndex(request.orderIndex())
                 .course(course)
                 .build();
-        return sectionRepository.save(section);
+        Section saved = sectionRepository.save(section);
+        courseChangeAuditService.auditCourseItemChange(courseId, saved.getId(), null, sectionMapper.toDto(saved));
+        return saved;
     }
 
     @Transactional
@@ -66,21 +73,11 @@ public class SectionService implements ISectionService{
     public Section updateSection(String courseId, String sectionId, UpdateSectionRequest request) {
         Section section = sectionRepository.findByIdAndCourseId(sectionId, courseId)
                 .orElseThrow(() -> new NotFoundException("Section not found with id: " + sectionId));
+        SectionResponse oldValue = sectionMapper.toDto(section);
         section.getCourse().setStatus(CourseStatus.DRAFT);
         courseRepository.save(section.getCourse());
-
-        if (request.title() != null) {
-            section.setTitle(request.title());
-        }
-        if (request.description() != null) {
-            section.setDescription(request.description());
-        }
-        if (request.duration() != null) {
-            section.setDuration(request.duration());
-        }
-        if (request.orderIndex() != null) {
-            section.setOrderIndex(request.orderIndex());
-        }
+        sectionMapper.partialUpdate(section, request);
+        courseChangeAuditService.auditCourseItemChange(courseId, sectionId, oldValue, sectionMapper.toDto(section));
         return sectionRepository.save(section);
     }
 
@@ -91,6 +88,7 @@ public class SectionService implements ISectionService{
                 .orElseThrow(() -> new NotFoundException("Section not found with id: " + sectionId));
         section.getCourse().setStatus(CourseStatus.DRAFT);
         courseRepository.save(section.getCourse());
+        courseChangeAuditService.auditCourseItemChange(courseId, sectionId, sectionMapper.toDto(section), null);
         sectionRepository.delete(section);
     }
 }

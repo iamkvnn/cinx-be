@@ -25,7 +25,7 @@ public class SectionController {
     public ResponseEntity<ApiResponse<List<SectionResponse>>> getSectionsByCourseId(@PathVariable String courseId) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Success",
-                sectionService.getSectionsByCourseId(courseId).stream().map(sectionMapper::toResponse).toList()
+                sectionService.getSectionsByCourseId(courseId).stream().map(sectionMapper::toDto).toList()
         ));
     }
 
@@ -36,7 +36,7 @@ public class SectionController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Success",
-                sectionMapper.toResponse(sectionService.getSectionById(courseId, sectionId))
+                sectionMapper.toDto(sectionService.getSectionById(courseId, sectionId))
         ));
     }
 
@@ -48,7 +48,7 @@ public class SectionController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Section created successfully",
-                sectionMapper.toResponse(sectionService.createSection(courseId, request))
+                sectionMapper.toDto(sectionService.createSection(courseId, request))
         ));
     }
 
@@ -61,7 +61,7 @@ public class SectionController {
     ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Section updated successfully",
-                sectionMapper.toResponse(sectionService.updateSection(courseId, sectionId, request))
+                sectionMapper.toDto(sectionService.updateSection(courseId, sectionId, request))
         ));
     }
 
