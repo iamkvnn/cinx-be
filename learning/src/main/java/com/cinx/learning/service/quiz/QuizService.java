@@ -2,10 +2,11 @@ package com.cinx.learning.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
+import com.cinx.learning.consts.ScoringMode;
 import com.cinx.learning.dto.request.ChooseQuizAnswerRequest;
 import com.cinx.learning.dto.request.SubmitQuizSessionRequest;
-import com.cinx.learning.dto.request.UpdateCourseProgressRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.*;
 import com.cinx.learning.mapper.QuizSessionMapper;
@@ -18,21 +19,24 @@ import com.cinx.learning.repository.QuizSessionRepository;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
 import com.cinx.learning.service.course.CourseService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
+import com.cinx.learning.service.quiz.evaluator.IQuestionEvaluator;
+import com.cinx.learning.service.quiz.evaluator.QuestionEvaluatorFactory;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class QuizService implements IQuizService {
+
     private final QuizSessionRepository quizSessionRepository;
     private final CourseService courseService;
     private final QuizSessionMapper quizSessionMapper;
@@ -58,7 +62,7 @@ public class QuizService implements IQuizService {
     public Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size) {
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
-                
+
         if (quizSession.getStatus() == QuizSessionStatus.SUBMITTED) {
             if (Boolean.FALSE.equals(quizSession.getIsReviewAllowed())) {
                 throw new BadRequestException("Review is not allowed for this quiz session");
@@ -68,7 +72,9 @@ public class QuizService implements IQuizService {
         return quizSessionQuestionRepository.findAllByQuizSessionId(quizSessionId, PageRequest.of(page - 1, size))
                 .map(quizSessionQuestionMapper::toDto)
                 .map(dto -> {
-                    if (quizSession.getStatus() == QuizSessionStatus.IN_PROGRESS) {
+                    boolean inProgress = quizSession.getStatus() == QuizSessionStatus.IN_PROGRESS;
+                    boolean hideAnswers = Boolean.FALSE.equals(quizSession.getIsShowAnswersOnReview());
+                    if (inProgress || hideAnswers) {
                         return new QuizSessionQuestionResponse(
                                 dto.id(),
                                 dto.quizSessionId(),
@@ -78,19 +84,8 @@ public class QuizService implements IQuizService {
                                 dto.userAnswer(),
                                 null,
                                 null,
-                                null
-                        );
-                    } else if (Boolean.FALSE.equals(quizSession.getIsShowAnswersOnReview())) {
-                        return new QuizSessionQuestionResponse(
-                                dto.id(),
-                                dto.quizSessionId(),
-                                dto.questionId(),
-                                dto.questionType(),
-                                dto.questionOrder(),
-                                dto.userAnswer(),
                                 null,
-                                null,
-                                null
+                                dto.scoringMethod()
                         );
                     }
                     return dto;
@@ -101,9 +96,13 @@ public class QuizService implements IQuizService {
     @Override
     public QuizSessionResponse createQuizSession(String userId, String quizLessonId) {
         QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(quizLessonId).data();
-        if (quizLessonResponse.maxAttempt() <= quizSessionRepository.countByQuizLessonId(quizLessonId)) {
+
+        // maxAttempt == null means unlimited
+        Integer maxAttempt = quizLessonResponse.maxAttempt();
+        if (maxAttempt != null && maxAttempt <= quizSessionRepository.countByQuizLessonId(quizLessonId)) {
             throw new BadRequestException("You have reached the maximum number of attempts for this quiz lesson");
         }
+
         QuizSession quizSession = quizSessionRepository.save(
                 QuizSession.builder()
                         .userId(userId)
@@ -115,31 +114,65 @@ public class QuizService implements IQuizService {
                         .isShowAnswersOnReview(quizLessonResponse.isShowAnswersOnReview())
                         .build()
         );
-        createQuizSessionQuestions(quizSession, quizLessonResponse.numberOfQuestionPerQuizSession(), quizLessonResponse.questions());
+
+        createQuizSessionQuestions(
+                quizSession,
+                quizLessonResponse.numberOfQuestionPerQuizSession(),
+                quizLessonResponse.questions(),
+                Boolean.TRUE.equals(quizLessonResponse.shuffleQuestions())
+        );
+
         return quizSessionMapper.toDto(quizSession);
     }
 
-    private void createQuizSessionQuestions(QuizSession quizSession, Integer numberOfQuestionPerQuizSession, List<QuizQuestionResponse> questions) {
-        List<QuizSessionQuestion> quizSessionQuestions = new ArrayList<>();
-        boolean[] usedIndexes = new boolean[questions.size()];
-        for (int i = 0; i < numberOfQuestionPerQuizSession; i++) {
-            int randomIndex;
-            do {
-                randomIndex = (int) (Math.random() * questions.size());
-            } while (usedIndexes[randomIndex]);
-            usedIndexes[randomIndex] = true;
-            QuizQuestionResponse quizQuestionResponse = questions.get(randomIndex);
-            quizSessionQuestions.add(QuizSessionQuestion.builder()
+    private void createQuizSessionQuestions(
+            QuizSession quizSession,
+            Integer numberOfQuestionPerQuizSession,
+            List<QuizQuestionResponse> questions,
+            boolean shuffleQuestions
+    ) {
+        List<QuizQuestionResponse> pool = new ArrayList<>(questions);
+        Collections.shuffle(pool);
+        List<QuizQuestionResponse> selected = pool.subList(0, Math.min(numberOfQuestionPerQuizSession, pool.size()));
+
+        List<QuizSessionQuestion> sessionQuestions = new ArrayList<>();
+        for (int i = 0; i < selected.size(); i++) {
+            QuizQuestionResponse q = selected.get(i);
+            sessionQuestions.add(QuizSessionQuestion.builder()
                     .quizSessionId(quizSession.getId())
                     .questionOrder(i + 1)
-                    .questionType(quizQuestionResponse.questionType())
-                    .questionId(quizQuestionResponse.id())
-                    //.weight(quizQuestionResponse.weight())
-                    .correctAnswer(quizQuestionResponse.options().stream().filter(QuizOptionResponse::isCorrect).map(QuizOptionResponse::optionOrder).sorted().toList().toString())
-                    .build()
-            );
+                    .questionType(q.questionType())
+                    .questionId(q.id())
+                    .scoringMethod(q.scoringMethod())
+                    .correctAnswer(buildCorrectAnswer(q))
+                    .build());
         }
-        quizSession.setQuestions(quizSessionQuestionRepository.saveAll(quizSessionQuestions));
+
+        quizSession.setQuestions(quizSessionQuestionRepository.saveAll(sessionQuestions));
+    }
+
+    private String buildCorrectAnswer(QuizQuestionResponse q) {
+        if (q.options() == null || q.options().isEmpty()) {
+            return "";
+        }
+        return switch (q.questionType()) {
+            case MATCHING -> q.options().stream()
+                    .filter(o -> Boolean.TRUE.equals(o.isCorrect()))
+                    .sorted(Comparator.comparing(QuizOptionResponse::optionOrder))
+                    .map(o -> o.id() + ":" + (o.matchText() != null ? o.matchText() : ""))
+                    .collect(Collectors.joining(","));
+            case SHORT_TEXT, ESSAY -> q.options().stream()
+                    .filter(o -> Boolean.TRUE.equals(o.isCorrect()))
+                    .map(QuizOptionResponse::optionText)
+                    .sorted()
+                    .collect(Collectors.joining(","));
+            default -> // SINGLE_CHOICE, MULTI_CHOICE, ORDERING
+                    q.options().stream()
+                    .filter(o -> Boolean.TRUE.equals(o.isCorrect()))
+                    .map(QuizOptionResponse::id)
+                    .sorted()
+                    .collect(Collectors.joining(","));
+        };
     }
 
     @Override
@@ -150,9 +183,7 @@ public class QuizService implements IQuizService {
                             quizSessionQuestion.setUserAnswer(request.userAnswer());
                             quizSessionQuestionRepository.save(quizSessionQuestion);
                         },
-                        () -> {
-                            throw new NotFoundException("Quiz session question not found");
-                        }
+                        () -> { throw new NotFoundException("Quiz session question not found"); }
                 );
     }
 
@@ -161,43 +192,114 @@ public class QuizService implements IQuizService {
     public QuizSessionResponse submitQuizSession(String quizSessionId, SubmitQuizSessionRequest request) {
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
-        if (quizSession.getStatus() == QuizSessionStatus.SUBMITTED) {
-            throw new BadRequestException("Quiz session already submitted");
+
+        if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Quiz session is not in progress");
         }
         if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
             throw new BadRequestException("Quiz session has expired");
         }
-        quizSession.setStatus(QuizSessionStatus.SUBMITTED);
-        quizSessionRepository.save(quizSession);
-        Map<String, ChooseQuizAnswerRequest> quizAnswerRequestMap = request.answers().stream().collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, q -> q));
 
-        Integer totalCorrectAnswers = quizSession.getQuestions().stream().peek(quizSessionQuestion -> {
-            ChooseQuizAnswerRequest chooseQuizAnswerRequest = quizAnswerRequestMap.get(quizSessionQuestion.getQuestionId());
-            if (chooseQuizAnswerRequest != null) {
-                quizSessionQuestion.setUserAnswer(chooseQuizAnswerRequest.userAnswer());
+        Map<String, ChooseQuizAnswerRequest> answerMap = request.answers() == null
+                ? Collections.emptyMap()
+                : request.answers().stream()
+                        .collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, a -> a));
+
+        List<QuizSessionQuestion> questions = quizSession.getQuestions();
+        questions.forEach(q -> {
+            ChooseQuizAnswerRequest lastAnswer = answerMap.get(q.getQuestionId());
+            if (lastAnswer != null) {
+                q.setUserAnswer(lastAnswer.userAnswer());
             }
-        }).reduce(0, (total, quizSessionQuestion) -> {
-            if (quizSessionQuestion.getCorrectAnswer().equals(quizSessionQuestion.getUserAnswer())) {
-                return total + 1;
+        });
+
+        boolean hasEssay = false;
+        double totalScore = 0.0;
+
+        for (QuizSessionQuestion q : questions) {
+            if (q.getQuestionType() == QuizQuestionType.ESSAY) {
+                hasEssay = true;
+                q.setScore(0.0);
+                continue;
             }
-            return total;
-        }, Integer::sum);
+            IQuestionEvaluator evaluator = QuestionEvaluatorFactory.resolve(q);
+            double fraction = evaluator.evaluate(q);
+            q.setScore(fraction);
+            totalScore += fraction;
 
-        quizSession.setQuestions(quizSessionQuestionRepository.saveAll(quizSession.getQuestions()));
+            log.debug("Graded question {} | type={} | method={} | score={}",
+                    q.getQuestionId(), q.getQuestionType(), q.getScoringMethod(), fraction);
+        }
 
-        quizSession.setQuizSessionSubmission(quizSessionSubmissionRepository.save(
-                QuizSessionSubmission.builder()
-                        .quizSessionId(quizSession.getId())
-                        .score((double) (totalCorrectAnswers * 10 / quizSession.getQuestions().size()))
-                        .submissionTime(LocalDateTime.now())
-                        .totalCorrectAnswers(totalCorrectAnswers)
-                        .build()
-        ));
-        learningProgressService.updateLearningItemProgress(
-                quizSession.getUserId(),
-                quizSession.getQuizLessonId(),
-                new UpdateLearningItemRequest(true, quizSession.getQuizSessionSubmission().getScore() >= 5.0, quizSession.getQuizSessionSubmission().getScore())
-        );
+        quizSessionQuestionRepository.saveAll(questions);
+
+        if (hasEssay) {
+            quizSession.setStatus(QuizSessionStatus.PENDING_GRADE);
+            quizSessionRepository.save(quizSession);
+            log.info("Quiz session {} set to PENDING_GRADE (contains ESSAY questions)", quizSessionId);
+        } else {
+            quizSession.setStatus(QuizSessionStatus.GRADED);
+            quizSessionRepository.save(quizSession);
+
+            double rawScore = questions.isEmpty() ? 0.0 : (totalScore / questions.size()) * 10.0;
+            int correctCount = (int) questions.stream()
+                    .filter(q -> q.getScore() != null && q.getScore() >= 1.0)
+                    .count();
+
+            quizSession.setQuizSessionSubmission(quizSessionSubmissionRepository.save(
+                    QuizSessionSubmission.builder()
+                            .quizSessionId(quizSession.getId())
+                            .score(rawScore)
+                            .submissionTime(LocalDateTime.now())
+                            .totalCorrectAnswers(correctCount)
+                            .build()
+            ));
+
+            double effectiveScore = aggregateScore(
+                    quizSession.getUserId(),
+                    quizSession.getQuizLessonId(),
+                    quizSession.getQuizSessionSubmission()
+            );
+
+            log.info("Quiz session {} graded. rawScore={} effectiveScore={}", quizSessionId, rawScore, effectiveScore);
+
+            learningProgressService.updateLearningItemProgress(
+                    quizSession.getUserId(),
+                    quizSession.getQuizLessonId(),
+                    new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore)
+            );
+        }
+
         return quizSessionMapper.toDto(quizSession);
+    }
+
+    private double aggregateScore(String userId, String quizLessonId, QuizSessionSubmission currentSubmission) {
+        List<QuizSessionSubmission> allSubmissions =
+                quizSessionSubmissionRepository.findAllByUserIdAndQuizLessonId(userId, quizLessonId);
+
+        if (allSubmissions.isEmpty()) {
+            return currentSubmission.getScore();
+        }
+
+        ScoringMode scoringMode;
+        try {
+            scoringMode = courseService.getQuizLessonById(quizLessonId).data().scoringMode();
+        } catch (Exception e) {
+            log.warn("Could not fetch scoringMode for quizLessonId={}, defaulting to HIGHEST", quizLessonId);
+            scoringMode = ScoringMode.HIGHEST;
+        }
+        if (scoringMode == null) scoringMode = ScoringMode.HIGHEST;
+
+        List<Double> scores = allSubmissions.stream()
+                .map(QuizSessionSubmission::getScore)
+                .filter(Objects::nonNull)
+                .toList();
+
+        return switch (scoringMode) {
+            case HIGHEST -> scores.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+            case LATEST  -> scores.getLast(); // list is sorted ASC; last = most recent
+            case FIRST   -> scores.getFirst();
+            case AVERAGE -> scores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+        };
     }
 }

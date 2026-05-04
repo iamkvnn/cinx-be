@@ -1,5 +1,6 @@
 package com.cinx.course.dto.request;
 
+import com.cinx.course.consts.ScoringMode;
 import lombok.Data;
 
 import java.time.LocalDateTime;
@@ -14,5 +15,8 @@ public class UpdateQuizLessonRequest {
     private Integer duration;
     private Boolean isReviewAllowed;
     private Boolean isShowAnswersOnReview;
+    private Boolean shuffleQuestions;
+    private Boolean shuffleOptions;
+    private ScoringMode scoringMode;
     private List<CreateQuizQuestionRequest> questions;
 }

@@ -1,6 +1,7 @@
 package com.cinx.learning.dto.response;
 
 import com.cinx.learning.consts.QuizQuestionType;
+import com.cinx.learning.consts.ScoringMethod;
 
 public record QuizSessionQuestionResponse(
         String id,
@@ -11,6 +12,7 @@ public record QuizSessionQuestionResponse(
         String userAnswer,
         String correctAnswer,
         Boolean isCorrect,
-        Short score
+        Double score,
+        ScoringMethod scoringMethod
 ) {
 }

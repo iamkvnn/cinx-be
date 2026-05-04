@@ -19,6 +19,7 @@ public class QuizOption extends BaseEntity {
     private String optionText;
     private Boolean isCorrect;
     private Integer optionOrder;
+    private String matchText;
 
     @ManyToOne
     @JoinColumn(name = "questionId", insertable = false, updatable = false)

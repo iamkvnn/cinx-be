@@ -2,6 +2,7 @@ package com.cinx.learning.dto.response;
 
 
 import com.cinx.learning.consts.QuizQuestionType;
+import com.cinx.learning.consts.ScoringMethod;
 
 import java.util.List;
 
@@ -10,7 +11,7 @@ public record QuizQuestionResponse(
         String questionText,
         QuizQuestionType questionType,
         Integer order,
-        //Short score,
+        ScoringMethod scoringMethod,
         List<QuizOptionResponse> options
 ) {
 }

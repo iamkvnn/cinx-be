@@ -1,5 +1,6 @@
 package com.cinx.course.model;
 
+import com.cinx.course.consts.ScoringMode;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -20,12 +21,22 @@ public class QuizLesson {
     private Integer duration;
     private Integer numberOfQuestionPerQuizSession;
     private Integer maxAttempt;
-    
+
     @Builder.Default
     private Boolean isReviewAllowed = false;
-    
+
     @Builder.Default
     private Boolean isShowAnswersOnReview = false;
+
+    @Builder.Default
+    private Boolean shuffleQuestions = false;
+
+    @Builder.Default
+    private Boolean shuffleOptions = false;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ScoringMode scoringMode = ScoringMode.HIGHEST;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)
