@@ -22,7 +22,4 @@ public class Review {
 
     @OneToMany(mappedBy = "reviewId", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<ReviewReaction> reactions;
-
-    @OneToMany(mappedBy = "reviewId", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<ReviewReport> reports;
 }

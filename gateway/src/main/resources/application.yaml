@@ -110,7 +110,7 @@ spring:
           - id: social-service
             uri: lb://social
             predicates:
-            - Path=/api/v1/wishlist/**, /api/v1/reviews/**
+            - Path=/api/v1/wishlist/**, /api/v1/reviews/**, /api/v1/course-qna/**, /api/v1/reports/**
           - id: recommendation-service
             uri: http://${RECOMMENDATION_HOST:localhost}:${RECOMMENDATION_PORT:8090}
             predicates:

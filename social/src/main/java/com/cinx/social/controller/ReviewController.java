@@ -14,6 +14,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import com.cinx.common.dto.PaginatedApiResponse;
+import com.cinx.common.mapper.PaginationWrapper;
+import com.cinx.social.dto.request.CreateReviewReplyRequest;
+import com.cinx.social.dto.request.UpdateReviewReplyRequest;
+import org.springframework.data.domain.Page;
 
 @RestController
 @RequiredArgsConstructor
@@ -22,8 +27,13 @@ public class ReviewController {
     private final IReviewService reviewService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<List<ReviewResponse>>> getReviewsByCourseId(@RequestParam String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Reviews retrieved successfully", reviewService.getReviewsByCourseId(courseId)));
+    public ResponseEntity<PaginatedApiResponse<ReviewResponse>> getReviewsByCourseId(
+            @RequestParam String courseId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String sort) {
+        Page<ReviewResponse> reviewPage = reviewService.getReviewsByCourseId(courseId, page, size, sort);
+        return ResponseEntity.ok(PaginationWrapper.wrap(reviewPage));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
@@ -59,5 +69,26 @@ public class ReviewController {
     public ResponseEntity<ApiResponse<?>> reactReview(@PathVariable String reviewId, @RequestBody CreateReviewReactionRequest request) {
         reviewService.reactReview(reviewId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Review reaction added successfully", null));
+    }
+
+    @Operation(summary = "Reply to review (Instructor only)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{reviewId}/replies")
+    public ResponseEntity<ApiResponse<?>> createReviewReply(@PathVariable String reviewId, @RequestBody CreateReviewReplyRequest request) {
+        reviewService.createReviewReply(reviewId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Review reply created successfully", null));
+    }
+
+    @Operation(summary = "Update review reply (Instructor only)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PutMapping("/replies/{replyId}")
+    public ResponseEntity<ApiResponse<?>> updateReviewReply(@PathVariable String replyId, @RequestBody UpdateReviewReplyRequest request) {
+        reviewService.updateReviewReply(replyId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Review reply updated successfully", null));
+    }
+
+    @Operation(summary = "Delete review reply (Instructor only)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @DeleteMapping("/replies/{replyId}")
+    public ResponseEntity<ApiResponse<?>> deleteReviewReply(@PathVariable String replyId) {
+        reviewService.deleteReviewReply(replyId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Review reply deleted successfully", null));
     }
 }

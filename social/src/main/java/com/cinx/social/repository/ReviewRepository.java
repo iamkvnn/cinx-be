@@ -7,8 +7,11 @@ import org.springframework.data.repository.query.Param;
 
 import java.util.List;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 public interface ReviewRepository extends JpaRepository<Review, String> {
-    List<Review> findByCourseId(String courseId);
+    Page<Review> findByCourseId(String courseId, Pageable pageable);
 
     @Query("SELECT AVG(r.rating) FROM Review r WHERE r.courseId = :courseId")
     Double getAverageRatingByCourseId(@Param("courseId") String courseId);
