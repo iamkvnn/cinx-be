@@ -13,11 +13,12 @@ import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
 import com.cinx.course.service.change.ICourseChangeAuditService;
+import com.cinx.course.messaging.CourseEventProducer;
+import com.cinx.course.messaging.event.LessonChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
@@ -28,6 +29,12 @@ public class LessonService implements ILessonService {
     private final CourseRepository courseRepository;
     private final LessonMapper lessonMapper;
     private final ICourseChangeAuditService courseChangeAuditService;
+    private final CourseEventProducer courseEventProducer;
+
+    @Override
+    public List<String> getLessonIdsByCourseId(String courseId) {
+        return lessonRepository.findAllByCourseId(courseId);
+    }
 
     @Override
     public List<Lesson> getLessonsBySectionId(String sectionId) {
@@ -58,15 +65,23 @@ public class LessonService implements ILessonService {
         section.getCourse().setStatus(CourseStatus.DRAFT);
         courseRepository.save(section.getCourse());
 
+        List<Lesson> prerequisites = null;
+        if (request.prerequisiteIds() != null && !request.prerequisiteIds().isEmpty()) {
+            prerequisites = lessonRepository.findAllById(request.prerequisiteIds());
+        }
+
         Lesson lesson = Lesson.builder()
                 .title(request.title())
                 .duration(request.duration())
                 .orderIndex(request.orderIndex())
                 .lessonType(request.lessonType())
+                .isPreview(request.isPreview() != null ? request.isPreview() : false)
+                .prerequisites(prerequisites)
                 .section(section)
                 .build();
         Lesson saved = lessonRepository.save(lesson);
         courseChangeAuditService.auditCourseItemChange(section.getCourse().getId(), saved.getId(), null, lessonMapper.toDto(saved));
+        courseEventProducer.publishLessonChangedEvent(new LessonChangedEvent(section.getCourse().getId(), saved.getId(), "CREATED"));
         return saved;
     }
 
@@ -78,9 +93,18 @@ public class LessonService implements ILessonService {
         LessonResponse oldValue = lessonMapper.toDto(lesson);
         lesson.getSection().getCourse().setStatus(CourseStatus.DRAFT);
         courseRepository.save(lesson.getSection().getCourse());
+        
         lessonMapper.partialUpdate(lesson, request);
+        
+        if (request.prerequisiteIds() != null) {
+            List<Lesson> prerequisites = lessonRepository.findAllById(request.prerequisiteIds());
+            lesson.setPrerequisites(prerequisites);
+        }
+        
         courseChangeAuditService.auditCourseItemChange(lesson.getSection().getCourse().getId(), lesson.getId(), oldValue, lessonMapper.toDto(lesson));
-        return lessonRepository.save(lesson);
+        Lesson updated = lessonRepository.save(lesson);
+        courseEventProducer.publishLessonChangedEvent(new LessonChangedEvent(lesson.getSection().getCourse().getId(), lesson.getId(), "UPDATED"));
+        return updated;
     }
 
     @Transactional
@@ -92,5 +116,6 @@ public class LessonService implements ILessonService {
         courseRepository.save(lesson.getSection().getCourse());
         courseChangeAuditService.auditCourseItemChange(lesson.getSection().getCourse().getId(), lesson.getId(), lessonMapper.toDto(lesson), null);
         lessonRepository.delete(lesson);
+        courseEventProducer.publishLessonChangedEvent(new LessonChangedEvent(lesson.getSection().getCourse().getId(), lesson.getId(), "DELETED"));
     }
 }

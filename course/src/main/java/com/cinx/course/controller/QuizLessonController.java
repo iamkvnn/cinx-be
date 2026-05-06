@@ -12,14 +12,21 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/quiz-lessons")
+@RequestMapping("/api/v1/lessons/{lessonId}/quizzes")
 @RequiredArgsConstructor
 public class QuizLessonController {
     private final IQuizService quizService;
 
+    @GetMapping
+    public ResponseEntity<ApiResponse<QuizLessonResponse>> getQuizByLessonId(@PathVariable String lessonId) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Success", quizService.getQuizByLessonId(lessonId))
+        );
+    }
+
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createQuizLesson(@RequestParam String lessonId, @RequestBody CreateQuizLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> createQuizLesson(@PathVariable String lessonId, @RequestBody CreateQuizLessonRequest request) {
         quizService.createQuiz(lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
@@ -28,7 +35,7 @@ public class QuizLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateQuizLesson(@RequestParam String lessonId, @RequestBody UpdateQuizLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> updateQuizLesson(@PathVariable String lessonId, @RequestBody UpdateQuizLessonRequest request) {
         quizService.updateQuiz(lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
@@ -37,7 +44,7 @@ public class QuizLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
-    public ResponseEntity<ApiResponse<?>> deleteQuizLesson(@RequestParam String lessonId) {
+    public ResponseEntity<ApiResponse<?>> deleteQuizLesson(@PathVariable String lessonId) {
         quizService.deleteQuiz(lessonId);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)

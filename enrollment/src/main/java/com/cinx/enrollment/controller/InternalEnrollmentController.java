@@ -37,6 +37,11 @@ public class InternalEnrollmentController {
         return new ApiResponse<>(true, "Enrolled successfully", null);
     }
 
+    @GetMapping("/enrollments/courses/{courseId}/users")
+    public ApiResponse<List<String>> getUserIdsEnrolledInCourse(@PathVariable String courseId) {
+        return new ApiResponse<>(true, "Users fetched successfully", enrollmentService.getUserIdsEnrolledInCourse(courseId));
+    }
+
     @GetMapping("/orders/{orderId}")
     public ApiResponse<OrderDetailResponse> getOrderById(@PathVariable String orderId) {
         return new ApiResponse<>(true, "Order fetched successfully", orderService.getOrderById(orderId));

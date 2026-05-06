@@ -21,7 +21,7 @@ public class VideoQuestionController {
 
     private final IVideoQuestionService videoQuestionService;
 
-    @GetMapping("/video-lessons/{lessonId}/questions")
+    @GetMapping("/lessons/{lessonId}/videos/questions")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<List<VideoQuestionResponse>>> getQuestionsByLessonId(
             @PathVariable String lessonId) {
@@ -36,7 +36,7 @@ public class VideoQuestionController {
                 .ok(new ApiResponse<>(true, "Question fetched successfully", videoQuestionService.getQuestionById(id)));
     }
 
-    @PostMapping("/video-lessons/{lessonId}/questions")
+    @PostMapping("/lessons/{lessonId}/videos/questions")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<VideoQuestionResponse>> createQuestion(
             @PathVariable String lessonId,

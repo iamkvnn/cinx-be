@@ -11,4 +11,5 @@ public interface IEnrollmentService {
     Page<CourseResponse> getEnrolledCourses(int page, int size);
     List<CheckEnrollmentStatus> checkEnrollmentStatus(List<String> courseIds);
     void enrollCourses(List<CreateEnrolledCourseRequest> requests);
+    List<String> getUserIdsEnrolledInCourse(String courseId);
 }

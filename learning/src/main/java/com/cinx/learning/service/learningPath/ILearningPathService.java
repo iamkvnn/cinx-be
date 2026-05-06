@@ -13,4 +13,11 @@ public interface ILearningPathService {
     void dropActiveLearningPath(String userId);
     void activatePendingPathForCourse(String userId, String courseId);
     void updatePathProgress(String userId, String lessonId);
+
+    /**
+     * Re-evaluate learning-path item unlock state for a single user after
+     * prerequisite or lesson-order changes in a course.  Preserves completed
+     * items; only marks not-yet-started items as unlocked or re-locked.
+     */
+    void refreshPrerequisiteUnlocks(String userId, String courseId);
 }

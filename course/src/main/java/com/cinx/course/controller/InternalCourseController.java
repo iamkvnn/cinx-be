@@ -1,11 +1,9 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
-import com.cinx.course.dto.response.CourseDetailResponse;
-import com.cinx.course.dto.response.CourseResponse;
-import com.cinx.course.dto.response.QuizLessonResponse;
-import com.cinx.course.dto.response.VideoLessonResponse;
+import com.cinx.course.dto.response.*;
 import com.cinx.course.service.course.ICourseService;
+import com.cinx.course.service.lesson.ILessonService;
 import com.cinx.course.service.quiz.IQuizService;
 import com.cinx.course.service.video.IVideoService;
 import com.cinx.course.service.videoquestion.IVideoQuestionService;
@@ -26,6 +24,7 @@ import java.util.List;
 public class InternalCourseController {
 
     private final ICourseService courseService;
+    private final ILessonService lessonService;
     private final IQuizService quizService;
     private final IVideoService videoService;
     private final IVideoQuestionService videoQuestionService;
@@ -33,6 +32,11 @@ public class InternalCourseController {
     @GetMapping("/courses/{id}")
     public ApiResponse<CourseResponse> getCourseById(@PathVariable String id) {
         return new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(id));
+    }
+
+    @GetMapping("/courses/{id}/lessons")
+    public ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id) {
+        return new ApiResponse<>(true, "Course fetched successfully", lessonService.getLessonIdsByCourseId(id));
     }
 
     @GetMapping("/courses/ids")

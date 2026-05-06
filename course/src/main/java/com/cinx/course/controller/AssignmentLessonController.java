@@ -12,13 +12,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/assignment-lessons")
+@RequestMapping("/api/v1/lessons/{lessonId}/assignments")
 @RequiredArgsConstructor
 public class AssignmentLessonController {
     private final IAssignmentService assignmentService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<AssignmentLessonResponse>> getAssigmentByLessonId(@RequestParam String lessonId) {
+    public ResponseEntity<ApiResponse<AssignmentLessonResponse>> getAssigmentByLessonId(@PathVariable String lessonId) {
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", assignmentService.getAssignmentByLessonId(lessonId))
         );
@@ -26,7 +26,7 @@ public class AssignmentLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createAssigmentLesson(@RequestParam String lessonId, @RequestBody CreateAssignmentLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> createAssigmentLesson(@PathVariable String lessonId, @RequestBody CreateAssignmentLessonRequest request) {
         assignmentService.createAssignment(lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
@@ -35,7 +35,7 @@ public class AssignmentLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateAssigmentLesson(@RequestParam String lessonId, @RequestBody UpdateAssignmentLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> updateAssigmentLesson(@PathVariable String lessonId, @RequestBody UpdateAssignmentLessonRequest request) {
         assignmentService.updateAssignment(lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
@@ -44,7 +44,7 @@ public class AssignmentLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
-    public ResponseEntity<ApiResponse<?>> deleteAssigmentLesson(@RequestParam String lessonId) {
+    public ResponseEntity<ApiResponse<?>> deleteAssigmentLesson(@PathVariable String lessonId) {
         assignmentService.deleteAssignment(lessonId);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)

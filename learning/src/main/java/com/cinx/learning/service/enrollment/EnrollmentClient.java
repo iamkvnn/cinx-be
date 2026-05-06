@@ -4,6 +4,8 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.learning.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.learning.dto.response.CheckEnrollmentStatus;
 import org.springframework.cloud.openfeign.FeignClient;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import java.util.List;
@@ -16,4 +18,7 @@ public interface EnrollmentClient {
 
     @PostMapping("/enrollments")
     ApiResponse<Void> enrollCourses(@RequestBody List<CreateEnrolledCourseRequest> requests);
+
+    @GetMapping("/enrollments/courses/{courseId}/users")
+    ApiResponse<List<String>> getUserIdsEnrolledInCourse(@PathVariable("courseId") String courseId);
 }

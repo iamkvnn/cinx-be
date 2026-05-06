@@ -23,4 +23,7 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("SELECT l FROM Lesson l WHERE l.id = :lessonId")
     Optional<Lesson> findByIdForUpdate(@Param("lessonId") String lessonId);
+
+    @Query("SELECT l.id FROM Lesson l WHERE l.section.course.id = :courseId")
+    List<String> findAllByCourseId(String courseId);
 }

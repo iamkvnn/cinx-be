@@ -3,9 +3,13 @@ package com.cinx.course.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.request.CreateLessonRequest;
 import com.cinx.course.dto.request.UpdateLessonRequest;
+import com.cinx.course.dto.response.LessonPreviewResponse;
 import com.cinx.course.dto.response.LessonResponse;
 import com.cinx.course.mapper.LessonMapper;
+import com.cinx.course.model.Lesson;
+import com.cinx.course.service.article.IArticleService;
 import com.cinx.course.service.lesson.ILessonService;
+import com.cinx.course.service.video.IVideoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -19,6 +23,8 @@ import java.util.List;
 @RequiredArgsConstructor
 public class LessonController {
     private final ILessonService lessonService;
+    private final IVideoService videoService;
+    private final IArticleService articleService;
     private final LessonMapper lessonMapper;
 
     @GetMapping
@@ -37,6 +43,29 @@ public class LessonController {
         return ResponseEntity.ok(ApiResponse.success(
                 "Success",
                 lessonMapper.toDto(lessonService.getLessonById(sectionId, lessonId))
+        ));
+    }
+
+    @GetMapping("/{lessonId}/preview")
+    public ResponseEntity<ApiResponse<LessonPreviewResponse>> getLessonPreview(
+            @PathVariable String sectionId,
+            @PathVariable String lessonId
+    ) {
+        Lesson lesson = lessonService.getLessonById(sectionId, lessonId);
+        if (lesson.getIsPreview() == null || !lesson.getIsPreview()) {
+            throw new com.cinx.common.exception.BadRequestException("This lesson is not available for preview");
+        }
+
+        Object content = null;
+        if (lesson.getLessonType() == com.cinx.course.consts.LessonType.VIDEO) {
+            content = videoService.getVideoByLessonId(lessonId);
+        } else if (lesson.getLessonType() == com.cinx.course.consts.LessonType.ARTICLE) {
+            content = articleService.getArticleByLessonId(lessonId);
+        }
+
+        return ResponseEntity.ok(ApiResponse.success(
+                "Success",
+                new LessonPreviewResponse(lessonMapper.toDto(lesson), content)
         ));
     }
 

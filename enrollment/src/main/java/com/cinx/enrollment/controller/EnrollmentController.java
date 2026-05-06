@@ -25,4 +25,10 @@ public class EnrollmentController {
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getEnrolledCourses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         return ResponseEntity.ok(PaginationWrapper.wrap(enrollmentService.getEnrolledCourses(page, size)));
     }
+
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/check")
+    public ResponseEntity<ApiResponse<List<CheckEnrollmentStatus>>> checkEnrollmentStatus(@RequestBody List<String> courseIds) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "", enrollmentService.checkEnrollmentStatus(courseIds)));
+    }
 }

@@ -56,4 +56,40 @@ public class RabbitMQConfig {
                 .durable(true)
                 .build();
     }
+
+    @Bean
+    public Queue lessonChangeQueue() {
+        return QueueBuilder.durable("learning.lesson-change.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "learning.lesson-change.dead")
+                .withArgument("x-message-ttl", 60000)
+                .withArgument("x-max-length", 10000)
+                .build();
+    }
+
+    @Bean
+    public Queue lessonChangeDeadLetterQueue() {
+        return QueueBuilder.durable("learning.lesson-change.dead.queue").build();
+    }
+
+    @Bean
+    public TopicExchange courseEventsExchange() {
+        return ExchangeBuilder.topicExchange("course.events.exchange")
+                .durable(true)
+                .build();
+    }
+
+    @Bean
+    public Binding lessonChangeBinding() {
+        return BindingBuilder.bind(lessonChangeQueue())
+                .to(courseEventsExchange())
+                .with("course.lesson.#");
+    }
+
+    @Bean
+    public Binding lessonChangeDeadLetterBinding() {
+        return BindingBuilder.bind(lessonChangeDeadLetterQueue())
+                .to(deadLetterExchange())
+                .with("learning.lesson-change.dead");
+    }
 }
