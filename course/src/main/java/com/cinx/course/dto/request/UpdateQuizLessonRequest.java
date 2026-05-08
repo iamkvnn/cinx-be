@@ -8,8 +8,6 @@ import java.util.List;
 
 @Data
 public class UpdateQuizLessonRequest {
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
     private Integer numberOfQuestionPerQuizSession;
     private Integer maxAttempt;
     private Integer duration;
@@ -18,5 +16,4 @@ public class UpdateQuizLessonRequest {
     private Boolean shuffleQuestions;
     private Boolean shuffleOptions;
     private ScoringMode scoringMode;
-    private List<CreateQuizQuestionRequest> questions;
 }

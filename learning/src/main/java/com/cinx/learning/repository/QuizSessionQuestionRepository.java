@@ -1,15 +1,15 @@
 package com.cinx.learning.repository;
 
-import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.model.QuizSessionQuestion;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 
-import java.util.Optional;
+import java.util.Collection;
 import java.util.List;
+import java.util.Optional;
 
 public interface QuizSessionQuestionRepository extends JpaRepository<QuizSessionQuestion, String> {
     Page<QuizSessionQuestion> findAllByQuizSessionId(String quizSessionId, Pageable pageable);
@@ -23,4 +23,15 @@ public interface QuizSessionQuestionRepository extends JpaRepository<QuizSession
            "WHERE s.quizLessonId = :quizId AND s.status = com.cinx.learning.consts.QuizSessionStatus.SUBMITTED " +
            "GROUP BY q.questionId")
     List<Object[]> getQuizAnalyticsByQuizId(String quizId);
+
+    @Query("""
+            SELECT q FROM QuizSessionQuestion q
+            JOIN FETCH q.quizSession s
+            WHERE q.questionId IN :questionIds
+              AND s.quizLessonId = :quizLessonId
+            """)
+    List<QuizSessionQuestion> findAllByQuizLessonIdAndQuestionIdIn(
+            String quizLessonId,
+            List<String> questionIds
+    );
 }

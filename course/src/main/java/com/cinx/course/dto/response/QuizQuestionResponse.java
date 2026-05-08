@@ -9,7 +9,6 @@ public record QuizQuestionResponse(
         String id,
         String questionText,
         QuizQuestionType questionType,
-        Integer orderIndex,
         ScoringMethod scoringMethod,
         List<QuizOptionResponse> options
 ) {

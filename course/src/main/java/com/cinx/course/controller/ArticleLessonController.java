@@ -35,11 +35,4 @@ public class ArticleLessonController {
         articleService.updateArticle(lessonId, request);
         return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<?>> deleteArticleLesson(@PathVariable String lessonId) {
-        articleService.deleteArticle(lessonId);
-        return ResponseEntity.ok(ApiResponse.success("Success", null));
-    }
 }

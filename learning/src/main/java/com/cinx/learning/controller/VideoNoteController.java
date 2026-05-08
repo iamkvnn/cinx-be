@@ -5,7 +5,7 @@ import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.request.CreateVideoNoteRequest;
 import com.cinx.learning.dto.request.UpdateVideoNoteRequest;
 import com.cinx.learning.dto.response.VideoNoteDto;
-import com.cinx.learning.service.IVideoNoteService;
+import com.cinx.learning.service.video.IVideoNoteService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;

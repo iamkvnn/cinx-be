@@ -41,13 +41,4 @@ public class AssignmentLessonController {
                 new ApiResponse<>(true, "Success", null)
         );
     }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<?>> deleteAssigmentLesson(@PathVariable String lessonId) {
-        assignmentService.deleteAssignment(lessonId);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
-    }
 }

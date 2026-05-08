@@ -6,9 +6,8 @@ import com.cinx.course.consts.ScoringMode;
 import java.time.LocalDateTime;
 import java.util.List;
 
-public record QuizLessonResponse (
-        LocalDateTime startTime,
-        LocalDateTime endTime,
+public record QuizLessonResponse(
+        String lessonId,
         Integer numberOfQuestionPerQuizSession,
         Integer maxAttempt,
         Integer duration,
@@ -17,6 +16,7 @@ public record QuizLessonResponse (
         Boolean shuffleQuestions,
         Boolean shuffleOptions,
         ScoringMode scoringMode,
+        Boolean hasPendingSync,
         List<QuizQuestionResponse> questions
 ){
 }

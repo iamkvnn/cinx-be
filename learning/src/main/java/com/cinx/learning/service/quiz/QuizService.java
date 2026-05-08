@@ -6,6 +6,7 @@ import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
 import com.cinx.learning.consts.ScoringMode;
 import com.cinx.learning.dto.request.ChooseQuizAnswerRequest;
+import com.cinx.learning.dto.request.GradeEssayRequest;
 import com.cinx.learning.dto.request.SubmitQuizSessionRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.*;
@@ -97,7 +98,6 @@ public class QuizService implements IQuizService {
     public QuizSessionResponse createQuizSession(String userId, String quizLessonId) {
         QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(quizLessonId).data();
 
-        // maxAttempt == null means unlimited
         Integer maxAttempt = quizLessonResponse.maxAttempt();
         if (maxAttempt != null && maxAttempt <= quizSessionRepository.countByQuizLessonId(quizLessonId)) {
             throw new BadRequestException("You have reached the maximum number of attempts for this quiz lesson");
@@ -152,9 +152,6 @@ public class QuizService implements IQuizService {
     }
 
     private String buildCorrectAnswer(QuizQuestionResponse q) {
-        if (q.options() == null || q.options().isEmpty()) {
-            return "";
-        }
         return switch (q.questionType()) {
             case MATCHING -> q.options().stream()
                     .filter(o -> Boolean.TRUE.equals(o.isCorrect()))
@@ -301,5 +298,80 @@ public class QuizService implements IQuizService {
             case FIRST   -> scores.getFirst();
             case AVERAGE -> scores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
         };
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Page<QuizSessionResponse> getPendingGradeSessions(String quizLessonId, int page, int size) {
+        return quizSessionRepository
+                .findAllByQuizLessonIdAndStatus(quizLessonId, QuizSessionStatus.PENDING_GRADE, PageRequest.of(page - 1, size))
+                .map(quizSessionMapper::toDto);
+    }
+
+    @Override
+    @Transactional
+    public QuizSessionResponse gradeEssay(String sessionId, GradeEssayRequest request) {
+        QuizSession session = quizSessionRepository.findById(sessionId)
+                .orElseThrow(() -> new NotFoundException("Quiz session not found"));
+
+        if (session.getStatus() != QuizSessionStatus.PENDING_GRADE) {
+            throw new BadRequestException("Quiz session is not pending essay grading");
+        }
+
+        Map<String, Double> scoreMap = request.scores().stream()
+                .collect(Collectors.toMap(
+                        GradeEssayRequest.EssayQuestionScore::questionId,
+                        GradeEssayRequest.EssayQuestionScore::score
+                ));
+
+        List<QuizSessionQuestion> questions = session.getQuestions();
+
+        questions.stream()
+                .filter(q -> q.getQuestionType() == QuizQuestionType.ESSAY)
+                .forEach(q -> {
+                    Double assignedScore = scoreMap.get(q.getQuestionId());
+                    if (assignedScore == null) {
+                        throw new BadRequestException("Missing score for essay question: " + q.getQuestionId());
+                    }
+                    if (assignedScore < 0.0 || assignedScore > 1.0) {
+                        throw new BadRequestException("Score must be in range [0.0, 1.0] for question: " + q.getQuestionId());
+                    }
+                    q.setScore(assignedScore);
+                });
+
+        quizSessionQuestionRepository.saveAll(questions);
+
+        double totalFraction = questions.stream()
+                .mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0)
+                .sum();
+        double rawScore = questions.isEmpty() ? 0.0 : (totalFraction / questions.size()) * 10.0;
+        int correctCount = (int) questions.stream()
+                .filter(q -> q.getScore() != null && q.getScore() >= 1.0)
+                .count();
+
+        session.setStatus(QuizSessionStatus.GRADED);
+        quizSessionRepository.save(session);
+
+        QuizSessionSubmission submission = quizSessionSubmissionRepository
+                .findByQuizSessionId(sessionId)
+                .orElseGet(() -> QuizSessionSubmission.builder()
+                        .quizSessionId(sessionId)
+                        .submissionTime(LocalDateTime.now())
+                        .build());
+        submission.setScore(rawScore);
+        submission.setTotalCorrectAnswers(correctCount);
+        session.setQuizSessionSubmission(quizSessionSubmissionRepository.save(submission));
+
+        double effectiveScore = aggregateScore(session.getUserId(), session.getQuizLessonId(), submission);
+
+        log.info("Essay graded for session {}. rawScore={} effectiveScore={}", sessionId, rawScore, effectiveScore);
+
+        learningProgressService.updateLearningItemProgress(
+                session.getUserId(),
+                session.getQuizLessonId(),
+                new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore)
+        );
+
+        return quizSessionMapper.toDto(session);
     }
 }

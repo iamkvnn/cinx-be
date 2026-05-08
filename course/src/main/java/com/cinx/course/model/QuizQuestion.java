@@ -21,15 +21,17 @@ public class QuizQuestion extends BaseEntity {
     @Enumerated(EnumType.STRING)
     private QuizQuestionType questionType;
 
-    private Integer orderIndex;
-
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private ScoringMethod scoringMethod = ScoringMethod.ALL_OR_NOTHING;
+
+    @Builder.Default
+    private Boolean needSync = false;
 
     @OneToMany(mappedBy = "quizQuestion")
     private List<QuizOption> options;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "quiz_lesson_id")
     private QuizLesson quizLesson;
 }

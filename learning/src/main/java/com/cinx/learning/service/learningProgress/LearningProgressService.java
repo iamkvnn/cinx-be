@@ -110,10 +110,6 @@ public class LearningProgressService implements ILearningProgressService {
         Boolean newCompleted = request.isCompleted() != null ? request.isCompleted() : oldCompleted;
         Double newScore = request.score();
 
-        if (oldScore != null && newScore <= oldScore) {
-            return;
-        }
-
         int completedItems = course.getCompletedItems() != null ? course.getCompletedItems() : 0;
         double totalScore = (course.getAvgScore() != null ? course.getAvgScore() : 0.0) * completedItems;
 
@@ -129,6 +125,7 @@ public class LearningProgressService implements ILearningProgressService {
         } else if (Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
             totalScore = totalScore - (oldScore != null ? oldScore : 0.0) + newScore;
             progress.setScore(newScore);
+            progress.setIsPassed(request.isPassed());
         }
 
         course.setCompletedItems(completedItems);

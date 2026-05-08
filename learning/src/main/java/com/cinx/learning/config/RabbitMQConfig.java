@@ -92,4 +92,34 @@ public class RabbitMQConfig {
                 .to(deadLetterExchange())
                 .with("learning.lesson-change.dead");
     }
+
+    @Bean
+    public Queue quizSyncQueue() {
+        return QueueBuilder.durable("learning.quiz.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "learning.quiz.dead")
+                .withArgument("x-message-ttl", 60000)
+                .withArgument("x-max-length", 10000)
+                .build();
+    }
+
+    @Bean
+    public Queue quizSyncDeadLetterQueue() {
+        return QueueBuilder.durable("learning.quiz.dead.queue").build();
+    }
+
+    @Bean
+    public Binding quizSyncBinding() {
+        return BindingBuilder.bind(quizSyncQueue())
+                .to(courseEventsExchange())
+                .with("course.quiz.#");
+    }
+
+    @Bean
+    public Binding quizSyncDeadLetterBinding() {
+        return BindingBuilder.bind(quizSyncDeadLetterQueue())
+                .to(deadLetterExchange())
+                .with("learning.quiz.dead");
+    }
 }
+

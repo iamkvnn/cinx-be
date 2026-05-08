@@ -16,8 +16,6 @@ import java.util.List;
 public class QuizLesson {
     @Id
     private String lessonId;
-    private LocalDateTime startTime;
-    private LocalDateTime endTime;
     private Integer duration;
     private Integer numberOfQuestionPerQuizSession;
     private Integer maxAttempt;
@@ -37,6 +35,9 @@ public class QuizLesson {
     @Enumerated(EnumType.STRING)
     @Builder.Default
     private ScoringMode scoringMode = ScoringMode.HIGHEST;
+
+    @Builder.Default
+    private Boolean hasPendingSync = false;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)

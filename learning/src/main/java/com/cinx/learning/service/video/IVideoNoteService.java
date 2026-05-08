@@ -1,4 +1,4 @@
-package com.cinx.learning.service;
+package com.cinx.learning.service.video;
 
 import com.cinx.learning.dto.request.CreateVideoNoteRequest;
 import com.cinx.learning.dto.request.UpdateVideoNoteRequest;

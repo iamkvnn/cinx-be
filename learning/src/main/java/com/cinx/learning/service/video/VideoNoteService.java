@@ -1,4 +1,4 @@
-package com.cinx.learning.service.impl;
+package com.cinx.learning.service.video;
 
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
@@ -8,7 +8,6 @@ import com.cinx.learning.dto.response.VideoNoteDto;
 import com.cinx.learning.mapper.VideoNoteMapper;
 import com.cinx.learning.model.VideoNote;
 import com.cinx.learning.repository.VideoNoteRepository;
-import com.cinx.learning.service.IVideoNoteService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;

@@ -2,11 +2,13 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.request.CreateQuizLessonRequest;
+import com.cinx.course.dto.request.SyncQuizRequest;
 import com.cinx.course.dto.request.UpdateQuizLessonRequest;
 import com.cinx.course.dto.response.QuizLessonResponse;
 import com.cinx.course.service.quiz.IQuizService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -19,35 +21,41 @@ public class QuizLessonController {
 
     @GetMapping
     public ResponseEntity<ApiResponse<QuizLessonResponse>> getQuizByLessonId(@PathVariable String lessonId) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", quizService.getQuizByLessonId(lessonId))
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizService.getQuizByLessonId(lessonId)));
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @Operation(summary = "Create quiz with initial questions", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createQuizLesson(@PathVariable String lessonId, @RequestBody CreateQuizLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> createQuizLesson(
+            @PathVariable String lessonId,
+            @Valid @RequestBody CreateQuizLessonRequest request
+    ) {
         quizService.createQuiz(lessonId, request);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "Quiz created successfully", null));
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @Operation(summary = "Update quiz (no questions)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateQuizLesson(@PathVariable String lessonId, @RequestBody UpdateQuizLessonRequest request) {
+    public ResponseEntity<ApiResponse<?>> updateQuizSettings(
+            @PathVariable String lessonId,
+            @Valid @RequestBody UpdateQuizLessonRequest request
+    ) {
         quizService.updateQuiz(lessonId, request);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
+        return ResponseEntity.ok(new ApiResponse<>(true, "Quiz updated successfully", null));
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<?>> deleteQuizLesson(@PathVariable String lessonId) {
-        quizService.deleteQuiz(lessonId);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
+    @Operation(summary = "Sync quiz changes to learning service (with optional regrade trigger)",
+               security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/sync")
+    public ResponseEntity<ApiResponse<?>> syncQuiz(
+            @PathVariable String lessonId,
+            @Valid @RequestBody SyncQuizRequest request
+    ) {
+        quizService.syncQuiz(lessonId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true,
+                Boolean.TRUE.equals(request.triggerRegrade())
+                        ? "Quiz synced and regrade triggered"
+                        : "Quiz sync acknowledged (no regrade)",
+                null));
     }
 }

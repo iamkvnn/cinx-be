@@ -8,9 +8,14 @@ import com.cinx.course.dto.request.UpdateQuizLessonRequest;
 import com.cinx.course.dto.response.QuizLessonResponse;
 import com.cinx.course.model.QuizLesson;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
 @Mapper(componentModel = "spring")
 public interface QuizMapper extends BaseMapper<QuizLesson, QuizLessonResponse>,
         CreateMapper<QuizLesson, CreateQuizLessonRequest>,
         UpdateMapper<QuizLesson, UpdateQuizLessonRequest> {
+
+    @Override
+    @Mapping(target = "lessonId", source = "lessonId")
+    QuizLessonResponse toDto(QuizLesson quizLesson);
 }
