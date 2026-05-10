@@ -2,13 +2,9 @@ package com.cinx.course.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.course.consts.QuizQuestionType;
-import com.cinx.course.consts.ScoringMethod;
-import com.cinx.course.dto.request.CreateQuizOptionRequest;
 import com.cinx.course.dto.request.CreateQuizQuestionRequest;
 import com.cinx.course.dto.request.UpdateQuizOptionRequest;
 import com.cinx.course.dto.request.UpdateQuizQuestionRequest;
-import com.cinx.course.dto.response.QuizOptionResponse;
 import com.cinx.course.dto.response.QuizQuestionResponse;
 import com.cinx.course.mapper.QuizQuestionMapper;
 import com.cinx.course.model.QuizLesson;
@@ -108,19 +104,15 @@ public class QuizQuestionService implements IQuizQuestionService {
         QuizQuestion question = quizQuestionRepository.findByIdAndQuizLessonId(questionId, lessonId)
                 .orElseThrow(() -> new NotFoundException("Question not found: " + questionId));
 
-        boolean scoringChanged = isScoringChanged(question, request);
-
         question.setQuestionText(request.questionText());
         question.setScoringMethod(request.scoringMethod());
-        question.setNeedSync(scoringChanged);
+        question.setNeedSync(true);
 
         quizQuestionRepository.save(question);
         mergeOptions(question, request.options());
 
-        if (scoringChanged) {
-            quiz.setHasPendingSync(true);
-            quizLessonRepository.save(quiz);
-        }
+        quiz.setHasPendingSync(true);
+        quizLessonRepository.save(quiz);
 
         return quizQuestionMapper.toDto(question);
     }
@@ -177,50 +169,5 @@ public class QuizQuestionService implements IQuizQuestionService {
             optionsToSave.add(option);
         });
         question.setOptions(quizOptionRepository.saveAll(optionsToSave));
-    }
-
-    private boolean isScoringChanged(QuizQuestion existing, UpdateQuizQuestionRequest request) {
-        if (request.scoringMethod() != null
-                && !Objects.equals(existing.getScoringMethod(), request.scoringMethod())) {
-            return true;
-        }
-
-        if (request.options() != null) {
-            String oldAnswer = buildCorrectAnswer(existing.getOptions(), existing.getQuestionType());
-
-            List<QuizOption> newOptions = request.options().stream()
-                    .<QuizOption>map(o -> QuizOption.builder()
-                            .id(o.id())
-                            .optionText(o.optionText())
-                            .isCorrect(o.isCorrect())
-                            .optionOrder(o.optionOrder())
-                            .matchText(o.matchText())
-                            .build())
-                    .toList();
-            String newAnswer = buildCorrectAnswer(newOptions, existing.getQuestionType());
-            return !Objects.equals(oldAnswer, newAnswer);
-        }
-        return false;
-    }
-
-    @Override
-    public String buildCorrectAnswer(List<QuizOption> options, QuizQuestionType questionType) {
-        return switch (questionType) {
-            case MATCHING -> options.stream()
-                    .filter(o -> Boolean.TRUE.equals(o.getIsCorrect()))
-                    .sorted(Comparator.comparing(o -> o.getOptionOrder() != null ? o.getOptionOrder() : 0))
-                    .map(o -> (o.getId() != null ? o.getId() : "NEW") + ":" + (o.getMatchText() != null ? o.getMatchText() : ""))
-                    .collect(Collectors.joining(","));
-            case SHORT_TEXT, ESSAY -> options.stream()
-                    .filter(o -> Boolean.TRUE.equals(o.getIsCorrect()))
-                    .map(QuizOption::getOptionText)
-                    .sorted()
-                    .collect(Collectors.joining(","));
-            default -> options.stream()
-                    .filter(o -> Boolean.TRUE.equals(o.getIsCorrect()))
-                    .map(o -> o.getId() != null ? o.getId() : "NEW")
-                    .sorted()
-                    .collect(Collectors.joining(","));
-        };
     }
 }

@@ -5,5 +5,6 @@ public record QuizOptionResponse(
         String optionText,
         Boolean isCorrect,
         Integer optionOrder,
-        String matchText
+        String matchText,
+        String side
 ) {}

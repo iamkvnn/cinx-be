@@ -1,8 +1,10 @@
 package com.cinx.learning.messaging;
 
+import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
 import com.cinx.learning.consts.ScoringMode;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
+import com.cinx.learning.dto.response.QuizQuestionResponse;
 import com.cinx.learning.messaging.event.QuizSyncEvent;
 import com.cinx.learning.model.QuizScoreHistory;
 import com.cinx.learning.model.QuizSession;
@@ -12,20 +14,18 @@ import com.cinx.learning.repository.QuizScoreHistoryRepository;
 import com.cinx.learning.repository.QuizSessionQuestionRepository;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
+import com.cinx.learning.service.quiz.QuizScoreAggregator;
+import com.cinx.learning.service.quiz.QuizSnapshotBuilder;
 import com.cinx.learning.service.quiz.evaluator.IQuestionEvaluator;
 import com.cinx.learning.service.quiz.evaluator.QuestionEvaluatorFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitListener;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
-import java.util.List;
-import java.util.Map;
-import java.util.Objects;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -33,20 +33,24 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class QuizSyncConsumer {
 
+    private final QuizScoreAggregator quizScoreAggregator;
+    private final QuizSnapshotBuilder snapshotBuilder;
+    private final QuestionEvaluatorFactory questionEvaluatorFactory;
     private final QuizSessionQuestionRepository quizSessionQuestionRepository;
     private final QuizSessionSubmissionRepository quizSessionSubmissionRepository;
     private final QuizScoreHistoryRepository quizScoreHistoryRepository;
     private final ILearningProgressService learningProgressService;
 
-    @RabbitListener(queues = "learning.quiz-sync.queue", containerFactory = "rabbitListenerContainerFactory")
+    @RabbitListener(queues = "learning.sync-and-regrade.queue", containerFactory = "rabbitListenerContainerFactory")
     @Transactional
     public void receiveQuizSyncEvent(QuizSyncEvent event) {
-        log.info("Received QuizSyncEvent: quizLessonId={}", event.getQuizLessonId());
+        log.info("Received QuizSyncEvent: quizLessonId={}, changedQuestions={}",
+                event.getQuizLessonId(), event.getQuestions().size());
 
-        Map<String, QuizSyncEvent.QuestionSnapshot> snapshotMap = event.getQuestions().stream()
-                .collect(Collectors.toMap(QuizSyncEvent.QuestionSnapshot::getQuestionId, s -> s));
+        Map<String, QuizQuestionResponse> incomingMap = event.getQuestions().stream()
+                .collect(Collectors.toMap(QuizQuestionResponse::id, q -> q));
 
-        List<String> affectedQuestionIds = snapshotMap.keySet().stream().toList();
+        List<String> affectedQuestionIds = new ArrayList<>(incomingMap.keySet());
 
         List<QuizSessionQuestion> affectedRows = quizSessionQuestionRepository
                 .findAllByQuizLessonIdAndQuestionIdIn(event.getQuizLessonId(), affectedQuestionIds);
@@ -57,96 +61,104 @@ public class QuizSyncConsumer {
             return;
         }
 
-        List<QuizSessionQuestion> updated = affectedRows.stream()
-                .filter(q -> {
-                    QuizSyncEvent.QuestionSnapshot snap = snapshotMap.get(q.getQuestionId());
-                    if (snap == null) return false;
-                    boolean changed = false;
-                    if (!Objects.equals(q.getCorrectAnswer(), snap.getCorrectAnswer())) {
-                        q.setCorrectAnswer(snap.getCorrectAnswer());
-                        changed = true;
-                    }
-                    if (snap.getScoringMethod() != null
-                            && !Objects.equals(q.getScoringMethod(), snap.getScoringMethod())) {
-                        q.setScoringMethod(snap.getScoringMethod());
-                        changed = true;
-                    }
-                    return changed;
-                })
-                .toList();
+        List<QuizSessionQuestion> needRegrade = new ArrayList<>();
 
-        if (!updated.isEmpty()) {
-            quizSessionQuestionRepository.saveAll(updated);
+        for (QuizSessionQuestion row : affectedRows) {
+            QuizQuestionResponse incoming = incomingMap.get(row.getQuestionId());
+            if (incoming == null) continue;
+
+            String newCorrectAnswer = snapshotBuilder.buildCorrectAnswer(incoming);
+            String newOptionsSnapshot = snapshotBuilder.buildOptionsSnapshot(incoming, false);
+
+            boolean scoringAffected = false;
+
+            if (!Objects.equals(row.getCorrectAnswer(), newCorrectAnswer)) {
+                row.setCorrectAnswer(newCorrectAnswer);
+                scoringAffected = true;
+            }
+            if (incoming.scoringMethod() != null
+                    && !Objects.equals(row.getScoringMethod(), incoming.scoringMethod())) {
+                row.setScoringMethod(incoming.scoringMethod());
+                scoringAffected = true;
+            }
+
+            row.setQuestionText(incoming.questionText());
+            row.setOptionsSnapshot(newOptionsSnapshot);
+
+            if (scoringAffected) {
+                needRegrade.add(row);
+            }
         }
-        log.info("Updated {} QuizSessionQuestion rows for quizLessonId={}", updated.size(), event.getQuizLessonId());
 
-        Map<String, QuizSession> affectedSessions = updated.stream()
+        quizSessionQuestionRepository.saveAll(affectedRows);
+        log.info("Updated {} QuizSessionQuestion rows; {} need regrade", affectedRows.size(), needRegrade.size());
+
+        if (needRegrade.isEmpty()) {
+            log.info("No scoring impact detected — snapshot updated, no regrade needed.");
+            return;
+        }
+
+        Map<String, QuizSession> affectedSessions = needRegrade.stream()
                 .map(QuizSessionQuestion::getQuizSession)
                 .filter(Objects::nonNull)
-                .collect(Collectors.toMap(
-                        QuizSession::getId,
-                        s -> s,
-                        (a, b) -> a
-                ));
+                .collect(Collectors.toMap(QuizSession::getId, s -> s, (a, b) -> a));
+        Map<String, QuizSessionSubmission> submissionMap = quizSessionSubmissionRepository
+                .findAllByQuizSessionIdIn(affectedSessions.keySet())
+                .stream()
+                .collect(Collectors.toMap(QuizSessionSubmission::getQuizSessionId, s -> s));
 
-        List<QuizSession> regradableSessions = affectedSessions.values().stream()
-                .filter(s -> s.getStatus() == QuizSessionStatus.SUBMITTED
-                          || s.getStatus() == QuizSessionStatus.GRADED
-                          || s.getStatus() == QuizSessionStatus.PENDING_GRADE)
-                .toList();
-
-        log.info("Affected sessions: {} total, {} eligible for regrade",
-                affectedSessions.size(), regradableSessions.size());
-
-        ScoringMode scoringMode = event.getScoringMode() != null ? event.getScoringMode() : ScoringMode.HIGHEST;
+        Map<String, List<QuizSessionQuestion>> questionsMap = quizSessionQuestionRepository
+                .findAllByQuizSessionIdIn(affectedSessions.keySet())
+                .stream()
+                .collect(Collectors.groupingBy(QuizSessionQuestion::getQuizSessionId));
 
         int regradeCount = 0;
-        for (QuizSession session : regradableSessions) {
-            List<QuizSessionQuestion> allSessionQuestions = quizSessionQuestionRepository
-                    .findAllByQuizSessionId(session.getId(), Pageable.unpaged())
-                    .getContent();
 
-            if (allSessionQuestions.isEmpty()) continue;
+        for (QuizSession session : affectedSessions.values()) {
+            QuizSessionStatus status = session.getStatus();
+
+            if (status == QuizSessionStatus.IN_PROGRESS) {
+                log.debug("Session {} is IN_PROGRESS — snapshot updated, will be graded on submit.", session.getId());
+                continue;
+            }
+
+            List<QuizSessionQuestion> allSessionQuestions = questionsMap.getOrDefault(session.getId(), Collections.emptyList());
 
             double totalFraction = 0.0;
+            int correctCount = 0;
             for (QuizSessionQuestion q : allSessionQuestions) {
-                IQuestionEvaluator evaluator = QuestionEvaluatorFactory.resolve(q);
+                if (q.getQuestionType() == QuizQuestionType.ESSAY) {
+                    // PENDING_GRADE: keep existing essay score, non-essay will be re-evaluated
+                    totalFraction += q.getScore() != null ? q.getScore() : 0.0;
+                    continue;
+                }
+                IQuestionEvaluator evaluator = questionEvaluatorFactory.resolve(q);
                 double fraction = evaluator.evaluate(q);
                 q.setScore(fraction);
+                if (fraction > 0.0) correctCount++;
                 totalFraction += fraction;
             }
             quizSessionQuestionRepository.saveAll(allSessionQuestions);
 
             double newRawScore = (totalFraction / allSessionQuestions.size()) * 10.0;
-            int correctCount = (int) allSessionQuestions.stream()
-                    .filter(q -> q.getScore() != null && q.getScore() >= 1.0)
-                    .count();
 
-            QuizSessionSubmission submission = quizSessionSubmissionRepository
-                    .findByQuizSessionId(session.getId())
-                    .orElseGet(() -> QuizSessionSubmission.builder()
-                            .quizSessionId(session.getId())
-                            .submissionTime(LocalDateTime.now())
-                            .build());
+            QuizSessionSubmission submission = submissionMap.get(session.getId());
 
             double oldScore = submission.getScore() != null ? submission.getScore() : 0.0;
             submission.setScore(newRawScore);
             submission.setTotalCorrectAnswers(correctCount);
             quizSessionSubmissionRepository.save(submission);
 
-            if (Math.abs(newRawScore - oldScore) > 0.0001) {
-                quizScoreHistoryRepository.save(QuizScoreHistory.builder()
-                        .quizSessionId(session.getId())
-                        .oldScore(oldScore)
-                        .newScore(newRawScore)
-                        .reason(event.getChangeReason())
-                        .gradedAt(LocalDateTime.now())
-                        .build());
-                regradeCount++;
-                log.info("Regraded session {} | old={} new={}", session.getId(), oldScore, newRawScore);
-            }
-
-            updateLearningProgress(session.getUserId(), session.getQuizLessonId(), scoringMode);
+            quizScoreHistoryRepository.save(QuizScoreHistory.builder()
+                    .quizSessionId(session.getId())
+                    .oldScore(oldScore)
+                    .newScore(newRawScore)
+                    .reason(event.getChangeReason())
+                    .gradedAt(LocalDateTime.now())
+                    .build());
+            regradeCount++;
+            log.info("Regraded session {} | old={} new={}", session.getId(), oldScore, newRawScore);
+            updateLearningProgress(session.getUserId(), session.getQuizLessonId(), event.getScoringMode());
         }
 
         log.info("Regrade complete for quizLessonId={}. {} sessions had score changes.",
@@ -154,22 +166,7 @@ public class QuizSyncConsumer {
     }
 
     private void updateLearningProgress(String userId, String quizLessonId, ScoringMode scoringMode) {
-        List<QuizSessionSubmission> allSubmissions =
-                quizSessionSubmissionRepository.findAllByUserIdAndQuizLessonId(userId, quizLessonId);
-
-        List<Double> scores = allSubmissions.stream()
-                .map(QuizSessionSubmission::getScore)
-                .filter(Objects::nonNull)
-                .toList();
-
-        if (scores.isEmpty()) return;
-
-        double effectiveScore = switch (scoringMode) {
-            case HIGHEST -> scores.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
-            case LATEST  -> scores.getLast();
-            case FIRST   -> scores.getFirst();
-            case AVERAGE -> scores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
-        };
+        double effectiveScore = quizScoreAggregator.aggregateScore(userId, quizLessonId, scoringMode);
 
         learningProgressService.updateLearningItemProgress(
                 userId,

@@ -1,25 +1,47 @@
 package com.cinx.learning.service.quiz.evaluator;
 
+import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.model.QuizSessionQuestion;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.List;
 
 /**
- * ALL_OR_NOTHING: the user must supply exactly the same set (unordered) of tokens as the correct answer.
- * Works for SINGLE_CHOICE and MULTI_CHOICE.
- * Returns 1.0 if match, 0.0 otherwise.
+ * ALL_OR_NOTHING evaluator.
+ *
+ * <ul>
+ *   <li>MATCHING  — all pairs must be correct (set equality, order-insensitive).</li>
+ *   <li>ORDERING  — full positional sequence must match exactly.</li>
+ *   <li>Others    — unordered set of token IDs must match exactly.</li>
+ * </ul>
  */
+@Component
+@RequiredArgsConstructor
 public class AllOrNothingEvaluator implements IQuestionEvaluator {
+    private final AnswerParser answerParser;
 
     @Override
     public double evaluate(QuizSessionQuestion question) {
-        List<String> correct = AnswerParser.parseList(question.getCorrectAnswer());
-        List<String> user    = AnswerParser.parseList(question.getUserAnswer());
+        if (question.getQuestionType() == QuizQuestionType.MATCHING) {
+            List<AnswerParser.MatchingPair> correct = answerParser.parseMatchingPairs(question.getCorrectAnswer());
+            List<AnswerParser.MatchingPair> user    = answerParser.parseMatchingPairs(question.getUserAnswer());
+            if (correct.isEmpty() && user.isEmpty()) return 1.0;
+            if (correct.size() != user.size()) return 0.0;
+            return new HashSet<>(correct).equals(new HashSet<>(user)) ? 1.0 : 0.0;
+        }
 
+        if (question.getQuestionType() == QuizQuestionType.ORDERING) {
+            List<String> correct = answerParser.parseStringList(question.getCorrectAnswer());
+            List<String> user    = answerParser.parseStringList(question.getUserAnswer());
+            return correct.equals(user) ? 1.0 : 0.0;
+        }
+
+        List<String> correct = answerParser.parseStringList(question.getCorrectAnswer());
+        List<String> user    = answerParser.parseStringList(question.getUserAnswer());
         if (correct.isEmpty() && user.isEmpty()) return 1.0;
-        if (correct.size() != user.size())        return 0.0;
-
-        // Order-insensitive comparison
+        if (correct.size() != user.size()) return 0.0;
         List<String> sortedCorrect = correct.stream().sorted().toList();
         List<String> sortedUser    = user.stream().sorted().toList();
         return sortedCorrect.equals(sortedUser) ? 1.0 : 0.0;

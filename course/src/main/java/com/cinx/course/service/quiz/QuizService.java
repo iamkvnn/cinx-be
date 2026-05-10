@@ -6,11 +6,13 @@ import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.*;
 import com.cinx.course.dto.response.QuizLessonResponse;
+import com.cinx.course.dto.response.QuizQuestionResponse;
 import com.cinx.course.mapper.QuizMapper;
+import com.cinx.course.mapper.QuizQuestionMapper;
 import com.cinx.course.messaging.CourseEventProducer;
 import com.cinx.course.messaging.event.QuizSyncEvent;
+import com.cinx.course.messaging.event.ScoringModeChangedEvent;
 import com.cinx.course.model.QuizLesson;
-import com.cinx.course.model.QuizOption;
 import com.cinx.course.model.QuizQuestion;
 import com.cinx.course.repository.QuizLessonRepository;
 import com.cinx.course.repository.QuizQuestionRepository;
@@ -20,10 +22,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -34,6 +34,7 @@ public class QuizService implements IQuizService {
     private final IQuizQuestionService quizQuestionService;
     private final ILessonService lessonService;
     private final QuizMapper quizMapper;
+    private final QuizQuestionMapper quizQuestionMapper;
     private final CourseEventProducer courseEventProducer;
 
     @Override
@@ -76,14 +77,15 @@ public class QuizService implements IQuizService {
             if (request.getNumberOfQuestionPerQuizSession() > questionCount) {
                 throw new BadRequestException(
                         "numberOfQuestionPerQuizSession (" + request.getNumberOfQuestionPerQuizSession()
-                        + ") cannot exceed current question count (" + questionCount + ")");
+                                + ") cannot exceed current question count (" + questionCount + ")");
             }
         }
 
         quizMapper.partialUpdate(existing, request);
 
         if (scoringModeChanged) {
-            existing.setHasPendingSync(true);
+            courseEventProducer.publishScoringModeChangedEvent(
+                    new ScoringModeChangedEvent(existing.getLessonId(), existing.getScoringMode()));
         }
 
         quizLessonRepository.save(existing);
@@ -97,13 +99,8 @@ public class QuizService implements IQuizService {
         if (Boolean.TRUE.equals(request.triggerRegrade())) {
             List<QuizQuestion> questions = quizQuestionRepository.findAllByQuizLessonIdAndNeedSync(lessonId);
 
-            List<QuizSyncEvent.QuestionSnapshot> snapshots = questions.stream()
-                    .map(q -> QuizSyncEvent.QuestionSnapshot.builder()
-                            .questionId(q.getId())
-                            .questionText(q.getQuestionText())
-                            .scoringMethod(q.getScoringMethod())
-                            .correctAnswer(quizQuestionService.buildCorrectAnswer(q.getOptions(), q.getQuestionType()))
-                            .build())
+            List<QuizQuestionResponse> snapshots = questions.stream()
+                    .map(quizQuestionMapper::toDto)
                     .toList();
 
             QuizSyncEvent syncEvent = QuizSyncEvent.builder()

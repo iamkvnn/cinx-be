@@ -14,5 +14,4 @@ public interface IQuizQuestionService {
     List<QuizQuestionResponse> addQuestions(String lessonId, List<CreateQuizQuestionRequest> requests);
     QuizQuestionResponse updateQuestion(String lessonId, String questionId, UpdateQuizQuestionRequest request);
     void deleteQuestion(String lessonId, String questionId);
-    String buildCorrectAnswer(List<QuizOption> options, QuizQuestionType questionType);
 }

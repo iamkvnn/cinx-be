@@ -7,9 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
-import java.util.Collection;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
 public interface QuizSessionQuestionRepository extends JpaRepository<QuizSessionQuestion, String> {
     Page<QuizSessionQuestion> findAllByQuizSessionId(String quizSessionId, Pageable pageable);
@@ -34,4 +32,13 @@ public interface QuizSessionQuestionRepository extends JpaRepository<QuizSession
             String quizLessonId,
             List<String> questionIds
     );
+
+    @Query("""
+            SELECT q FROM QuizSessionQuestion q
+            WHERE q.quizSessionId = :sessionId
+              AND q.questionType = com.cinx.learning.consts.QuizQuestionType.ESSAY
+            """)
+    List<QuizSessionQuestion> findAllEssayByQuizSessionId(String sessionId);
+
+    List<QuizSessionQuestion> findAllByQuizSessionIdIn(Collection<String> strings);
 }

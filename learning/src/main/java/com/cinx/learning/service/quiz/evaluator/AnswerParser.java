@@ -1,31 +1,76 @@
 package com.cinx.learning.service.quiz.evaluator;
 
-import java.util.Arrays;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import lombok.*;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Component;
+
 import java.util.Collections;
 import java.util.List;
+import java.util.Objects;
 
 /**
- * Utility class for parsing the canonical answer format stored as strings.
+ * Utility class for parsing the canonical answer format stored as JSON strings.
  *
  * <p><b>Contract</b>:
  * <ul>
- *   <li>Single/Multi/Ordering – comma-separated option IDs, e.g. {@code "optA,optB"}</li>
- *   <li>Matching – comma-separated {@code "optionId:matchText"} pairs, e.g. {@code "opt1:Paris,opt2:Berlin"}</li>
- *   <li>Short text / Essay – raw string, single element list</li>
+ *   <li>SINGLE_CHOICE, MULTI_CHOICE, ORDERING — JSON array of option IDs: {@code ["id1","id2"]}</li>
+ *   <li>SHORT_TEXT, ESSAY — JSON array of accepted texts: {@code ["Paris","paris","City of Light"]}</li>
+ *   <li>MATCHING — JSON array of pair objects: {@code [{"optionId":"id1","matchText":"Paris"}]}</li>
  * </ul>
  */
-final class AnswerParser {
+@Slf4j
+@Component
+@RequiredArgsConstructor
+public final class AnswerParser {
 
-    private AnswerParser() {}
+    private final ObjectMapper MAPPER;
 
-    /** Split a comma-separated answer string into an ordered list of tokens. */
-    static List<String> parseList(String answer) {
-        if (answer == null || answer.isBlank()) {
+    public List<String> parseStringList(String json) {
+        if (json == null || json.isBlank()) return Collections.emptyList();
+        try {
+            return MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse answer as JSON string list: '{}'", json);
             return Collections.emptyList();
         }
-        return Arrays.stream(answer.split(","))
-                .map(String::trim)
-                .filter(s -> !s.isEmpty())
-                .toList();
+    }
+
+    public List<MatchingPair> parseMatchingPairs(String json) {
+        if (json == null || json.isBlank()) return Collections.emptyList();
+        try {
+            return MAPPER.readValue(json, new TypeReference<>() {});
+        } catch (Exception e) {
+            log.warn("Failed to parse answer as JSON matching pairs: '{}'", json);
+            return Collections.emptyList();
+        }
+    }
+
+    @Getter
+    @Setter
+    @NoArgsConstructor
+    @AllArgsConstructor
+    public static final class MatchingPair {
+        private String optionId;
+        private String matchText;
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (!(o instanceof MatchingPair p)) return false;
+            return Objects.equals(optionId, p.optionId)
+                && Objects.equals(matchText, p.matchText);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(optionId, matchText);
+        }
+
+        @Override
+        public String toString() {
+            return optionId + "→" + matchText;
+        }
     }
 }

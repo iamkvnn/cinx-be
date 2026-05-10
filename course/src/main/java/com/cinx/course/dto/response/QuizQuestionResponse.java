@@ -10,6 +10,7 @@ public record QuizQuestionResponse(
         String questionText,
         QuizQuestionType questionType,
         ScoringMethod scoringMethod,
+        Boolean needSync,
         List<QuizOptionResponse> options
 ) {
 }

@@ -19,18 +19,18 @@ import lombok.experimental.SuperBuilder;
 public class QuizSessionQuestion extends BaseEntity {
     private String quizSessionId;
     private String questionId;
-
     @Enumerated(EnumType.STRING)
     private QuizQuestionType questionType;
-
     private Integer questionOrder;
+    private String questionText;
     private String correctAnswer;
     private String userAnswer;
-
     @Enumerated(EnumType.STRING)
     private ScoringMethod scoringMethod;
-
     private Double score;
+
+    @Column(columnDefinition = "TEXT")
+    private String optionsSnapshot;
 
     @ManyToOne
     @JoinColumn(name = "quizSessionId", insertable = false, updatable = false)

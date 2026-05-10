@@ -2,6 +2,7 @@ package com.cinx.course.messaging;
 
 import com.cinx.course.messaging.event.LessonChangedEvent;
 import com.cinx.course.messaging.event.QuizSyncEvent;
+import com.cinx.course.messaging.event.ScoringModeChangedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
@@ -19,5 +20,10 @@ public class CourseEventProducer {
     public void publishQuizSyncEvent(QuizSyncEvent event) {
         System.out.println("Publishing quiz sync event: quizLessonId=" + event.getQuizLessonId());
         rabbitTemplate.convertAndSend("course.events.exchange", "course.quiz.sync_and_regrade", event);
+    }
+
+    public void publishScoringModeChangedEvent(ScoringModeChangedEvent event) {
+        System.out.println("Publishing quiz sync event: quizLessonId=" + event.quizLessonId());
+        rabbitTemplate.convertAndSend("course.events.exchange", "course.quiz.scoring_mode_changed", event);
     }
 }

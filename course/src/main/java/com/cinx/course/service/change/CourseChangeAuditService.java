@@ -25,6 +25,7 @@ import java.util.Optional;
 public class CourseChangeAuditService implements ICourseChangeAuditService {
     private final CourseChangeRepository courseChangeRepository;
     private final CourseChangeMapper courseChangeMapper;
+    private final JsonConverter jsonConverter;
 
     @Transactional
     @Override
@@ -33,17 +34,17 @@ public class CourseChangeAuditService implements ICourseChangeAuditService {
         if (opt.isEmpty()) {
             courseChangeRepository.save(CourseChange.builder()
                     .courseId(courseId)
-                    .oldValue(JsonConverter.toJson(oldValue))
-                    .newValue(JsonConverter.toJson(newValue))
+                    .oldValue(jsonConverter.toJson(oldValue))
+                    .newValue(jsonConverter.toJson(newValue))
                     .build());
             return;
         }
         CourseChange change = opt.get();
-        if (change.getOldValue().equals(JsonConverter.toJson(newValue))) {
+        if (change.getOldValue().equals(jsonConverter.toJson(newValue))) {
             courseChangeRepository.delete(change);
         }
         else {
-            change.setNewValue(JsonConverter.toJson(newValue));
+            change.setNewValue(jsonConverter.toJson(newValue));
             courseChangeRepository.save(change);
         }
     }
@@ -56,18 +57,18 @@ public class CourseChangeAuditService implements ICourseChangeAuditService {
             courseChangeRepository.save(CourseChange.builder()
                     .courseId(courseId)
                     .itemId(itemId)
-                    .oldValue(oldValue != null ? JsonConverter.toJson(oldValue) : null)
-                    .newValue(newValue != null ? JsonConverter.toJson(newValue) : null)
+                    .oldValue(oldValue != null ? jsonConverter.toJson(oldValue) : null)
+                    .newValue(newValue != null ? jsonConverter.toJson(newValue) : null)
                     .build());
             return;
         }
         CourseChange change = opt.get();
 
-        if (newValue == null || (change.getOldValue() != null && change.getOldValue().equals(JsonConverter.toJson(newValue)))) {
+        if (newValue == null || (change.getOldValue() != null && change.getOldValue().equals(jsonConverter.toJson(newValue)))) {
             courseChangeRepository.delete(change);
         }
         else {
-            change.setNewValue(JsonConverter.toJson(newValue));
+            change.setNewValue(jsonConverter.toJson(newValue));
             courseChangeRepository.save(change);
         }
     }
