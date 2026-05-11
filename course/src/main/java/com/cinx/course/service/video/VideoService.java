@@ -1,15 +1,12 @@
 package com.cinx.course.service.video;
 
 import com.cinx.common.exception.AlreadyExistException;
-import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateVideoLessonRequest;
 import com.cinx.course.dto.request.UpdateVideoLessonRequest;
 import com.cinx.course.dto.response.VideoLessonResponse;
 import com.cinx.course.mapper.VideoLessonMapper;
-import com.cinx.course.model.Lesson;
-import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.VideoLessonRepository;
 import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
@@ -56,15 +53,6 @@ public class VideoService implements IVideoService {
             videoLessonRepository.save(existing);
         },() -> {
             throw new NotFoundException("Video not found for lessonId: " + lessonId);
-        });
-    }
-
-    @Override
-    public void deleteVideo(String lessonId) {
-        lessonService.getForUpdate(lessonId, LessonType.VIDEO);
-        videoLessonRepository.findByLessonId(lessonId)
-                .ifPresentOrElse(videoLessonRepository::delete, () -> {
-                    throw new NotFoundException("Video not found for lessonId: " + lessonId);
         });
     }
 }

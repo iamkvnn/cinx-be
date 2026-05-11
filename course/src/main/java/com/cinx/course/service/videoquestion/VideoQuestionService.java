@@ -177,6 +177,7 @@ public class VideoQuestionService implements IVideoQuestionService {
         }
         
         String correctStr = correctOptions.stream()
+                .map(VideoOption::getId)
                 .sorted()
                 .toList()
                 .toString();

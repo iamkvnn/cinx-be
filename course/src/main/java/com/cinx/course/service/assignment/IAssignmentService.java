@@ -8,5 +8,4 @@ public interface IAssignmentService {
     AssignmentLessonResponse getAssignmentByLessonId(String lessonId);
     void createAssignment(String lessonId, CreateAssignmentLessonRequest request);
     void updateAssignment(String lessonId, UpdateAssignmentLessonRequest request);
-    void deleteAssignment(String lessonId);
 }

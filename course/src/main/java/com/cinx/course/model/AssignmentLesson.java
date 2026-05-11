@@ -16,8 +16,6 @@ public class AssignmentLesson {
     @Id
     private String lessonId;
     private String description;
-    private LocalDateTime startDate;
-    private LocalDateTime dueDate;
 
     @MapsId
     @OneToOne(fetch = FetchType.LAZY)

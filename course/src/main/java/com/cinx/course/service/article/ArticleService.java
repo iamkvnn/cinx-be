@@ -51,13 +51,4 @@ public class ArticleService implements IArticleService {
                 throw new NotFoundException("Article not found for lessonId: " + lessonId);
             });
     }
-
-    @Override
-    public void deleteArticle(String lessonId) {
-        lessonService.getForUpdate(lessonId, LessonType.ARTICLE);
-        articleLessonRepository.findByLessonId(lessonId)
-                .ifPresentOrElse(articleLessonRepository::delete, () -> {
-                    throw new NotFoundException("Article not found for lessonId: " + lessonId);
-        });
-    }
 }

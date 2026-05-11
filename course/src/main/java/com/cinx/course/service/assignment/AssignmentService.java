@@ -68,13 +68,4 @@ public class AssignmentService implements IAssignmentService {
                 throw new NotFoundException("Assignment not found for lessonId: " + lessonId);
             });
     }
-
-    @Override
-    public void deleteAssignment(String lessonId) {
-        lessonService.getForUpdate(lessonId, LessonType.ASSIGNMENT);
-        assignmentLessonRepository.findByLessonId(lessonId)
-                .ifPresentOrElse(assignmentLessonRepository::delete, () -> {
-                    throw new NotFoundException("Assignment not found for lessonId: " + lessonId);
-        });
-    }
 }

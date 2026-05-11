@@ -1,28 +1,17 @@
 package com.cinx.course.dto.request;
 
-import com.cinx.common.validation.ValidDateRange;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
-import jakarta.validation.constraints.Future;
 import lombok.Data;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@ValidDateRange
 public class CreateAssignmentLessonRequest {
         @NotBlank(message = "Description is required")
         private String description;
-        
-        @NotNull(message = "Start date is required")
-        private LocalDateTime startDate;
-        
-        @NotNull(message = "Due date is required")
-        @Future(message = "Due date must be in the future")
-        private LocalDateTime dueDate;
         
         @Valid
         private List<AttachmentDto> attachments;

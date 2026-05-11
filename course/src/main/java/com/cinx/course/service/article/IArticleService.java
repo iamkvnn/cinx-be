@@ -8,5 +8,4 @@ public interface IArticleService {
     ArticleLessonResponse getArticleByLessonId(String lessonId);
     void createArticle(String lessonId, CreateArticleLessonRequest request);
     void updateArticle(String lessonId, UpdateArticleLessonRequest request);
-    void deleteArticle(String lessonId);
 }

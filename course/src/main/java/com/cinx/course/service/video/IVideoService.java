@@ -8,5 +8,4 @@ public interface IVideoService {
         VideoLessonResponse getVideoByLessonId(String lessonId);
         void createVideo(String lessonId, CreateVideoLessonRequest request);
         void updateVideo(String lessonId, UpdateVideoLessonRequest request);
-        void deleteVideo(String lessonId);
 }

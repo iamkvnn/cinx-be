@@ -1,4 +1,4 @@
-package com.cinx.learning.service.assessment;
+package com.cinx.learning.service.assignment;
 
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
 import com.cinx.learning.dto.response.AssignmentSubmissionResponse;

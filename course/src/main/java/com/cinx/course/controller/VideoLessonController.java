@@ -37,12 +37,4 @@ public class VideoLessonController {
                 new ApiResponse<>(true, "Success", null)
         );
     }
-
-    @DeleteMapping
-    public ResponseEntity<ApiResponse<?>> deleteVideoLesson(@PathVariable String lessonId) {
-        videoService.deleteVideo(lessonId);
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", null)
-        );
-    }
 }

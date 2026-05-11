@@ -1,8 +1,6 @@
 package com.cinx.course.dto.request;
 
-import com.cinx.common.validation.ValidDateRange;
 import jakarta.validation.Valid;
-import jakarta.validation.constraints.Future;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -11,15 +9,9 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 @Data
-@ValidDateRange
 public class UpdateAssignmentLessonRequest {
     private String description;
-    
-    private LocalDateTime startDate;
-    
-    @Future(message = "Due date must be in the future")
-    private LocalDateTime dueDate;
-    
+
     @Valid
     private List<AttachmentDto> attachments;
 
