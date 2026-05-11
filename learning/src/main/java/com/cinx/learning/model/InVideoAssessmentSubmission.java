@@ -14,6 +14,7 @@ import lombok.experimental.SuperBuilder;
 @NoArgsConstructor
 @AllArgsConstructor
 public class InVideoAssessmentSubmission extends UserSubmission {
+    private String videoLessonId;
     private String videoAssessmentId;
     private String userAnswer;
 }

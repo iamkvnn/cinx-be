@@ -8,7 +8,7 @@ public record ReviewResponse(
         String courseId,
         String content,
         Double rating,
-        List<ReviewReportResponse> reports,
+        ReviewReplyDto reply,
         List<ReviewReactionResponse> reactions
 ) {
 }

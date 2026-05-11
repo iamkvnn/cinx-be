@@ -6,7 +6,7 @@ import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
 import com.cinx.learning.dto.response.AssignmentSubmissionResponse;
-import com.cinx.learning.service.assessment.IAssignmentService;
+import com.cinx.learning.service.assignment.IAssignmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;

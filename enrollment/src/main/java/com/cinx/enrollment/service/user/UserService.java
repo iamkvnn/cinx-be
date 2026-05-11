@@ -7,7 +7,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.time.LocalDateTime;
 
-@FeignClient(name = "user", path = "/api/v1/users")
+@FeignClient(name = "user", path = "/internal/users")
 public interface UserService {
     @GetMapping("/metrics/total-count")
     ApiResponse<Long> getTotalUsersCount();

@@ -2,36 +2,58 @@ from pydantic import BaseModel
 from typing import Optional, List
 from datetime import datetime
 
-
 class LessonPayload(BaseModel):
     id: str
     title: str
-    lessonType: Optional[str] = None # 'video', 'article', 'quiz', 'assignment'
+    lessonType: Optional[str] = None  # 'VIDEO', 'ARTICLE', 'QUIZ', 'ASSIGNMENT'
     orderIndex: int
     duration: Optional[int] = 0
-    description: Optional[str] = None
+
 
 class SectionPayload(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
     orderIndex: int
+    duration: Optional[int] = None
     lessons: List[LessonPayload] = []
+
+
+class CategoryPayload(BaseModel):
+    id: str
+    name: str
+
+
+class InstructorPayload(BaseModel):
+    id: str
+    name: str
+    email: Optional[str] = None
+    gender: Optional[str] = None  # 'MALE' | 'FEMALE' | ...
+    avatarUrl: Optional[str] = None
+
+
+class ImagePayload(BaseModel):
+    id: str
+    imageUrl: str
 
 
 class CoursePayload(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
-    category: str
+    category: CategoryPayload
+    instructor: Optional[InstructorPayload] = None
+    images: List[ImagePayload] = []
     price: Optional[float] = None
     discountedPrice: Optional[float] = None
     discountRate: Optional[int] = None
     rating: Optional[float] = 0.0
     enrollmentCount: int = 0
-    isPublished: bool = False
     isInSubscription: bool = False
     duration: Optional[int] = None
+    hasCertificate: bool = False
+    certificateTitle: Optional[str] = None
+    status: str = "DRAFT"  # 'DRAFT' | 'PUBLISHED' | ...
     sections: List[SectionPayload] = []
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
@@ -55,7 +77,7 @@ class WishlistEvent(BaseModel):
 
 class UserPreferencePayload(BaseModel):
     userId: str
-    categories: list[str]
+    categorieIds: list[str]
 
 class UserPreferenceEvent(BaseModel):
     payload: UserPreferencePayload

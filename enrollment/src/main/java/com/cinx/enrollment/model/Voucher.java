@@ -19,7 +19,7 @@ public class Voucher extends AuditableEntity {
     private String code;
     private Long discountAmount;
     private Long minPurchaseAmount;
-    private String maxDiscountAmount;
+    private Long maxDiscountAmount;
     private LocalDateTime validFrom;
     private LocalDateTime validTo;
     private String description;

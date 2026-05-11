@@ -12,6 +12,7 @@ import lombok.*;
 @AllArgsConstructor
 public class OrderItem extends BaseEntity {
     private String courseId;
+    private String instructorId;
     private String orderId;
     private String title;
     private Long price;

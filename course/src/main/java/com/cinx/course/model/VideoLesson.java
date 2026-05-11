@@ -3,6 +3,8 @@ package com.cinx.course.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -26,4 +28,7 @@ public class VideoLesson {
     @OneToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lessonId")
     private Lesson lesson;
+
+    @OneToMany(mappedBy = "videoLesson", fetch = FetchType.LAZY)
+    private List<VideoQuestion> questions;
 }

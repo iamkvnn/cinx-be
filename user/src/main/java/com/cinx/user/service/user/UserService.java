@@ -92,7 +92,10 @@ public class UserService implements IUserService {
                 .cvFileKey(request.cvFileKey())
                 .cvUrl(request.cvFileKey() != null ? s3CdnUrl + "/" + request.cvFileKey() : null)
                 .build());
-        userEventProducer.sendNewInstructorNotification(user);
+        // Only notify admins for new instructor registrations
+        if (request.role() == Role.INSTRUCTOR) {
+            userEventProducer.sendNewInstructorNotification(user);
+        }
         return userMapper.toDto(user);
     }
 

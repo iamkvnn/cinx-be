@@ -1,0 +1,34 @@
+spring:
+  datasource:
+    url: ${SPRING_DATASOURCE_URL}
+    username: ${SPRING_DATASOURCE_USERNAME}
+    password: ${SPRING_DATASOURCE_PASSWORD}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+  rabbitmq:
+    host: ${RABBITMQ_HOST}
+    port: ${RABBITMQ_PORT}
+    username: ${RABBITMQ_USERNAME}
+    password: ${RABBITMQ_PASSWORD}
+jwt:
+  access:
+    secret: ${JWT_ACCESS_SECRET}
+  refresh:
+    secret: ${JWT_REFRESH_SECRET}
+eureka:
+  client:
+    serviceUrl:
+      defaultZone: ${EUREKA_CLIENT_SERVICEURL_DEFAULTZONE}
+VNPay:
+  vnp_TmnCode: ${VNPAY_TMN_CODE}
+  vnp_HashSecret: ${VNPAY_HASH_SECRET}
+MoMo:
+  returnUrl: ${MOMO_RETURN_URL}
+  notifyUrl: ${MOMO_NOTIFY_URL}
+  partnerCode: ${MOMO_PARTNER_CODE}
+  accessKey: ${MOMO_ACCESS_KEY}
+  secret: ${MOMO_SECRET}
+feBaseUrl: ${FE_BASE_URL}
+gateway.url: ${GATEWAY_URL}

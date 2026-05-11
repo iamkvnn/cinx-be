@@ -1,12 +1,16 @@
 package com.cinx.course.dto.request;
 
-import java.util.List;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotNull;
 
 public record CreateSectionRequest(
+        @NotBlank
         String title,
         String description,
+        @Min(0)
         Long duration,
-        Integer orderIndex,
-        List<CreateLessonRequest> lessons
+        @NotNull
+        Integer orderIndex
 ) {
 }

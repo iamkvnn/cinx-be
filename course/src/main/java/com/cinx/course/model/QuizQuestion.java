@@ -2,10 +2,8 @@ package com.cinx.course.model;
 
 import com.cinx.common.model.BaseEntity;
 import com.cinx.course.consts.QuizQuestionType;
-import jakarta.persistence.Entity;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.ManyToOne;
-import jakarta.persistence.OneToMany;
+import com.cinx.course.consts.ScoringMethod;
+import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -19,13 +17,21 @@ import java.util.List;
 @AllArgsConstructor
 public class QuizQuestion extends BaseEntity {
     private String questionText;
+
+    @Enumerated(EnumType.STRING)
     private QuizQuestionType questionType;
-    private Integer orderIndex;
-    //private Short weight;
+
+    @Enumerated(EnumType.STRING)
+    @Builder.Default
+    private ScoringMethod scoringMethod = ScoringMethod.ALL_OR_NOTHING;
+
+    @Builder.Default
+    private Boolean needSync = false;
 
     @OneToMany(mappedBy = "quizQuestion")
     private List<QuizOption> options;
 
     @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "quiz_lesson_id")
     private QuizLesson quizLesson;
 }

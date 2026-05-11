@@ -7,6 +7,7 @@ public record CourseResponse(
         String title,
         String description,
         CategoryResponse category,
+        InstructorResponse instructor,
         Long price,
         Long discountedPrice,
         Long discountRate,

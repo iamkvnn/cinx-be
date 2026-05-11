@@ -6,6 +6,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.util.List;
+
 @Entity
 @Getter
 @Setter
@@ -18,6 +20,14 @@ public class Lesson extends AuditableEntity {
     private Long duration;
     private Integer orderIndex;
     private LessonType lessonType;
+    @Column(columnDefinition = "boolean default false")
+    private Boolean isPreview;
+
+    @ManyToMany
+    @JoinTable(name = "lesson_prerequisites",
+            joinColumns = @JoinColumn(name = "lesson_id"),
+            inverseJoinColumns = @JoinColumn(name = "prerequisite_id"))
+    private List<Lesson> prerequisites;
 
     @ManyToOne
     private Section section;

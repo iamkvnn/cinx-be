@@ -8,14 +8,14 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 
-@FeignClient(name = "user", path = "/api/v1")
+@FeignClient(name = "user", path = "/internal/users")
 public interface IUserProfileService {
-    @PostMapping("/users")
+    @PostMapping
     void createUser(@RequestBody CreateUserProfileRequest user);
 
-    @GetMapping("/users/{userId}/instructor-verified")
+    @GetMapping("/{userId}/instructor-verified")
     ApiResponse<Boolean> checkInstructorVerified(@PathVariable String userId);
 
-    @PostMapping("/users/{userId}/toggle-ban")
+    @PostMapping("/{userId}/toggle-ban")
     void toggleBanUser(@PathVariable String userId);
 }

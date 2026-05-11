@@ -7,7 +7,7 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "enrollment", path = "/api/v1", configuration = FeignConfig.class)
+@FeignClient(name = "enrollment", path = "/internal", configuration = FeignConfig.class)
 public interface EnrollmentService {
     @GetMapping("/orders/{orderId}")
     ApiResponse<OrderResponse> getOrderById(@PathVariable String orderId);

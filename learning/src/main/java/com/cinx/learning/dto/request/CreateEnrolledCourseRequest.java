@@ -1,3 +1,11 @@
 package com.cinx.learning.dto.request;
+import jakarta.validation.constraints.NotBlank;
 
-public record CreateEnrolledCourseRequest(String courseId, String userId) {}
+
+public record CreateEnrolledCourseRequest(
+    @NotBlank(message = "courseId must not be blank")
+    String courseId,
+
+    @NotBlank(message = "userId must not be blank")
+    String userId
+) {}

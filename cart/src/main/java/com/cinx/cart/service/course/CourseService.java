@@ -9,7 +9,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "course", path = "/api/v1")
+@FeignClient(name = "course", path = "/internal")
 public interface CourseService {
     @GetMapping("/courses/{id}")
     ApiResponse<CourseResponse> getCourseById(@PathVariable String id);

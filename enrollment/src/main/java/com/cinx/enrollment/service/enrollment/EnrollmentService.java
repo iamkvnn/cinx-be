@@ -63,4 +63,9 @@ public class EnrollmentService implements IEnrollmentService {
                 )
         );
     }
+
+    @Override
+    public List<String> getUserIdsEnrolledInCourse(String courseId) {
+        return enrolledCourseRepository.findUserIdsByCourseId(courseId);
+    }
 }

@@ -1,13 +1,19 @@
 package com.cinx.course.dto.request;
 
-import com.cinx.course.consts.LessonType;
+import jakarta.validation.constraints.Min;
+import jakarta.validation.constraints.NotBlank;
+
+import java.util.List;
 
 public record UpdateLessonRequest(
-     String id,
+     @NotBlank
      String title,
+     @Min(0)
      Long duration,
-     LessonType lessonType,
-     Integer orderIndex
+     @Min(0)
+     Integer orderIndex,
+     Boolean isPreview,
+     List<String> prerequisiteIds
 ) {
 }
 

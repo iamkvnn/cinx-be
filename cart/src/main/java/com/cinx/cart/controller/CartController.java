@@ -41,13 +41,6 @@ public class CartController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @DeleteMapping("/ids")
-    public ResponseEntity<ApiResponse<Void>> removeFromCart(@RequestParam List<String> itemIds) {
-        cartService.removeAllFromCartByIds(itemIds);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Items removed from cart successfully", null));
-    }
-
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping("/clear")
     public ResponseEntity<ApiResponse<Void>> clearCart() {
         cartService.clearCart();

@@ -11,26 +11,25 @@ class Course(Base):
     id: Mapped[str] = mapped_column(String(50), primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str | None] = mapped_column(Text, nullable=True)
-    category: Mapped[str] = mapped_column(String(100), nullable=False)
 
-    price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
-    discounted_price: Mapped[float | None] = mapped_column(Numeric(12, 2), nullable=True)
-    discount_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # Category (stored flat)
+    category_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    category_name: Mapped[str | None] = mapped_column(String(100), nullable=True)
+
+    # Instructor (stored flat)
+    instructor_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
 
     rating: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     enrollment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    is_published: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
-    is_in_subscription: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 0 |1 | 2 | ...
 
-    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)    
-    sections: Mapped[dict | None] = mapped_column(JSON, nullable=True)
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
     __table_args__ = (
-        Index("idx_course_category", "category"),
-        Index("idx_course_published", "is_published"),
+        Index("idx_course_category_id", "category_id"),
+        Index("idx_course_status", "status"),
         Index("idx_course_rating", "rating"),
         Index("idx_course_enrollment", "enrollment_count"),
     )

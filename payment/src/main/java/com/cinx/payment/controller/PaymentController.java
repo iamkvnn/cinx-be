@@ -24,23 +24,6 @@ import java.util.Map;
 public class PaymentController {
     private final PaymentServiceFactory factory;
 
-    @Hidden
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping
-    public ResponseEntity<ApiResponse<PaymentResponse>> getPayment(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod) {
-        PaymentResponse response = factory.getPaymentService(paymentMethod).getPaymentByOrderId(orderId);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
-    }
-
-    @Hidden
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/ids")
-    public ResponseEntity<ApiResponse<List<PaymentResponse>>> getPaymentByOrderIds(@RequestParam List<String> orderIds) {
-        List<PaymentResponse> response = factory.getPaymentService(PaymentMethod.MOMO).getPaymentByIds(orderIds);
-        System.out.println(response);
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", response));
-    }
-
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<String>> requestMomoPayment(@RequestBody PaymentRequest request) {

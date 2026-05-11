@@ -174,4 +174,33 @@ public class LearningPathService implements ILearningPathService {
             pathRepository.save(path);
         }
     }
+
+    @Override
+    public void refreshPrerequisiteUnlocks(String userId, String courseId) {
+        // Find any active/pending path that contains lessons from this course.
+        pathRepository.findByUserIdAndStatusIn(userId,
+                List.of(LearningPathStatus.ACTIVE, LearningPathStatus.PENDING_PAYMENT))
+                .ifPresent(path -> {
+                    // Re-index incomplete items in the affected course by their stored orderIndex.
+                    // We preserve completed items and only normalise ordering for the rest.
+                    List<LearningPathItem> courseItems = path.getItems().stream()
+                            .filter(item -> courseId.equals(item.getCourseId()))
+                            .sorted(java.util.Comparator.comparingInt(LearningPathItem::getOrderIndex))
+                            .toList();
+
+                    boolean changed = false;
+                    int position = 0;
+                    for (LearningPathItem item : courseItems) {
+                        if (item.getOrderIndex() != position) {
+                            item.setOrderIndex(position);
+                            changed = true;
+                        }
+                        position++;
+                    }
+
+                    if (changed) {
+                        itemRepository.saveAll(courseItems);
+                    }
+                });
+    }
 }

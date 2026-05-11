@@ -28,6 +28,9 @@ public class PaymentEventListener {
                         new CreateEnrolledCourseRequest(item.courseId(), orderDetail.userId())
                 ).toList()
         );
-        orderDetail.items().forEach(item -> courseService.increaseEnrollmentCount(item.courseId()));
+        orderDetail.items().forEach(item -> {
+                System.out.println("Increasing enrollment count for course: " + item.courseId());
+                courseService.increaseEnrollmentCount(item.courseId());
+        });
     }
 }

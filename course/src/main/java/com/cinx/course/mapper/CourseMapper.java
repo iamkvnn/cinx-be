@@ -15,33 +15,16 @@ import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
 import org.mapstruct.ReportingPolicy;
 
-@Mapper(
-        componentModel = "spring",
-        uses = {
-                InstructorMapper.class,
-                CourseImageMapper.class,
-                SectionMapper.class
-        },
-        unmappedTargetPolicy = ReportingPolicy.IGNORE
-)
+@Mapper(componentModel = "spring")
 public interface CourseMapper extends BaseMapper<Course, CourseResponse>,
         CreateMapper<Course, CreateCourseRequest>,
         UpdateMapper<Course, UpdateCourseRequest> {
-    @Override
-    CourseResponse toDto(Course entity);
-
 
     @Mapping(target = ".", source = "course")
-    @Mapping(target = "category", source = "course.category")
     @Mapping(target = "instructor", source = "instructor")
     CourseResponse toDto(CourseAggregate aggregate);
 
     @Mapping(target = ".", source = "course")
-    @Mapping(target = "category", source = "course.category")
     @Mapping(target = "instructor", source = "instructor")
     CourseDetailResponse toDetailDto(CourseAggregate aggregate);
-
-    @Override
-    @Mapping(target = "sections", ignore = true)
-    void partialUpdate(@MappingTarget Course entity, UpdateCourseRequest request);
 }

@@ -6,6 +6,8 @@ public record VideoLessonResponse (
         String fileType,
         Long fileSize,
         Integer duration,
-        String status
+        String status,
+        Boolean hasQuestions,
+        Integer questionCount
 ) {
 }

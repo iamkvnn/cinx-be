@@ -14,5 +14,5 @@ class UserRepository:
         self.db.commit()
 
     def get_user_categories(self, user_id: str) -> list[str]:
-        stmt = select(UserPreference.category).where(UserPreference.user_id == user_id)
+        stmt = select(UserPreference.categoryId).where(UserPreference.user_id == user_id)
         return list(self.db.execute(stmt).scalars().all())

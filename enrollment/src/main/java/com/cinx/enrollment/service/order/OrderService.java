@@ -84,11 +84,12 @@ public class OrderService implements IOrderService {
         validateCreateOrderRequest(request);
         List<OrderItem> orderItems = createOrderItems(request);
         Long totalPrice = orderItems.stream().mapToLong(OrderItem::getPrice).sum();
-        Long discounted = orderItems.stream().mapToLong(item -> item.getPrice() - item.getDiscountedPrice()).sum();
+        long discounted = orderItems.stream().mapToLong(item -> item.getPrice() - item.getDiscountedPrice()).sum();
         VoucherResponse voucherResponse = null;
         if (request.voucherCode() != null) {
             voucherResponse = voucherService.validateVoucher(request.voucherCode(), totalPrice);
-            discounted += voucherResponse.discountAmount();
+            long discountAmount = voucherResponse.discountAmount() * (totalPrice - discounted) / 100;
+            discounted += Math.min(discountAmount, voucherResponse.maxDiscountAmount());
         }
         Order order = orderRepository.save(
                 Order.builder()
@@ -145,6 +146,7 @@ public class OrderService implements IOrderService {
         return request.cartItems().stream()
                 .map(item -> OrderItem.builder()
                         .courseId(item.course().id())
+                        .instructorId(item.course().instructor() != null ? item.course().instructor().id() : null)
                         .title(item.course().title())
                         .price(item.course().price())
                         .discountedPrice(item.course().discountedPrice())

@@ -31,12 +31,12 @@ class RecommendationService:
         if not categories:
             return []
 
-        courses = self.course_repo.get_published_courses_by_categories(categories)
+        courses = self.course_repo.get_published_courses_by_categoryId(categories)
 
         scored = []
         for c in courses:
             score = 0.0
-            if c.category in categories:
+            if c.category_id in categories:
                 score += 50
             score += min(c.rating / 5.0, 1.0) * 30
             score += min(c.enrollment_count / 1000.0, 1.0) * 20
@@ -62,7 +62,7 @@ class RecommendationService:
             return []
 
         docs = [
-            f"{c.title} {c.category}"
+            f"{c.title} {c.category_name}"
             for c in all_courses
         ]
 
@@ -105,14 +105,27 @@ class RecommendationService:
             "id": c.id,
             "title": c.title,
             "description": c.description,
-            "category": c.category,
+            "category": {
+                "id": c.category_id,
+                "name": c.category_name
+            },
+            "instructor": {
+                "id": c.instructor_id,
+                "name": c.instructor_name,
+                "email": c.instructor_email,
+                "gender": c.instructor_gender,
+                "avatarUrl": c.instructor_avatar_url
+            },
             "price": float(c.price) if c.price is not None else None,
             "discountedPrice": float(c.discounted_price) if c.discounted_price is not None else None,
+            "discountRate": c.discount_rate,
             "rating": c.rating,
             "enrollmentCount": c.enrollment_count,
-            "isPublished": c.is_published,
             "isInSubscription": c.is_in_subscription,
             "duration": c.duration,
+            "hasCertificate": c.has_certificate,
+            "certificateTitle": c.certificate_title,
+            "status": c.status,
             "score": round(score, 4),
             "source": source
         }

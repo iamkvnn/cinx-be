@@ -11,7 +11,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 
 import java.util.List;
 
-@FeignClient(name = "payment", path = "/api/v1/payments", configuration = FeignConfig.class)
+@FeignClient(name = "payment", path = "/internal/payments", configuration = FeignConfig.class)
 public interface PaymentService {
     @GetMapping
     ApiResponse<PaymentResponse> getPaymentByOrderId(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod);

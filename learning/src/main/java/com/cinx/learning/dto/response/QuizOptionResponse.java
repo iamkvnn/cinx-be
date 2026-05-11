@@ -1,7 +1,10 @@
 package com.cinx.learning.dto.response;
 
 public record QuizOptionResponse(
+        String id,
         String optionText,
         Boolean isCorrect,
-        Integer optionOrder
+        Integer optionOrder,
+        String matchText,
+        String side
 ) {}

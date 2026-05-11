@@ -4,7 +4,6 @@ import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.RejectCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
-import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.dto.response.RejectCourseResponse;
 import org.springframework.data.domain.Page;
@@ -12,14 +11,16 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface ICourseService {
-    CourseDetailResponse getCourseById(String courseId);
+    CourseResponse getCourseById(String courseId);
     List<CourseResponse> getCourseByIds(List<String> courseIds);
     Page<CourseResponse> getAllCourses(String query, String categoryId, String instructorId, Integer rating, Integer priceFrom, Integer priceTo, CourseStatus status, int page, int size, String sort);
     CourseResponse createCourse(CreateCourseRequest request);
     CourseResponse updateCourse(String courseId, UpdateCourseRequest request);
+    CourseResponse publishCourse(String courseId);
     CourseResponse approveCourse(String courseId);
     CourseResponse rejectCourse(String courseId, RejectCourseRequest request);
     RejectCourseResponse getRejectReason(String courseId);
+    void draftCourse(String courseId);
     void updateCourseRating(String courseId, Double rating);
     void increaseEnrollmentCount(String courseId);
 }
