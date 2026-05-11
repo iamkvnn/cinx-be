@@ -1,5 +1,6 @@
 import json
 import numpy as np
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sentence_transformers import SentenceTransformer
@@ -22,7 +23,7 @@ class RAGService:
     def embed_text(self, text: str) -> list[float]:
         return embed_model.encode([text])[0].tolist()
 
-    def generate_learning_path(self, user_goal: str, top_k: int = 15):
+    def generate_learning_path(self, user_goal: str, top_k: int = 5):
         goal_embedding = np.array(self.embed_text(user_goal))
         
         # Load all chunks and compute cosine similarity
@@ -46,29 +47,59 @@ class RAGService:
 
         # Sort all chunks by similarity in descending order
         sorted_indices = np.argsort(similarities)[::-1]
-
-        # Extract unique course IDs, guaranteeing we get up to 5 different courses
-        unique_course_ids = []
-        target_course_count = 5 
-        
-        for idx in sorted_indices:
-            course_id = chunks[idx].course_id
-            if course_id not in unique_course_ids:
-                unique_course_ids.append(course_id)
-            
-            # Stop once we have gathered enough unique courses
-            if len(unique_course_ids) >= target_course_count:
-                break
+        top_courseIds = sorted_indices[:top_k]
 
         # Fetch the FULL structures of these specific courses
-        courses = self.db.execute(select(Course).where(Course.id.in_(unique_course_ids))).scalars().all()
+        courses = self.db.execute(select(Course).where(Course.id.in_(top_courseIds))).scalars().all()
+
+        # Connect to course db to fetch sections and lessons
+        engine_course = create_engine(
+            f"mysql+pymysql://{settings.COURSE_DB_USER}:{settings.COURSE_DB_PASSWORD}"
+            f"@{settings.COURSE_DB_HOST}:{settings.COURSE_DB_PORT}/{settings.COURSE_DB_NAME}?charset=utf8mb4"
+        )
+        
+        course_sections_dict = {}
+        if courses:
+            with engine_course.connect() as conn:
+                course_ids_str = ",".join(f"'{cid}'" for cid in [c.id for c in courses])
+                
+                # Fetch sections
+                sections_result = conn.execute(text(f"""
+                    SELECT id, course_id, title FROM section WHERE course_id IN ({course_ids_str})
+                """)).mappings().all()
+                
+                section_ids = [s["id"] for s in sections_result]
+                lessons_by_section = {}
+                
+                # Fetch lessons if there are sections
+                if section_ids:
+                    section_ids_str = ",".join(f"'{sid}'" for sid in section_ids)
+                    lessons_result = conn.execute(text(f"""
+                        SELECT id, section_id, title, lesson_type FROM lesson WHERE section_id IN ({section_ids_str})
+                    """)).mappings().all()
+                    
+                    for les in lessons_result:
+                        lessons_by_section.setdefault(les["section_id"], []).append({
+                            "id": les["id"],
+                            "title": les["title"],
+                            "type": les["lesson_type"]
+                        })
+                
+                # Group into course_sections_dict
+                for sec in sections_result:
+                    sec_data = {
+                        "title": sec["title"],
+                        "lessons": lessons_by_section.get(sec["id"], [])
+                    }
+                    course_sections_dict.setdefault(sec["course_id"], []).append(sec_data)
 
         # Build context utilizing full course hierarchy so AI won't miss any lessons!
         context_parts = []
         for c in courses:
             course_text = f"Course ID: {c.id}, Title: {c.title}\nDescription: {c.description}\nSections:\n"
-            if c.sections:
-                for sec in c.sections:
+            sections = course_sections_dict.get(c.id, [])
+            if sections:
+                for sec in sections:
                     course_text += f"  - Section Title: {sec.get('title')}\n"
                     for les in sec.get('lessons', []):
                         course_text += f"      * Lesson ID: {les.get('id')}, Title: {les.get('title')}, Type: {les.get('type')}\n"
@@ -79,7 +110,7 @@ class RAGService:
         if not self.llm:
             return {
                 "error": "Gemini API key not configured. Cannot generate learning path.",
-                "retrieved_chunks": [{"course_id": rc.course_id, "lesson_id": rc.lesson_id, "score": similarities[i]} for rc, i in zip(related_chunks, top_indices)]
+                "retrieved_chunks": [{"course_id": c.id} for c in courses]
             }
             
         prompt = f"""

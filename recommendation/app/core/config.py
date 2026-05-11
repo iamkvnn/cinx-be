@@ -11,6 +11,12 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
+    COURSE_DB_HOST: str
+    COURSE_DB_PORT: int
+    COURSE_DB_NAME: str
+    COURSE_DB_USER: str
+    COURSE_DB_PASSWORD: str
+
     RABBITMQ_HOST: str
     RABBITMQ_PORT: int
     RABBITMQ_USER: str
