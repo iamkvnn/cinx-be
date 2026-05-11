@@ -18,7 +18,6 @@ public class VideoOption extends BaseEntity {
 
     private String optionText;
     private Boolean isCorrect;
-    private Integer optionOrder;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "questionId")

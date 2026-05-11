@@ -1,6 +1,9 @@
 package com.cinx.social.dto.request;
+import jakarta.validation.constraints.NotBlank;
+
 
 public record AddToWishlistRequest(
-        String courseId
+    @NotBlank(message = "courseId must not be blank")
+    String courseId
 ) {
 }

@@ -7,7 +7,7 @@ public record VoucherResponse(
         String code,
         Long discountAmount,
         Long minPurchaseAmount,
-        String maxDiscountAmount,
+        Long maxDiscountAmount,
         String description,
         Long quantity,
         LocalDateTime validFrom,

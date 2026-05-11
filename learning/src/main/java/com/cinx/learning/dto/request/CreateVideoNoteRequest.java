@@ -1,5 +1,6 @@
 package com.cinx.learning.dto.request;
 
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -16,5 +17,6 @@ public class CreateVideoNoteRequest {
     private String content;
 
     @NotNull(message = "Video timestamp is required")
+    @Min(value = 0, message = "Video timestamp must be non-negative")
     private Integer videoTimestamp;
 }

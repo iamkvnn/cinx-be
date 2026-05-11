@@ -83,7 +83,7 @@ public class VideoService implements IVideoService {
     public void submitVideoQuestionAnswer(String userId, SubmitVideoQuestionRequest request) {
         ApiResponse<Boolean> checkResult = courseService.checkVideoQuestionAnswer(request.videoAssessmentId(), request.userAnswer());
         if (checkResult == null || !Boolean.TRUE.equals(checkResult.data())) {
-            throw new com.cinx.common.exception.BadRequestException("Incorrect answer. Please try again.");
+            throw new BadRequestException("Incorrect answer. Please try again.");
         }
 
         InVideoAssessmentSubmission submission = inVideoAssessmentSubmissionRepository
@@ -128,7 +128,7 @@ public class VideoService implements IVideoService {
     }
 
     @Override
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    @Transactional(readOnly = true)
     public List<InVideoAssessmentSubmissionResponse> getVideoQuestionSubmissions(String userId, String videoLessonId) {
         return inVideoAssessmentSubmissionRepository.findByUserIdAndVideoLessonId(userId, videoLessonId).stream()
                 .map(sub -> new InVideoAssessmentSubmissionResponse(

@@ -3,9 +3,7 @@ package com.cinx.course.service.videoquestion;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
-import com.cinx.course.dto.request.CreateVideoOptionRequest;
 import com.cinx.course.dto.request.CreateVideoQuestionRequest;
-import com.cinx.course.dto.request.UpdateVideoOptionRequest;
 import com.cinx.course.dto.request.UpdateVideoQuestionRequest;
 import com.cinx.course.dto.response.VideoOptionResponse;
 import com.cinx.course.dto.response.VideoQuestionResponse;
@@ -62,7 +60,7 @@ public class VideoQuestionService implements IVideoQuestionService {
                             q.questionType(),
                             q.timestampSeconds(),
                             q.options().stream()
-                                    .map(o -> new VideoOptionResponse(o.id(), o.optionText(), null, o.optionOrder()))
+                                    .map(o -> new VideoOptionResponse(o.id(), o.optionText(), null))
                                     .toList()
                     ))
                     .collect(Collectors.toList());
@@ -96,7 +94,7 @@ public class VideoQuestionService implements IVideoQuestionService {
                     q.questionType(),
                     q.timestampSeconds(),
                     q.options().stream()
-                            .map(o -> new VideoOptionResponse(o.id(), o.optionText(), null, o.optionOrder()))
+                            .map(o -> new VideoOptionResponse(o.id(), o.optionText(), null))
                             .toList()
             );
         }
@@ -179,24 +177,10 @@ public class VideoQuestionService implements IVideoQuestionService {
         }
         
         String correctStr = correctOptions.stream()
-                .map(o -> o.getOptionOrder() != null ? o.getOptionOrder().toString() : "")
                 .sorted()
                 .toList()
                 .toString();
 
-        // Check if userAnswer matches order string, ID, order integer string, or text
-        if (userAnswer.equals(correctStr)) {
-            return true;
-        }
-
-        for (VideoOption option : correctOptions) {
-            if (option.getId().equals(userAnswer) || 
-                (option.getOptionOrder() != null && option.getOptionOrder().toString().equals(userAnswer)) || 
-                (option.getOptionText() != null && option.getOptionText().equalsIgnoreCase(userAnswer))) {
-                return true;
-            }
-        }
-        
-        return false;
+        return userAnswer.equals(correctStr);
     }
 }

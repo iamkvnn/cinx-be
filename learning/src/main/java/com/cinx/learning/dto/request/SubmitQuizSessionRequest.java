@@ -1,8 +1,11 @@
 package com.cinx.learning.dto.request;
 
+import jakarta.validation.Valid;
+
 import java.util.List;
 
 public record SubmitQuizSessionRequest(
-        List<ChooseQuizAnswerRequest> answers
+    @Valid
+    List<ChooseQuizAnswerRequest> answers
 ) {
 }

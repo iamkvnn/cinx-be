@@ -1,6 +1,9 @@
 package com.cinx.social.dto.request;
+import jakarta.validation.constraints.NotBlank;
+
 
 public record CreateReportReviewRequest(
-        String reason
+    @NotBlank(message = "reason must not be blank")
+    String reason
 ) {
 }
