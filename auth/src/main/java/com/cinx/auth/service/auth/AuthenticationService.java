@@ -80,6 +80,8 @@ public class AuthenticationService implements IAuthenticationService {
         if (user.getStatus().equals(UserStatus.UNVERIFIED)) {
             throw new BadRequestException("User email is not verified");
         }
+        
+        userService.checkAndUnbanIfNeeded(user);
         if (user.getStatus().equals(UserStatus.BANNED)) {
             throw new BadRequestException("User account is banned");
         }
@@ -95,6 +97,12 @@ public class AuthenticationService implements IAuthenticationService {
         GoogleTokenResponse tokenResponse = googleAuthenticationService.exchangeCodeForToken(request);
         GoogleProfileResponse profileResponse = googleAuthenticationService.getGoogleUserProfile(tokenResponse.accessToken());
         User user = userService.findOrCreateUserByGoogleProfile(profileResponse);
+        
+        userService.checkAndUnbanIfNeeded(user);
+        if (user.getStatus().equals(UserStatus.BANNED)) {
+            throw new BadRequestException("User account is banned");
+        }
+        
         return generateTokens(new JWTPayload(user.getId(), user.getRole().name()));
     }
 
@@ -146,6 +154,8 @@ public class AuthenticationService implements IAuthenticationService {
             }
             String userId = signedJWT.getJWTClaimsSet().getSubject();
             User user = userService.findById(userId);
+            
+            userService.checkAndUnbanIfNeeded(user);
             if (user.getStatus().equals(UserStatus.BANNED)) {
                 throw new BadRequestException("User account is banned");
             }

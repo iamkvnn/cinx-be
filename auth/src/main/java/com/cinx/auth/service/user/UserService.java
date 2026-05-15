@@ -82,23 +82,62 @@ public class UserService implements IUserService {
     @Override
     public User banUser(String userId, BanUserRequest request) {
         User user = findById(userId);
+
+        Integer duration = request.durationDays();
+        Integer maxDuration = request.reasonType().getMaxDurationDays();
+
+        if (maxDuration != null) {
+            if (duration == null) {
+                throw new BadRequestException("Duration is required for reason type " + request.reasonType());
+            }
+            if (duration > maxDuration) {
+                throw new BadRequestException("Duration exceeds the maximum allowed (" + maxDuration + " days) for reason type " + request.reasonType());
+            }
+        }
+
         user.setStatus(UserStatus.BANNED);
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        if (duration != null) {
+            user.setBanExpiresAt(LocalDateTime.now().plusDays(duration));
+        } else {
+            user.setBanExpiresAt(null);
+        }
+
         userProfileService.toggleBanUser(userId);
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        String expirationText = duration != null ? "đến ngày " + java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").format(savedUser.getBanExpiresAt()) : "vĩnh viễn";
+        String body = String.format("Tài khoản của bạn đã bị khóa %s.\nLý do: %s\nChi tiết: %s", 
+                expirationText, request.reasonType().name(), request.details());
+
+        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
+                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", body), 
+                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        return savedUser;
     }
 
     @Override
     public User unbanUser(String userId) {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
+        user.setBanExpiresAt(null);
         rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
                 Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được mở khóa", "body", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
                 m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
         userProfileService.toggleBanUser(userId);
         return userRepository.save(user);
+    }
+
+    @Override
+    public void checkAndUnbanIfNeeded(User user) {
+        if (UserStatus.BANNED.equals(user.getStatus()) && user.getBanExpiresAt() != null && user.getBanExpiresAt().isBefore(LocalDateTime.now())) {
+            user.setStatus(UserStatus.ACTIVE);
+            user.setBanExpiresAt(null);
+            userRepository.save(user);
+            userProfileService.toggleBanUser(user.getId());
+            rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
+                    Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được tự động mở khóa", "body", "Tài khoản của bạn đã hết thời hạn khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
+                    m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        }
     }
 
     @Override
