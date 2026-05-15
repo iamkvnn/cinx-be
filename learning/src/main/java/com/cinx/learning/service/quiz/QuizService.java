@@ -25,6 +25,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -157,6 +158,16 @@ public class QuizService implements IQuizService {
 
     @Override
     public void chooseQuizSessionQuestion(String quizSessionId, ChooseQuizAnswerRequest request) {
+        QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
+                .orElseThrow(() -> new NotFoundException("Quiz session not found"));
+        if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Quiz session is not in progress");
+        }
+        if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
+            submitQuizSession(quizSessionId, new SubmitQuizSessionRequest(Collections.emptyList()));
+            throw new BadRequestException("Quiz session has expired and was automatically submitted");
+        }
+
         quizSessionQuestionRepository.findByQuizSessionIdAndQuestionId(quizSessionId, request.questionId())
                 .ifPresentOrElse(
                         q -> {
@@ -177,14 +188,13 @@ public class QuizService implements IQuizService {
         if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
             throw new BadRequestException("Quiz session is not in progress");
         }
-        if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Quiz session has expired");
-        }
-
-        Map<String, ChooseQuizAnswerRequest> answerMap = request.answers() == null
-                ? Collections.emptyMap()
-                : request.answers().stream()
-                        .collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, a -> a));
+        
+        boolean isExpired = quizSession.getEndTime().isBefore(LocalDateTime.now());
+        
+        Map<String, ChooseQuizAnswerRequest> answerMap = (request != null && request.answers() != null && !isExpired)
+                ? request.answers().stream()
+                        .collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, a -> a))
+                : Collections.emptyMap();
 
         List<QuizSessionQuestion> questions = quizSessionQuestionRepository.findAllByQuizSessionId(quizSessionId, Pageable.unpaged()).getContent();
         questions.forEach(q -> {
@@ -309,5 +319,22 @@ public class QuizService implements IQuizService {
                         ((Number) obj[1]).doubleValue() == 0 ? 0.0 : ((Number) obj[2]).doubleValue() / ((Number) obj[1]).doubleValue()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Scheduled(fixedRateString = "${app.quiz.auto-submit.rate:60000}")
+    public void autoSubmitExpiredSessions() {
+        List<QuizSession> expiredSessions = quizSessionRepository.findExpiredSessions(QuizSessionStatus.IN_PROGRESS, LocalDateTime.now());
+        if (!expiredSessions.isEmpty()) {
+            log.info("Found {} expired quiz sessions. Starting auto-submission.", expiredSessions.size());
+        }
+        for (QuizSession session : expiredSessions) {
+            try {
+                // Submit empty request, the internal logic will use currently saved answers since it's already expired
+                submitQuizSession(session.getId(), new SubmitQuizSessionRequest(Collections.emptyList()));
+                log.info("Auto-submitted expired quiz session: {}", session.getId());
+            } catch (Exception e) {
+                log.error("Failed to auto-submit expired quiz session: {}", session.getId(), e);
+            }
+        }
     }
 }
