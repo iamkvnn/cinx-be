@@ -131,7 +131,29 @@ public class LearningProgressService implements ILearningProgressService {
         course.setCompletedItems(completedItems);
         course.setAvgScore(completedItems > 0 ? totalScore / completedItems : 0.0);
 
-        if (course.getTotalItems() != null && completedItems == course.getTotalItems()) {
+        boolean justCompleted = !Boolean.TRUE.equals(oldCompleted) && course.getTotalItems() != null && completedItems == course.getTotalItems();
+
+        if (justCompleted) {
+            course.setIsCompleted(true);
+            course.setCompletionTime(LocalDateTime.now());
+            
+            // Notify user of course completion
+            try {
+                String courseTitle = "your course";
+                var courseRes = courseService.getCourseById(course.getCourseId());
+                if (courseRes != null && courseRes.success() && courseRes.data() != null) {
+                    courseTitle = courseRes.data().title();
+                }
+
+                String title = "Course Completed!";
+                String message = "Congratulations on completing: " + courseTitle;
+
+                notificationPublisher.sendInApp(List.of(userId), title, message);
+                notificationPublisher.sendPush(List.of(userId), title, message, Map.of("courseId", course.getCourseId()));
+            } catch (Exception ex) {
+                log.error("Failed to send course completion notification for userId={}, courseId={}", userId, course.getCourseId(), ex);
+            }
+        } else if (course.getTotalItems() != null && completedItems == course.getTotalItems()) {
             course.setIsCompleted(true);
             course.setCompletionTime(LocalDateTime.now());
         }
@@ -248,6 +270,8 @@ public class LearningProgressService implements ILearningProgressService {
         courseProgress.setAvgScore(avgScore);
 
         boolean nowComplete = expectedTotal > 0 && completedCount == expectedTotal;
+        boolean justCompleted = nowComplete && !Boolean.TRUE.equals(courseProgress.getIsCompleted());
+
         courseProgress.setIsCompleted(nowComplete);
         if (nowComplete && courseProgress.getCompletionTime() == null) {
             courseProgress.setCompletionTime(LocalDateTime.now());
@@ -256,6 +280,24 @@ public class LearningProgressService implements ILearningProgressService {
         }
 
         courseProgressRepository.save(courseProgress);
+
+        if (justCompleted) {
+            try {
+                String courseTitle = "your course";
+                var courseRes = courseService.getCourseById(courseId);
+                if (courseRes != null && courseRes.success() && courseRes.data() != null) {
+                    courseTitle = courseRes.data().title();
+                }
+
+                String title = "Course Completed!";
+                String message = "Congratulations on completing: " + courseTitle;
+
+                notificationPublisher.sendInApp(List.of(userId), title, message);
+                notificationPublisher.sendPush(List.of(userId), title, message, Map.of("courseId", courseId));
+            } catch (Exception ex) {
+                log.error("Failed to send course completion notification for userId={}, courseId={}", userId, courseId, ex);
+            }
+        }
     }
 
     private void publishLessonChangeNotifications(String courseId, String changeType,

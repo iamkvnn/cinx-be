@@ -18,6 +18,7 @@ public class NotificationPublisher {
     private static final String EXCHANGE        = "notification.send.exchange";
     private static final String EMAIL_ROUTE     = "notification.email.send";
     private static final String IN_APP_ROUTE    = "notification.in-app.send";
+    private static final String PUSH_ROUTE      = "notification.push.send";
 
     private final RabbitTemplate rabbitTemplate;
 
@@ -40,6 +41,21 @@ public class NotificationPublisher {
         );
         publish(IN_APP_ROUTE, payload);
         log.info("In-app notification queued for {} user(s)", userIds.size());
+    }
+
+    public void sendPush(List<String> userIds, String title, String body, Map<String, String> data) {
+        if (userIds == null || userIds.isEmpty()) return;
+        
+        // Push notification usually needs userIds, title, body, and optional data
+        Map<String, Object> payload = Map.of(
+                "userIds", userIds,
+                "title", title,
+                "body", body,
+                "data", data != null ? data : Map.of()
+        );
+        
+        publish(PUSH_ROUTE, payload);
+        log.info("Push notification queued for {} user(s)", userIds.size());
     }
 
     private void publish(String routingKey, Map<String, Object> payload) {

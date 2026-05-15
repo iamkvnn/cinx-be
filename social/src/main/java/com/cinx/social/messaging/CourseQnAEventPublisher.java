@@ -1,5 +1,6 @@
 package com.cinx.social.messaging;
 
+import com.cinx.social.event.CourseAnswerCreatedEvent;
 import com.cinx.social.event.CourseQuestionCreatedEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -15,5 +16,10 @@ public class CourseQnAEventPublisher {
     public void publishQuestionCreatedEvent(CourseQuestionCreatedEvent event) {
         log.info("Publishing CourseQuestionCreatedEvent: {}", event.getEventId());
         rabbitTemplate.convertAndSend("course.qna.exchange", "question.created", event);
+    }
+
+    public void publishAnswerCreatedEvent(CourseAnswerCreatedEvent event) {
+        log.info("Publishing CourseAnswerCreatedEvent: {}", event.getEventId());
+        rabbitTemplate.convertAndSend("course.qna.exchange", "answer.created", event);
     }
 }
