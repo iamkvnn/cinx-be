@@ -1,12 +1,18 @@
 package com.cinx.social.dto.response;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import java.util.List;
 
 public record ReviewResponse(
+        @Schema(example = "rev_123")
         String id,
+        @Schema(example = "user_123")
         String userId,
+        @Schema(example = "course_123")
         String courseId,
+        @Schema(example = "Great course, learned a lot!")
         String content,
+        @Schema(example = "4.5")
         Double rating,
         ReviewReplyDto reply,
         List<ReviewReactionResponse> reactions

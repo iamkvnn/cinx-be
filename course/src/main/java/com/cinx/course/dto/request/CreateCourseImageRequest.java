@@ -1,5 +1,6 @@
 package com.cinx.course.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -15,6 +16,7 @@ public class CreateCourseImageRequest {
     @Data
     public static class ImageDto {
         @NotBlank(message = "File key is required")
+        @Schema(example = "courses/images/spring-boot-cover.jpg")
         private String fileKey;
     }
 }
