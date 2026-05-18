@@ -81,7 +81,8 @@ public class LessonService implements ILessonService {
                 .build();
         Lesson saved = lessonRepository.save(lesson);
         courseChangeAuditService.auditCourseItemChange(section.getCourse().getId(), saved.getId(), null, lessonMapper.toDto(saved));
-        courseEventProducer.publishLessonChangedEvent(new LessonChangedEvent(section.getCourse().getId(), saved.getId(), "CREATED"));
+        courseEventProducer.publishLessonChangedEvent(
+                new LessonChangedEvent(section.getCourse().getId(), saved.getId(), "CREATED", section.getCourse().getTitle()));
         return saved;
     }
 
@@ -103,7 +104,8 @@ public class LessonService implements ILessonService {
         
         courseChangeAuditService.auditCourseItemChange(lesson.getSection().getCourse().getId(), lesson.getId(), oldValue, lessonMapper.toDto(lesson));
         Lesson updated = lessonRepository.save(lesson);
-        courseEventProducer.publishLessonChangedEvent(new LessonChangedEvent(lesson.getSection().getCourse().getId(), lesson.getId(), "UPDATED"));
+        courseEventProducer.publishLessonChangedEvent(
+                new LessonChangedEvent(lesson.getSection().getCourse().getId(), lesson.getId(), "UPDATED", lesson.getSection().getCourse().getTitle()));
         return updated;
     }
 
@@ -116,6 +118,7 @@ public class LessonService implements ILessonService {
         courseRepository.save(lesson.getSection().getCourse());
         courseChangeAuditService.auditCourseItemChange(lesson.getSection().getCourse().getId(), lesson.getId(), lessonMapper.toDto(lesson), null);
         lessonRepository.delete(lesson);
-        courseEventProducer.publishLessonChangedEvent(new LessonChangedEvent(lesson.getSection().getCourse().getId(), lesson.getId(), "DELETED"));
+        courseEventProducer.publishLessonChangedEvent(
+                new LessonChangedEvent(lesson.getSection().getCourse().getId(), lesson.getId(), "DELETED", lesson.getSection().getCourse().getTitle()));
     }
 }

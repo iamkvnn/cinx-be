@@ -6,8 +6,7 @@ import com.cinx.auth.dto.request.*;
 import com.cinx.auth.dto.response.GoogleProfileResponse;
 import com.cinx.auth.model.User;
 import com.cinx.auth.repository.UserRepository;
-import java.util.Map;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.cinx.auth.messaging.AuthNotificationPublisher;
 import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.auth.utils.OtpGenerator;
 import com.cinx.common.exception.AlreadyExistException;
@@ -27,7 +26,7 @@ public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final IUserProfileService userProfileService;
     private final PasswordEncoder passwordEncoder;
-    private final RabbitTemplate rabbitTemplate;
+    private final AuthNotificationPublisher authNotificationPublisher;
 
     @Override
     public User findById(String id) {
@@ -47,9 +46,7 @@ public class UserService implements IUserService {
         }
 
         String otp = OtpGenerator.generateOtp();
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", dto.email(), "subject", "Mã Xác Nhận OTP", "body", "Mã xác nhận OTP của bạn là: " + otp), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        authNotificationPublisher.publishOtpVerifyEmail(dto.email(), otp);
 
         User user = userRepository.save(User
                 .builder()
@@ -109,9 +106,7 @@ public class UserService implements IUserService {
         String body = String.format("Tài khoản của bạn đã bị khóa %s.\nLý do: %s\nChi tiết: %s", 
                 expirationText, request.reasonType().name(), request.details());
 
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", body), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        authNotificationPublisher.publishAccountBanned(user.getEmail(), body);
         return savedUser;
     }
 
@@ -120,9 +115,7 @@ public class UserService implements IUserService {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
         user.setBanExpiresAt(null);
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được mở khóa", "body", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        authNotificationPublisher.publishAccountUnbanned(user.getEmail());
         userProfileService.toggleBanUser(userId);
         return userRepository.save(user);
     }
@@ -134,9 +127,7 @@ public class UserService implements IUserService {
             user.setBanExpiresAt(null);
             userRepository.save(user);
             userProfileService.toggleBanUser(user.getId());
-            rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                    Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được tự động mở khóa", "body", "Tài khoản của bạn đã hết thời hạn khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
-                    m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+            authNotificationPublisher.publishAccountAutoUnbanned(user.getEmail());
         }
     }
 

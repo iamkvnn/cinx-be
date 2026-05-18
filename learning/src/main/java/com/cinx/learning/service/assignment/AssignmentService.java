@@ -2,6 +2,7 @@ package com.cinx.learning.service.assignment;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.AssignmentSubmissionResponse;
@@ -10,6 +11,7 @@ import com.cinx.learning.model.AssignmentSubmission;
 import com.cinx.learning.model.AssignmentSubmissionAttachment;
 import com.cinx.learning.repository.AssignmentSubmissionRepository;
 import com.cinx.learning.repository.AssignmentSubmissionAttachmentRepository;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
@@ -27,6 +29,7 @@ public class AssignmentService implements IAssignmentService {
     private final AssignmentSubmissionRepository assignmentSubmissionRepository;
     private final AssignmentSubmissionMapper assignmentSubmissionMapper;
     private final ILearningProgressService learningProgressService;
+    private final IDailyGoalService dailyGoalService;
 
     @Value("${aws.s3.cdn-url}")
     private String cdnUrl;
@@ -71,6 +74,8 @@ public class AssignmentService implements IAssignmentService {
                             .build())
                     .toList());
         }
+
+        dailyGoalService.recordProgress(userId, DailyGoalType.ASSIGNMENTS_SUBMITTED, 1);
     }
 
     @Transactional

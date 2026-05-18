@@ -1,5 +1,6 @@
 package com.cinx.learning.repository;
 
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.model.UserDailyGoal;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -10,7 +11,13 @@ import java.util.Optional;
 
 @Repository
 public interface UserDailyGoalRepository extends JpaRepository<UserDailyGoal, String> {
-    Optional<UserDailyGoal> findByUserIdAndGoalDate(String userId, LocalDate goalDate);
+    List<UserDailyGoal> findByUserIdAndGoalDate(String userId, LocalDate goalDate);
+    Optional<UserDailyGoal> findByUserIdAndGoalDateAndGoalKey(String userId, LocalDate goalDate, String goalKey);
+    Optional<UserDailyGoal> findByUserIdAndGoalDateAndGoalTypeAndTargetItemId(
+            String userId,
+            LocalDate goalDate,
+            DailyGoalType goalType,
+            String targetItemId);
     List<UserDailyGoal> findByUserIdAndGoalDateBetween(String userId, LocalDate startDate, LocalDate endDate);
     List<UserDailyGoal> findByGoalDateAndIsCompletedFalse(LocalDate goalDate);
 }

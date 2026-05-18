@@ -2,6 +2,7 @@ package com.cinx.learning.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
 import com.cinx.learning.dto.request.ChooseQuizAnswerRequest;
@@ -17,6 +18,7 @@ import com.cinx.learning.repository.QuizSessionQuestionRepository;
 import com.cinx.learning.repository.QuizSessionRepository;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
 import com.cinx.learning.service.course.CourseService;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import com.cinx.learning.service.quiz.evaluator.IQuestionEvaluator;
 import com.cinx.learning.service.quiz.evaluator.QuestionEvaluatorFactory;
@@ -46,6 +48,7 @@ public class QuizService implements IQuizService {
     private final QuizSessionSubmissionRepository quizSessionSubmissionRepository;
     private final QuizSessionQuestionRepository quizSessionQuestionRepository;
     private final ILearningProgressService learningProgressService;
+    private final IDailyGoalService dailyGoalService;
     private final QuizSnapshotBuilder snapshotBuilder;
 
     @Override
@@ -243,10 +246,19 @@ public class QuizService implements IQuizService {
 
         log.info("Quiz session {} graded. rawScore={} effectiveScore={}", quizSessionId, rawScore, effectiveScore);
 
+        boolean wasCompleted = learningProgressService.isLearningItemCompleted(
+                quizSession.getUserId(),
+                quizSession.getQuizLessonId());
+        boolean isPassed = effectiveScore >= 5.0;
+
         learningProgressService.updateLearningItemProgress(
                 quizSession.getUserId(),
                 quizSession.getQuizLessonId(),
-                new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore));
+                new UpdateLearningItemRequest(true, isPassed, effectiveScore));
+
+        if (!wasCompleted && isPassed) {
+            dailyGoalService.recordProgress(quizSession.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
+        }
 
         return quizSessionMapper.toDto(quizSession);
     }
@@ -300,10 +312,19 @@ public class QuizService implements IQuizService {
         double effectiveScore = quizScoreAggregator.aggregateScore(session.getUserId(), session.getQuizLessonId());
         log.info("Essay graded for session {}. rawScore={} effectiveScore={}", sessionId, rawScore, effectiveScore);
 
+        boolean wasCompleted = learningProgressService.isLearningItemCompleted(
+                session.getUserId(),
+                session.getQuizLessonId());
+        boolean isPassed = effectiveScore >= 5.0;
+
         learningProgressService.updateLearningItemProgress(
                 session.getUserId(),
                 session.getQuizLessonId(),
-                new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore));
+                new UpdateLearningItemRequest(true, isPassed, effectiveScore));
+
+        if (!wasCompleted && isPassed) {
+            dailyGoalService.recordProgress(session.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
+        }
 
         return quizSessionMapper.toDto(session);
     }

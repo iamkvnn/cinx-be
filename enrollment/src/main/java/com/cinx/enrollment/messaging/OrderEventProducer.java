@@ -5,9 +5,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
-
 @Component
 @RequiredArgsConstructor
 public class OrderEventProducer {
@@ -15,15 +12,9 @@ public class OrderEventProducer {
 
     public void publishOrderCreatedEvent(OrderEvent event) {
         System.out.println("Publishing OrderEvent: " + event);
+        // The notification service subscribes to order.events.exchange / order.order.created
+        // and handles in-app notification from there — no direct publish to notification exchange.
         rabbitTemplate.convertAndSend("order.events.exchange", "order.order.created", event, m -> {
-            m.getMessageProperties().setMessageId(event.getId() + "-CREATED");
-            return m;
-        });
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.in-app.send", Map.of(
-                        "userIds", List.of(event.getUserId()),
-                        "title", "Order Created",
-                        "message", "Your order with ID " + event.getId() + " has been created."
-                ), m -> {
             m.getMessageProperties().setMessageId(event.getId() + "-CREATED");
             return m;
         });

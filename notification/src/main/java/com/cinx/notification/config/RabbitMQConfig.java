@@ -7,12 +7,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
 
-    // --- Exchanges ---
-    @Bean
-    public TopicExchange notificationExchange() {
-        return ExchangeBuilder.topicExchange("notification.send.exchange").durable(true).build();
-    }
-
     @Bean
     public TopicExchange paymentExchange() {
         return ExchangeBuilder.topicExchange("payment.events.exchange").durable(true).build();
@@ -29,39 +23,33 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public TopicExchange learningExchange() {
+        return ExchangeBuilder.topicExchange("learning.events.exchange").durable(true).build();
+    }
+
+    @Bean
+    public TopicExchange orderExchange() {
+        return ExchangeBuilder.topicExchange("order.events.exchange").durable(true).build();
+    }
+
+    @Bean
+    public TopicExchange authExchange() {
+        return ExchangeBuilder.topicExchange("auth.events.exchange").durable(true).build();
+    }
+
+    @Bean
+    public TopicExchange userExchange() {
+        return ExchangeBuilder.topicExchange("user.events.exchange").durable(true).build();
+    }
+
+    @Bean
     public DirectExchange deadLetterExchange() {
         return ExchangeBuilder.directExchange("dlx.exchange").durable(true).build();
     }
 
-    // --- Dead Letter Queue ---
     @Bean
     public Queue deadLetterQueue() {
         return QueueBuilder.durable("notification.dlq").build();
-    }
-
-    // --- Channel Queues ---
-    @Bean
-    public Queue emailQueue() {
-        return QueueBuilder.durable("notification.email.queue")
-                .withArgument("x-dead-letter-exchange", "dlx.exchange")
-                .withArgument("x-dead-letter-routing-key", "email.dead")
-                .build();
-    }
-
-    @Bean
-    public Queue pushQueue() {
-        return QueueBuilder.durable("notification.push.queue")
-                .withArgument("x-dead-letter-exchange", "dlx.exchange")
-                .withArgument("x-dead-letter-routing-key", "push.dead")
-                .build();
-    }
-
-    @Bean
-    public Queue inAppQueue() {
-        return QueueBuilder.durable("notification.inapp.queue")
-                .withArgument("x-dead-letter-exchange", "dlx.exchange")
-                .withArgument("x-dead-letter-routing-key", "inapp.dead")
-                .build();
     }
 
     @Bean
@@ -88,42 +76,36 @@ public class RabbitMQConfig {
                 .build();
     }
 
-    // --- Bindings ---
-
     @Bean
-    public Binding emailBinding() {
-        return BindingBuilder.bind(emailQueue())
-                .to(notificationExchange())
-                .with("notification.email.send");
+    public Queue learningQueue() {
+        return QueueBuilder.durable("notification.learning.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "learning.dead")
+                .build();
     }
 
     @Bean
-    public Binding inAppBinding() {
-        return BindingBuilder.bind(inAppQueue())
-                .to(notificationExchange())
-                .with("notification.in-app.send");
+    public Queue orderQueue() {
+        return QueueBuilder.durable("notification.order.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "order.dead")
+                .build();
     }
 
     @Bean
-    public Binding pushBinding() {
-        return BindingBuilder.bind(pushQueue())
-                .to(notificationExchange())
-                .with("notification.push.send");
+    public Queue authQueue() {
+        return QueueBuilder.durable("notification.auth.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "auth.dead")
+                .build();
     }
 
     @Bean
-    public Binding dlqEmailBinding() {
-        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("email.dead");
-    }
-    
-    @Bean
-    public Binding dlqPushBinding() {
-        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("push.dead");
-    }
-
-    @Bean
-    public Binding dlqInAppBinding() {
-        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("inapp.dead");
+    public Queue userQueue() {
+        return QueueBuilder.durable("notification.user.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "user.dead")
+                .build();
     }
 
     @Bean
@@ -155,6 +137,43 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding learningCourseCompletedBinding() {
+        return BindingBuilder.bind(learningQueue())
+                .to(learningExchange())
+                .with("learning.course.completed");
+    }
+
+    @Bean
+    public Binding learningReminderDueBinding() {
+        return BindingBuilder.bind(learningQueue())
+                .to(learningExchange())
+                .with("learning.reminder.due");
+    }
+
+    @Bean
+    public Binding orderCreatedBinding() {
+        return BindingBuilder.bind(orderQueue())
+                .to(orderExchange())
+                .with("order.order.created");
+    }
+
+    // auth.events.exchange — wildcard catches all OTP and account lifecycle events
+    @Bean
+    public Binding authEventsBinding() {
+        return BindingBuilder.bind(authQueue())
+                .to(authExchange())
+                .with("auth.#");
+    }
+
+    // user.events.exchange — wildcard catches instructor and future user events
+    @Bean
+    public Binding userEventsBinding() {
+        return BindingBuilder.bind(userQueue())
+                .to(userExchange())
+                .with("user.#");
+    }
+
+    @Bean
     public Binding dlqPaymentBinding() {
         return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("payment.dead");
     }
@@ -167,5 +186,25 @@ public class RabbitMQConfig {
     @Bean
     public Binding dlqSocialBinding() {
         return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("social.dead");
+    }
+
+    @Bean
+    public Binding dlqLearningBinding() {
+        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("learning.dead");
+    }
+
+    @Bean
+    public Binding dlqOrderBinding() {
+        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("order.dead");
+    }
+
+    @Bean
+    public Binding dlqAuthBinding() {
+        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("auth.dead");
+    }
+
+    @Bean
+    public Binding dlqUserBinding() {
+        return BindingBuilder.bind(deadLetterQueue()).to(deadLetterExchange()).with("user.dead");
     }
 }
