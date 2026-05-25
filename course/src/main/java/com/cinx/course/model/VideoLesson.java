@@ -24,11 +24,6 @@ public class VideoLesson {
     private Integer duration;
     private String status;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lessonId")
-    private Lesson lesson;
-
     @OneToMany(mappedBy = "videoLesson", fetch = FetchType.LAZY)
     private List<VideoQuestion> questions;
 }

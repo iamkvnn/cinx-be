@@ -13,9 +13,6 @@ public record UpdateLessonRequest(
      @Min(0)
      @Schema(example = "800")
      Long duration,
-     @Min(0)
-     @Schema(example = "2")
-     Integer orderIndex,
      @Schema(example = "false")
      Boolean isPreview,
      @Schema(example = "[\"les_122\", \"les_123\"]")

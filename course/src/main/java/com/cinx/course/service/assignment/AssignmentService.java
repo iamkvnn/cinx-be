@@ -38,7 +38,7 @@ public class AssignmentService implements IAssignmentService {
                 throw new AlreadyExistException("Assignment already exists for lessonId: " + lessonId);
             },() -> {
                 var assignmentLesson = assignmentMapper.toModel(request);
-                assignmentLesson.setLesson(lessonService.getForUpdate(lessonId, LessonType.ASSIGNMENT));
+                assignmentLesson.setLessonId(lessonId);
                 if (assignmentLesson.getAttachments() != null) {
                     assignmentLesson.getAttachments().forEach(attachment -> {
                         attachment.setAttachmentUrl(cdnUrl + "/" + attachment.getFileKey());
@@ -51,7 +51,6 @@ public class AssignmentService implements IAssignmentService {
 
     @Override
     public void updateAssignment(String lessonId, UpdateAssignmentLessonRequest request) {
-            lessonService.getForUpdate(lessonId, LessonType.ASSIGNMENT);
             assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
                 assignmentMapper.partialUpdate(existing, request);
                 if (existing.getAttachments() != null && !existing.getAttachments().isEmpty()) {

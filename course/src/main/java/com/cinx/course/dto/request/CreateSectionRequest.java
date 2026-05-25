@@ -3,7 +3,6 @@ package com.cinx.course.dto.request;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record CreateSectionRequest(
         @NotBlank
@@ -13,9 +12,6 @@ public record CreateSectionRequest(
         String description,
         @Min(0)
         @Schema(example = "3600")
-        Long duration,
-        @NotNull
-        @Schema(example = "1")
-        Integer orderIndex
+        Long duration
 ) {
 }

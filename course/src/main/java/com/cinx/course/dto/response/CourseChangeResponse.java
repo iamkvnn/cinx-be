@@ -7,6 +7,8 @@ public record CourseChangeResponse(
         String courseId,
         @Schema(example = "tit_123")
         String itemId,
+        @Schema(example = "COURSE")
+        String itemType,
         @Schema(example = "Old Title")
         String oldValue,
         @Schema(example = "New Title")

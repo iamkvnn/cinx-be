@@ -3,9 +3,14 @@ package com.cinx.course.model;
 import com.cinx.common.model.AuditableEntity;
 import com.cinx.course.consts.LessonType;
 import jakarta.persistence.*;
-import lombok.*;
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
 import lombok.experimental.SuperBuilder;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Entity
@@ -15,32 +20,21 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class Lesson extends AuditableEntity {
+    @Column(nullable = false)
+    private String stableId;
 
     private String title;
     private Long duration;
     private Integer orderIndex;
     private LessonType lessonType;
-    @Column(columnDefinition = "boolean default false")
     private Boolean isPreview;
 
-    @ManyToMany
-    @JoinTable(name = "lesson_prerequisites",
-            joinColumns = @JoinColumn(name = "lesson_id"),
-            inverseJoinColumns = @JoinColumn(name = "prerequisite_id"))
-    private List<Lesson> prerequisites;
+    @Builder.Default
+    @ElementCollection
+    @CollectionTable(name = "lesson_prerequisite_ids", joinColumns = @JoinColumn(name = "lesson_id"))
+    @Column(name = "prerequisite_id")
+    private List<String> prerequisiteIds = new ArrayList<>();
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     private Section section;
-
-    @OneToOne(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
-    private VideoLesson videoLesson;
-
-    @OneToOne(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
-    private ArticleLesson articleLesson;
-
-    @OneToOne(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
-    private QuizLesson quizLesson;
-
-    @OneToOne(mappedBy = "lesson", cascade = CascadeType.ALL, orphanRemoval = true)
-    private AssignmentLesson assessmentLesson;
 }

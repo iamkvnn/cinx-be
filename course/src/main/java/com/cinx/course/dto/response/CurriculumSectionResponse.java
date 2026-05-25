@@ -2,7 +2,9 @@ package com.cinx.course.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
-public record SectionResponse(
+import java.util.List;
+
+public record CurriculumSectionResponse(
         @Schema(example = "sec_123")
         String id,
         @Schema(example = "Introduction to Spring Boot")
@@ -11,7 +13,8 @@ public record SectionResponse(
         String description,
         @Schema(example = "3600")
         Long duration,
-        @Schema(example = "1")
-        Integer orderIndex
+        @Schema(example = "1024")
+        Integer orderIndex,
+        List<LessonResponse> lessons
 ) {
 }

@@ -58,7 +58,7 @@ public class QuizService implements IQuizService {
         });
 
         QuizLesson quizLesson = quizMapper.toModel(request);
-        quizLesson.setLesson(lessonService.getForUpdate(lessonId, LessonType.QUIZ));
+        quizLesson.setLessonId(lessonId);
         QuizLesson saved = quizLessonRepository.save(quizLesson);
 
         quizQuestionService.addQuestions(saved.getLessonId(), request.getQuestions());

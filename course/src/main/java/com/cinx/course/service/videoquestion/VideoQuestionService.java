@@ -3,6 +3,7 @@ package com.cinx.course.service.videoquestion;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateVideoQuestionRequest;
 import com.cinx.course.dto.request.UpdateVideoQuestionRequest;
 import com.cinx.course.dto.response.VideoOptionResponse;
@@ -15,6 +16,8 @@ import com.cinx.course.model.VideoQuestion;
 import com.cinx.course.repository.VideoLessonRepository;
 import com.cinx.course.repository.VideoOptionRepository;
 import com.cinx.course.repository.VideoQuestionRepository;
+import com.cinx.course.service.course.ICourseDraftService;
+import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,6 +34,7 @@ public class VideoQuestionService implements IVideoQuestionService {
     private final VideoLessonRepository videoLessonRepository;
     private final VideoQuestionMapper videoQuestionMapper;
     private final VideoOptionMapper videoOptionMapper;
+    private final ILessonService lessonService;
 
     @Override
     @Transactional(readOnly = true)
@@ -41,13 +45,7 @@ public class VideoQuestionService implements IVideoQuestionService {
         List<VideoQuestion> questions = videoQuestionRepository.findByVideoLessonLessonIdOrderByTimestampSecondsAsc(lessonId);
         
         String currentUserId = AuthenticationUtil.extractUserId();
-        boolean isInstructor = false;
-        
-        if (currentUserId != null && videoLesson.getLesson() != null 
-            && videoLesson.getLesson().getSection() != null 
-            && videoLesson.getLesson().getSection().getCourse() != null) {
-            isInstructor = currentUserId.equals(videoLesson.getLesson().getSection().getCourse().getInstructorId());
-        }
+        boolean isInstructor = lessonService.isLessonInstructor(lessonId, currentUserId);
 
         if (isInstructor) {
             return questions.stream().map(videoQuestionMapper::toDto).collect(Collectors.toList());
@@ -76,13 +74,7 @@ public class VideoQuestionService implements IVideoQuestionService {
         VideoLesson videoLesson = question.getVideoLesson();
         
         String currentUserId = AuthenticationUtil.extractUserId();
-        boolean isInstructor = false;
-        
-        if (currentUserId != null && videoLesson != null && videoLesson.getLesson() != null 
-            && videoLesson.getLesson().getSection() != null 
-            && videoLesson.getLesson().getSection().getCourse() != null) {
-            isInstructor = currentUserId.equals(videoLesson.getLesson().getSection().getCourse().getInstructorId());
-        }
+        boolean isInstructor = videoLesson != null && lessonService.isLessonInstructor(videoLesson.getLessonId(), currentUserId);
 
         VideoQuestionResponse q = videoQuestionMapper.toDto(question);
         if (isInstructor) {

@@ -1,39 +1,53 @@
 package com.cinx.course.mapper;
 
-import com.cinx.common.mapper.CreateMapper;
-import com.cinx.common.mapper.UpdateMapper;
 import com.cinx.course.dto.request.CreateLessonRequest;
 import com.cinx.course.dto.request.UpdateLessonRequest;
 import com.cinx.course.dto.response.LessonResponse;
 import com.cinx.course.model.Lesson;
-
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
-import org.mapstruct.Named;
+import org.mapstruct.MappingTarget;
+import org.mapstruct.NullValueMappingStrategy;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
-import java.util.List;
-import java.util.stream.Collectors;
-
-import com.cinx.common.mapper.BaseMapper;
-
-@Mapper(componentModel = "spring")
-public interface LessonMapper extends
-        BaseMapper<Lesson, LessonResponse>,
-        CreateMapper<Lesson, CreateLessonRequest>,
-        UpdateMapper<Lesson, UpdateLessonRequest> {
-
-    @Mapping(target = "prerequisiteIds", source = "prerequisites", qualifiedByName = "lessonsToIds")
-    LessonResponse toDto(Lesson e);
-
-    @Mapping(target = "prerequisites", ignore = true)
+@Mapper(componentModel = "spring", nullValueIterableMappingStrategy = NullValueMappingStrategy.RETURN_DEFAULT)
+public interface LessonMapper {
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "stableId", ignore = true)
+    @Mapping(target = "section", ignore = true)
+    @Mapping(target = "orderIndex", ignore = true)
+    @Mapping(target = "prerequisiteIds", ignore = true)
     Lesson toModel(CreateLessonRequest request);
 
-    @Mapping(target = "prerequisites", ignore = true)
-    void partialUpdate(@org.mapstruct.MappingTarget Lesson entity, UpdateLessonRequest dto);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "stableId", ignore = true)
+    @Mapping(target = "section", ignore = true)
+    @Mapping(target = "lessonType", ignore = true)
+    @Mapping(target = "prerequisiteIds", ignore = true)
+    @Mapping(target = "orderIndex", ignore = true)
+    void partialUpdate(@MappingTarget Lesson lesson, UpdateLessonRequest request);
 
-    @Named("lessonsToIds")
-    default List<String> lessonsToIds(List<Lesson> lessons) {
-        if (lessons == null) return null;
-        return lessons.stream().map(Lesson::getId).collect(Collectors.toList());
-    }
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "section", ignore = true)
+    Lesson cloneLesson(Lesson lesson);
+
+    @Mapping(target = "id", source = "stableId")
+    LessonResponse toResponse(Lesson lesson);
 }

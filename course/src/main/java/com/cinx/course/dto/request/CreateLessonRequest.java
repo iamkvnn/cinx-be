@@ -15,9 +15,6 @@ public record CreateLessonRequest (
      @Min(value = 0, message = "Duration must not be negative")
      @Schema(example = "600")
      Long duration,
-     @NotNull(message = "Order index is required")
-     @Schema(example = "1")
-     Integer orderIndex,
      @NotNull(message = "Lesson type is required")
      @Schema(example = "VIDEO")
      LessonType lessonType,

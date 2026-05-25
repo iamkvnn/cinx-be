@@ -12,9 +12,6 @@ public record UpdateSectionRequest(
         String description,
         @Min(0)
         @Schema(example = "4200")
-        Long duration,
-        @Min(0)
-        @Schema(example = "2")
-        Integer orderIndex
+        Long duration
 ) {
 }
