@@ -7,6 +7,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import org.springframework.transaction.annotation.Transactional;
 
 @Component
 public class OutboxRelay extends AbstractOutboxRelay<OutboxMessage> {
@@ -17,6 +18,7 @@ public class OutboxRelay extends AbstractOutboxRelay<OutboxMessage> {
     }
 
     @Scheduled(fixedDelayString = "${app.outbox.relay-delay-ms:5000}")
+    @Transactional
     public void relay() {
         publishPending();
     }
