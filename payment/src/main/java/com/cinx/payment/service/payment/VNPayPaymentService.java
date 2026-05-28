@@ -17,6 +17,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
 import java.util.*;
 
 @Service
@@ -134,12 +135,28 @@ public class VNPayPaymentService extends PaymentTemplate {
         try {
             String signValue = vnPayConfig.hashAllFields(callbackData);
             if (signValue.equals(vnp_SecureHash) && callbackData.get("vnp_ResponseCode").equals("00")) {
-
+                String orderId = extractOrderId(callbackData.get("vnp_OrderInfo"));
+                VNPayPayment payment = vnPayPaymentRepository.findByOrderId(orderId)
+                        .orElseThrow(() -> new RuntimeException("Payment not found for orderId: " + orderId));
+                payment.setStatus(PaymentStatus.PAID);
+                payment.setPaymentDate(LocalDateTime.now());
+                payment.setTransactionNumber(callbackData.get("vnp_TransactionNo"));
+                payment.setBank(callbackData.get("vnp_BankCode"));
+                payment.setVnPayResponseCode(callbackData.get("vnp_ResponseCode"));
+                return payment;
             }
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }
         return null;
+    }
+
+    private String extractOrderId(String orderInfo) {
+        String prefix = "Thanh toan don hang ";
+        if (orderInfo == null || !orderInfo.startsWith(prefix)) {
+            throw new RuntimeException("Invalid VNPay order info");
+        }
+        return orderInfo.substring(prefix.length());
     }
 
     @Override

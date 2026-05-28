@@ -3,39 +3,54 @@ package com.cinx.notification.service.idempotency;
 import com.cinx.notification.model.InboxMessage;
 import com.cinx.notification.repository.InboxMessageRepository;
 import lombok.RequiredArgsConstructor;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class IdempotencyService {
 
     private final InboxMessageRepository inboxMessageRepository;
-    private static final Logger log = LoggerFactory.getLogger(IdempotencyService.class);
+
+    @Transactional(readOnly = true)
+    public boolean isProcessed(String messageId) {
+        if (messageId == null || messageId.isBlank()) {
+            log.warn("Received message without ID; processing without idempotency guard");
+            return false;
+        }
+        return inboxMessageRepository.findById(messageId)
+                .map(message -> "SUCCESS".equals(message.getStatus()))
+                .orElse(false);
+    }
 
     @Transactional(propagation = Propagation.REQUIRES_NEW)
-    public boolean checkAndSave(String messageId) {
-        if (messageId == null || messageId.isEmpty()) {
-            log.warn("Received message without ID, allowing it to process (could lead to duplicates)");
-            return true;
+    public void markSuccess(String messageId) {
+        if (messageId == null || messageId.isBlank()) {
+            return;
         }
-
         try {
-            InboxMessage inboxMessage = InboxMessage.builder()
+            inboxMessageRepository.saveAndFlush(InboxMessage.builder()
                     .messageId(messageId)
                     .status("SUCCESS")
                     .processedAt(LocalDateTime.now())
-                    .build();
-            inboxMessageRepository.saveAndFlush(inboxMessage);
-            return true;
-        } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            log.info("Message with ID {} already processed (Constraint Violation), skipping.", messageId);
+                    .build());
+        } catch (DataIntegrityViolationException e) {
+            log.info("Message with ID {} was already marked processed", messageId);
+        }
+    }
+
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public boolean checkAndSave(String messageId) {
+        if (isProcessed(messageId)) {
             return false;
         }
+        markSuccess(messageId);
+        return true;
     }
 }

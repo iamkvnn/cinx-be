@@ -126,6 +126,10 @@ public class MomoPaymentService extends PaymentTemplate {
                     .orElseThrow(() -> new BadRequestException("Payment not found for orderId: " + orderId));
             payment.setStatus(PaymentStatus.PAID);
             payment.setPaymentDate(LocalDateTime.now());
+            payment.setResultCode(Integer.parseInt(callbackData.getOrDefault("resultCode", "0")));
+            if (callbackData.get("transId") != null) {
+                payment.setTransactionId(Long.parseLong(callbackData.get("transId")));
+            }
             return payment;
         }
         return null;

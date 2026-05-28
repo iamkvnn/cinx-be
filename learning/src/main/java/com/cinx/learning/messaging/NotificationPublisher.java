@@ -5,8 +5,6 @@ import com.cinx.learning.messaging.event.CourseCompletedEvent;
 import com.cinx.learning.messaging.event.DailyReminderDueEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.MessageProperties;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -19,7 +17,7 @@ public class NotificationPublisher {
 
     private static final String EXCHANGE = "learning.events.exchange";
 
-    private final RabbitTemplate rabbitTemplate;
+    private final OutboxEventPublisher outboxEventPublisher;
 
     public void publishCourseCompleted(String userId, String courseId, String courseTitle) {
         CourseCompletedEvent event = CourseCompletedEvent.builder()
@@ -29,7 +27,7 @@ public class NotificationPublisher {
                 .occurredAt(Instant.now())
                 .build();
         publish("learning.course.completed", event);
-        log.info("CourseCompletedEvent published → userId={}, courseId={}", userId, courseId);
+        log.info("CourseCompletedEvent published - userId={}, courseId={}", userId, courseId);
     }
 
     public void publishDailyReminderDue(
@@ -47,14 +45,18 @@ public class NotificationPublisher {
                 .occurredAt(Instant.now())
                 .build();
         publish("learning.reminder.due", event);
-        log.info("DailyReminderDueEvent published → userId={}, goalType={}", userId, goalType);
+        log.info("DailyReminderDueEvent published - userId={}, goalType={}", userId, goalType);
     }
 
     private void publish(String routingKey, Object event) {
-        rabbitTemplate.convertAndSend(EXCHANGE, routingKey, event, msg -> {
-            msg.getMessageProperties().setMessageId(UUID.randomUUID().toString());
-            msg.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
-            return msg;
-        });
+        outboxEventPublisher.enqueue(
+                UUID.randomUUID().toString(),
+                "LearningNotification",
+                routingKey,
+                routingKey,
+                EXCHANGE,
+                routingKey,
+                event
+        );
     }
 }

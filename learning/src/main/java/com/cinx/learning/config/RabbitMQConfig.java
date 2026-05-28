@@ -12,7 +12,6 @@ public class RabbitMQConfig {
         return QueueBuilder.durable("learning.enrollment.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
                 .withArgument("x-dead-letter-routing-key", "learning.enrollment.dead")
-                .withArgument("x-message-ttl", 60000)          // 60s TTL
                 .withArgument("x-max-length", 10000)           // backpressure
                 .build();
     }
@@ -62,7 +61,6 @@ public class RabbitMQConfig {
         return QueueBuilder.durable("learning.lesson-change.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
                 .withArgument("x-dead-letter-routing-key", "learning.lesson-change.dead")
-                .withArgument("x-message-ttl", 60000)
                 .withArgument("x-max-length", 10000)
                 .build();
     }
@@ -98,7 +96,6 @@ public class RabbitMQConfig {
         return QueueBuilder.durable("learning.sync-and-regrade.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
                 .withArgument("x-dead-letter-routing-key", "learning.sync-and-regrade.dead")
-                .withArgument("x-message-ttl", 60000)
                 .withArgument("x-max-length", 10000)
                 .build();
     }
@@ -127,7 +124,6 @@ public class RabbitMQConfig {
         return QueueBuilder.durable("learning.quiz.scoring-mode-change.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
                 .withArgument("x-dead-letter-routing-key", "learning.quiz.scoring-mode-change.dead")
-                .withArgument("x-message-ttl", 60000)
                 .withArgument("x-max-length", 10000)
                 .build();
     }

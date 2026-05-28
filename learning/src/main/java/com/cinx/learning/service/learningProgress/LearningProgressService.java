@@ -79,6 +79,9 @@ public class LearningProgressService implements ILearningProgressService {
     @Transactional
     @Override
     public void createCourseProgress(String userId, String courseId) {
+        if (courseProgressRepository.existsByUserIdAndCourseId(userId, courseId)) {
+            return;
+        }
         List<String> lessonIds = courseService.getCourseLessonIdsByCourseId(courseId).data();
         CourseProgress courseProgress = courseProgressRepository.save(
                 CourseProgress.builder()

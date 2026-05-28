@@ -4,6 +4,7 @@ import com.cinx.payment.messaging.PaymentEventProducer;
 import com.cinx.payment.messaging.event.PaymentEvent;
 import com.cinx.payment.model.Payment;
 import lombok.RequiredArgsConstructor;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.Map;
 
@@ -12,14 +13,11 @@ public abstract class PaymentTemplate implements IPaymentStrategyService{
     private final PaymentEventProducer paymentEventProducer;
 
     @Override
+    @Transactional
     public boolean handleCallback(Map<String, String> callbackData){
         Payment payment = validateCallback(callbackData);
         if (payment == null) {
             return false;
-        }
-        String orderId = callbackData.get("orderId");
-        if (orderId == null) {
-            orderId = callbackData.get("vnp_OrderInfo").substring(20);
         }
         updatePayment(payment);
         paymentEventProducer.publishPaymentSuccessEvent(new PaymentEvent(payment.getOrderId(), payment.getStatus()));

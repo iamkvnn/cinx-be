@@ -2,16 +2,25 @@ package com.cinx.payment.messaging;
 
 import com.cinx.payment.messaging.event.PaymentEvent;
 import lombok.RequiredArgsConstructor;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 @Component
 @RequiredArgsConstructor
 public class PaymentEventProducer {
-    private final RabbitTemplate rabbitTemplate;
+    private static final String EXCHANGE = "payment.events.exchange";
+
+    private final OutboxEventPublisher outboxEventPublisher;
 
     public void publishPaymentSuccessEvent(PaymentEvent event) {
         System.out.println("Publishing payment success event: " + event);
-        rabbitTemplate.convertAndSend("payment.events.exchange", "payment.payment.success", event);
+        outboxEventPublisher.enqueue(
+                event.getOrderId() + "-" + event.getStatus(),
+                "Payment",
+                event.getOrderId(),
+                "Payment" + event.getStatus(),
+                EXCHANGE,
+                "payment.payment.success",
+                event
+        );
     }
 }

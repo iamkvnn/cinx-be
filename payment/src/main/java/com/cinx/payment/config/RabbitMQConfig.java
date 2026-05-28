@@ -12,7 +12,6 @@ public class RabbitMQConfig {
         return QueueBuilder.durable("payment.order.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
                 .withArgument("x-dead-letter-routing-key", "payment.order.dead")
-                .withArgument("x-message-ttl", 60000)          // 60s TTL
                 .withArgument("x-max-length", 10000)           // backpressure
                 .build();
     }

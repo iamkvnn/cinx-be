@@ -8,6 +8,7 @@ import com.cinx.notification.client.EnrollmentClient;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.payment.PaymentEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
+import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,12 +28,18 @@ public class PaymentNotificationListener {
     private final EnrollmentClient enrollmentClient;
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
+    private final IdempotencyService idempotencyService;
 
     @RabbitListener(queues = "notification.payment.queue", ackMode = "MANUAL")
     public void handlePaymentSuccess(PaymentEvent event, Channel channel,
-                                     @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+                                     @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                     @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
         log.info("Received payment success event for order: {}", event.getOrderId());
         try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
             // Enrich: payment event only carries orderId; we need userId + email
             ApiResponse<OrderDetailResponse> orderResponse = enrollmentClient.getOrderById(event.getOrderId());
             if (orderResponse == null || !orderResponse.success() || orderResponse.data() == null) {
@@ -80,6 +87,7 @@ public class PaymentNotificationListener {
                     .build();
 
             dispatchService.dispatch(ctx);
+            idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
 
         } catch (Exception e) {

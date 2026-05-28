@@ -7,6 +7,7 @@ import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.social.CourseAnswerCreatedEvent;
 import com.cinx.notification.messaging.event.social.CourseQuestionCreatedEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
+import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -27,13 +28,18 @@ public class SocialNotificationListener {
 
     private final CourseClient courseClient;
     private final INotificationDispatchService dispatchService;
+    private final IdempotencyService idempotencyService;
 
     @RabbitHandler
     public void handleQuestionCreated(CourseQuestionCreatedEvent event, Channel channel,
-                                      @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+                                      @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                      @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
         log.info("Received question created event: {}", event.getQuestionId());
         try {
-            // Enrich: need instructorId, not available in event
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
             ApiResponse<CourseResponse> courseRes = courseClient.getCourseById(event.getCourseId());
             if (courseRes != null && courseRes.success() && courseRes.data() != null) {
                 CourseResponse course = courseRes.data();
@@ -53,6 +59,7 @@ public class SocialNotificationListener {
                     }
                 }
             }
+            idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("Error processing question created event", e);
@@ -62,10 +69,16 @@ public class SocialNotificationListener {
 
     @RabbitHandler
     public void handleAnswerCreated(CourseAnswerCreatedEvent event, Channel channel,
-                                    @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+                                    @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                    @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
         log.info("Received answer created event: {}", event.getAnswerId());
         try {
-            String targetUserId = null;
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
+
+            String targetUserId;
             String message;
 
             if (event.getParentAnswerAuthorId() != null) {
@@ -75,6 +88,7 @@ public class SocialNotificationListener {
                 targetUserId = event.getQuestionAuthorId();
                 message = "Someone answered your question in a course Q&A.";
             } else {
+                idempotencyService.markSuccess(messageId);
                 channel.basicAck(tag, false);
                 return;
             }
@@ -90,6 +104,7 @@ public class SocialNotificationListener {
                         .build();
                 dispatchService.dispatch(ctx);
             }
+            idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("Error processing answer created event", e);

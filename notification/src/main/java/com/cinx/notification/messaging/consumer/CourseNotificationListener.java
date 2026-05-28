@@ -9,6 +9,7 @@ import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.course.LessonChangedEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
+import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -29,12 +30,18 @@ public class CourseNotificationListener {
     private final EnrollmentClient enrollmentClient;
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
+    private final IdempotencyService idempotencyService;
 
     @RabbitListener(queues = "notification.course.queue", ackMode = "MANUAL")
     public void handleLessonChanged(LessonChangedEvent event, Channel channel,
-                                    @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+                                    @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                    @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
         log.info("Received course lesson changed event for courseId: {}", event.getCourseId());
         try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
             // courseTitle may be embedded; fall back to Feign if blank
             String courseTitle = event.getCourseTitle();
             if (courseTitle == null || courseTitle.isBlank()) {
@@ -101,6 +108,7 @@ public class CourseNotificationListener {
                 }
             }
 
+            idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("Error processing course lesson changed event: ", e);

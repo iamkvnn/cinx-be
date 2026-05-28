@@ -4,6 +4,7 @@ import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.learning.CourseCompletedEvent;
 import com.cinx.notification.messaging.event.learning.DailyReminderDueEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
+import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -23,12 +24,18 @@ import java.util.Map;
 public class LearningNotificationListener {
 
     private final INotificationDispatchService dispatchService;
+    private final IdempotencyService idempotencyService;
 
     @RabbitHandler
     public void handleCourseCompleted(CourseCompletedEvent event, Channel channel,
-                                      @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+                                      @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                      @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
         log.info("Received course completed event for userId={}, courseId={}", event.getUserId(), event.getCourseId());
         try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
             String title = "Course Completed!";
             String message = "Congratulations on completing: " + event.getCourseTitle();
 
@@ -48,6 +55,7 @@ public class LearningNotificationListener {
                     .build();
 
             dispatchService.dispatch(ctx);
+            idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("Error processing course completed event", e);
@@ -57,9 +65,14 @@ public class LearningNotificationListener {
 
     @RabbitHandler
     public void handleDailyReminderDue(DailyReminderDueEvent event, Channel channel,
-                                       @Header(AmqpHeaders.DELIVERY_TAG) long tag) {
+                                       @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                       @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
         log.info("Received daily reminder event for userId={}", event.getUserId());
         try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
             String title = "Don't break your momentum!";
             String message = buildDailyGoalReminderMessage(event);
 
@@ -79,6 +92,7 @@ public class LearningNotificationListener {
                     .build();
 
             dispatchService.dispatch(ctx);
+            idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
         } catch (Exception e) {
             log.error("Error processing daily reminder event", e);

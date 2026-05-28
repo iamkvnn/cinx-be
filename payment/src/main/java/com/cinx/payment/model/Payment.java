@@ -23,6 +23,7 @@ public abstract class Payment {
     protected LocalDateTime paymentDate;
     protected String paymentInfo;
     protected String paymentMessage;
+    @Column(unique = true)
     protected String orderId;
     protected String paymentUrl;
     protected LocalDateTime urlExpireTime;

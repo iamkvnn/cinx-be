@@ -216,6 +216,7 @@ public class CourseService implements ICourseService {
     }
 
     @Override
+    @Transactional
     public void increaseEnrollmentCount(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));

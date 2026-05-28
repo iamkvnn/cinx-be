@@ -11,5 +11,7 @@ public interface CourseProgressRepository extends JpaRepository<CourseProgress, 
 
     Optional<CourseProgress> findByUserIdAndCourseId(String userId, String courseId);
 
+    boolean existsByUserIdAndCourseId(String userId, String courseId);
+
     List<CourseProgress> findAllByCourseId(String courseId);
 }
