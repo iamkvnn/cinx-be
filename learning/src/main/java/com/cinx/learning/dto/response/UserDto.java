@@ -1,4 +1,11 @@
 package com.cinx.learning.dto.response;
 
-public record UserDto(String userId, String name, String email, String avatarUrl) {
+import io.swagger.v3.oas.annotations.media.Schema;
+
+public record UserDto(
+        @Schema(example = "user_123") String userId, 
+        @Schema(example = "John Doe") String name, 
+        @Schema(example = "johndoe@example.com") String email, 
+        @Schema(example = "https://example.com/avatar.jpg") String avatarUrl
+) {
 }

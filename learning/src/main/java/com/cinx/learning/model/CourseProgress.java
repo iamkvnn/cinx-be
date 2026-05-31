@@ -3,6 +3,8 @@ package com.cinx.learning.model;
 import com.cinx.common.model.BaseEntity;
 import jakarta.persistence.Entity;
 import jakarta.persistence.OneToMany;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -18,6 +20,7 @@ import java.util.List;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "course_id"}))
 public class CourseProgress extends BaseEntity {
     private String userId;
     private String courseId;

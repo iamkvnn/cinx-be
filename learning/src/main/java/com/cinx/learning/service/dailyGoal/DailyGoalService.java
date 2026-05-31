@@ -1,9 +1,14 @@
 package com.cinx.learning.service.dailyGoal;
 
-import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.exception.BadRequestException;
+import com.cinx.learning.consts.DailyGoalType;
+import com.cinx.learning.dto.request.SetDailyGoalRequest;
+import com.cinx.learning.model.LearningItemProgress;
 import com.cinx.learning.model.UserDailyGoal;
+import com.cinx.learning.repository.LearningItemProgressRepository;
 import com.cinx.learning.repository.UserDailyGoalRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -15,33 +20,55 @@ import com.cinx.learning.service.user.UserService;
 @Service
 @RequiredArgsConstructor
 @Transactional
+@Slf4j
 public class DailyGoalService implements IDailyGoalService {
 
     private final UserDailyGoalRepository dailyGoalRepository;
+    private final LearningItemProgressRepository learningItemProgressRepository;
     private final UserService userService;
 
     @Override
     @Transactional(readOnly = true)
-    public UserDailyGoal getUserDailyGoal(String userId, LocalDate date) {
-        return dailyGoalRepository.findByUserIdAndGoalDate(userId, date)
-                .orElse(null); // Return null instead of default value if no goal exists for the day
+    public List<UserDailyGoal> getUserDailyGoals(String userId, LocalDate date) {
+        return dailyGoalRepository.findByUserIdAndGoalDate(userId, date);
     }
 
     @Override
-    public UserDailyGoal setDailyGoal(String userId, Integer targetXp, LocalDate date) {
-        LocalDate goalDate = date != null ? date : LocalDate.now();
-        UserDailyGoal goal = dailyGoalRepository.findByUserIdAndGoalDate(userId, goalDate)
+    public UserDailyGoal setDailyGoal(String userId, SetDailyGoalRequest request) {
+        DailyGoalType goalType = request.goalType();
+        LocalDate goalDate = request.goalDate() != null ? request.goalDate() : LocalDate.now();
+        String goalKey = buildGoalKey(goalType, request.targetItemId());
+        Integer targetValue = resolveTargetValue(goalType, request.targetValue());
+
+        UserDailyGoal goal = dailyGoalRepository.findByUserIdAndGoalDateAndGoalKey(userId, goalDate, goalKey)
                 .orElse(UserDailyGoal.builder()
                         .userId(userId)
+                        .goalType(goalType)
+                        .goalKey(goalKey)
                         .goalDate(goalDate)
-                        .currentXp(0)
+                        .currentValue(0)
                         .isCompleted(false)
                         .build());
-        
-        goal.setTargetXp(targetXp);
-        
-        // Check if updating target makes it completed
-        if (goal.getCurrentXp() >= goal.getTargetXp()) {
+
+        goal.setGoalType(goalType);
+        goal.setGoalKey(goalKey);
+        goal.setTargetItemId(resolveTargetItemId(goalType, request.targetItemId()));
+        goal.setTargetValue(targetValue);
+        if (goal.getCurrentValue() == null) {
+            goal.setCurrentValue(0);
+        }
+
+        if (goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED) {
+            LearningItemProgress progress = learningItemProgressRepository
+                    .findByItemIdAndUserId(request.targetItemId(), userId)
+                    .orElseThrow(() -> new BadRequestException("Learning item progress not found for target lesson"));
+            if (Boolean.TRUE.equals(progress.getIsCompleted())) {
+                goal.setCurrentValue(1);
+            }
+        }
+
+        if (goal.getCurrentValue() >= goal.getTargetValue()) {
+            goal.setCurrentValue(goal.getTargetValue());
             goal.setIsCompleted(true);
         } else {
             goal.setIsCompleted(false);
@@ -51,28 +78,39 @@ public class DailyGoalService implements IDailyGoalService {
     }
 
     @Override
-    public void addXp(String userId, Integer xpAmount) {
+    public void recordProgress(String userId, DailyGoalType goalType, Integer amount) {
+        if (amount == null || amount <= 0) {
+            return;
+        }
+        if (goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED) {
+            throw new BadRequestException("Use recordLessonCompleted for specific lesson goals");
+        }
+
         LocalDate today = LocalDate.now();
-        dailyGoalRepository.findByUserIdAndGoalDate(userId, today)
-                .ifPresent(goal -> {
-                    goal.setCurrentXp(goal.getCurrentXp() + xpAmount);
-                    if (goal.getCurrentXp() >= goal.getTargetXp() && !goal.getIsCompleted()) {
-                        goal.setIsCompleted(true);
-                    }
-                    dailyGoalRepository.save(goal);
-                });
-        try {
-            userService.addXp(userId, xpAmount);
-        } catch (Exception e) {
-            System.err.println("Failed to add XP to user profile: " + e.getMessage());
-            // log exception if feign fails, but don't fail the transaction
+        dailyGoalRepository.findByUserIdAndGoalDateAndGoalKey(userId, today, buildGoalKey(goalType, null))
+                .ifPresent(goal -> incrementGoal(goal, amount));
+
+        if (goalType == DailyGoalType.XP) {
+            addXpToUserProfile(userId, amount);
         }
     }
 
     @Override
-    public void deleteDailyGoal(String userId, LocalDate date) {
+    public void recordLessonCompleted(String userId, String itemId) {
+        LocalDate today = LocalDate.now();
+        dailyGoalRepository
+                .findByUserIdAndGoalDateAndGoalTypeAndTargetItemId(
+                        userId,
+                        today,
+                        DailyGoalType.SPECIFIC_LESSON_COMPLETED,
+                        itemId)
+                .ifPresent(goal -> incrementGoal(goal, 1));
+    }
+
+    @Override
+    public void deleteDailyGoal(String userId, LocalDate date, DailyGoalType goalType, String targetItemId) {
         LocalDate goalDate = date != null ? date : LocalDate.now();
-        dailyGoalRepository.findByUserIdAndGoalDate(userId, goalDate)
+        dailyGoalRepository.findByUserIdAndGoalDateAndGoalKey(userId, goalDate, buildGoalKey(goalType, targetItemId))
                 .ifPresent(dailyGoalRepository::delete);
     }
 
@@ -82,5 +120,54 @@ public class DailyGoalService implements IDailyGoalService {
         LocalDate startDate = LocalDate.of(year, month, 1);
         LocalDate endDate = startDate.withDayOfMonth(startDate.lengthOfMonth());
         return dailyGoalRepository.findByUserIdAndGoalDateBetween(userId, startDate, endDate);
+    }
+
+    private void incrementGoal(UserDailyGoal goal, int amount) {
+        if (Boolean.TRUE.equals(goal.getIsCompleted())) {
+            return;
+        }
+        goal.setCurrentValue(goal.getCurrentValue() + amount);
+        if (goal.getCurrentValue() >= goal.getTargetValue()) {
+            goal.setCurrentValue(goal.getTargetValue());
+            goal.setIsCompleted(true);
+        } else {
+            goal.setIsCompleted(false);
+        }
+        dailyGoalRepository.save(goal);
+    }
+
+    private void addXpToUserProfile(String userId, Integer xpAmount) {
+        try {
+            userService.addXp(userId, xpAmount);
+        } catch (Exception e) {
+            log.error("Failed to add XP to user profile for userId={}: {}", userId, e.getMessage());
+        }
+    }
+
+    private String buildGoalKey(DailyGoalType goalType, String targetItemId) {
+        if (goalType == null) {
+            throw new BadRequestException("goalType is required");
+        }
+        if (goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED) {
+            if (targetItemId == null || targetItemId.isBlank()) {
+                throw new BadRequestException("targetItemId is required for specific lesson goals");
+            }
+            return goalType.name() + ":" + targetItemId;
+        }
+        return goalType.name();
+    }
+
+    private Integer resolveTargetValue(DailyGoalType goalType, Integer requestedTargetValue) {
+        if (goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED) {
+            return 1;
+        }
+        if (requestedTargetValue == null || requestedTargetValue < 1) {
+            throw new BadRequestException("targetValue must be at least 1");
+        }
+        return requestedTargetValue;
+    }
+
+    private String resolveTargetItemId(DailyGoalType goalType, String targetItemId) {
+        return goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED ? targetItemId : null;
     }
 }

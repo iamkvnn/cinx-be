@@ -1,13 +1,13 @@
 package com.cinx.learning.messaging;
 
+import com.cinx.learning.consts.DailyGoalType;
+import com.cinx.learning.messaging.event.CourseCompletedEvent;
+import com.cinx.learning.messaging.event.DailyReminderDueEvent;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.MessageProperties;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.List;
-import java.util.Map;
+import java.time.Instant;
 import java.util.UUID;
 
 @Slf4j
@@ -15,38 +15,48 @@ import java.util.UUID;
 @RequiredArgsConstructor
 public class NotificationPublisher {
 
-    private static final String EXCHANGE        = "notification.send.exchange";
-    private static final String EMAIL_ROUTE     = "notification.email.send";
-    private static final String IN_APP_ROUTE    = "notification.in-app.send";
+    private static final String EXCHANGE = "learning.events.exchange";
 
-    private final RabbitTemplate rabbitTemplate;
+    private final OutboxEventPublisher outboxEventPublisher;
 
-    public void sendEmail(String to, String subject, String body) {
-        Map<String, Object> payload = Map.of(
-                "to",      to,
-                "subject", subject,
-                "body",    body
-        );
-        publish(EMAIL_ROUTE, payload);
-        log.info("Email notification queued → {}", to);
+    public void publishCourseCompleted(String userId, String courseId, String courseTitle) {
+        CourseCompletedEvent event = CourseCompletedEvent.builder()
+                .userId(userId)
+                .courseId(courseId)
+                .courseTitle(courseTitle)
+                .occurredAt(Instant.now())
+                .build();
+        publish("learning.course.completed", event);
+        log.info("CourseCompletedEvent published - userId={}, courseId={}", userId, courseId);
     }
 
-    public void sendInApp(List<String> userIds, String title, String message) {
-        if (userIds == null || userIds.isEmpty()) return;
-        Map<String, Object> payload = Map.of(
-                "userIds", userIds,
-                "title",   title,
-                "message", message
-        );
-        publish(IN_APP_ROUTE, payload);
-        log.info("In-app notification queued for {} user(s)", userIds.size());
+    public void publishDailyReminderDue(
+            String userId,
+            DailyGoalType goalType,
+            int targetValue,
+            int currentValue,
+            String targetItemId) {
+        DailyReminderDueEvent event = DailyReminderDueEvent.builder()
+                .userId(userId)
+                .goalType(goalType.name())
+                .targetValue(targetValue)
+                .currentValue(currentValue)
+                .targetItemId(targetItemId)
+                .occurredAt(Instant.now())
+                .build();
+        publish("learning.reminder.due", event);
+        log.info("DailyReminderDueEvent published - userId={}, goalType={}", userId, goalType);
     }
 
-    private void publish(String routingKey, Map<String, Object> payload) {
-        rabbitTemplate.convertAndSend(EXCHANGE, routingKey, payload, msg -> {
-            msg.getMessageProperties().setMessageId(UUID.randomUUID().toString());
-            msg.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
-            return msg;
-        });
+    private void publish(String routingKey, Object event) {
+        outboxEventPublisher.enqueue(
+                UUID.randomUUID().toString(),
+                "LearningNotification",
+                routingKey,
+                routingKey,
+                EXCHANGE,
+                routingKey,
+                event
+        );
     }
 }

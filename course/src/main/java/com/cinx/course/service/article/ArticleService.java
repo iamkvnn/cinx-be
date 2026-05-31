@@ -2,16 +2,12 @@ package com.cinx.course.service.article;
 
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateArticleLessonRequest;
 import com.cinx.course.dto.request.UpdateArticleLessonRequest;
 import com.cinx.course.dto.response.ArticleLessonResponse;
 import com.cinx.course.mapper.ArticleMapper;
-import com.cinx.course.model.Lesson;
 import com.cinx.course.repository.ArticleLessonRepository;
-import com.cinx.course.repository.CourseRepository;
-import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -36,19 +32,18 @@ public class ArticleService implements IArticleService {
             throw new AlreadyExistException("Article already exists for lessonId: " + lessonId);
         },() -> {
             var articleLesson = articleLessonMapper.toModel(request);
-            articleLesson.setLesson(lessonService.getForUpdate(lessonId, LessonType.ARTICLE));
+            articleLesson.setLessonId(lessonId);
             articleLessonRepository.save(articleLesson);
         });
     }
 
     @Override
     public void updateArticle(String lessonId, UpdateArticleLessonRequest request) {
-        lessonService.getForUpdate(lessonId, LessonType.ARTICLE);
-            articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
-                articleLessonMapper.partialUpdate(existing, request);
-                articleLessonRepository.save(existing);
-            },() -> {
-                throw new NotFoundException("Article not found for lessonId: " + lessonId);
-            });
+        articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+            articleLessonMapper.partialUpdate(existing, request);
+            articleLessonRepository.save(existing);
+        },() -> {
+            throw new NotFoundException("Article not found for lessonId: " + lessonId);
+        });
     }
 }

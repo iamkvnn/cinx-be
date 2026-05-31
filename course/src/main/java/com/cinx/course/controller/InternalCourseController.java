@@ -3,6 +3,7 @@ package com.cinx.course.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.course.dto.response.*;
 import com.cinx.course.service.course.ICourseService;
+import com.cinx.course.service.curriculum.ICurriculumService;
 import com.cinx.course.service.lesson.ILessonService;
 import com.cinx.course.service.quiz.IQuizService;
 import com.cinx.course.service.video.IVideoService;
@@ -24,6 +25,7 @@ import java.util.List;
 public class InternalCourseController {
 
     private final ICourseService courseService;
+    private final ICurriculumService curriculumService;
     private final ILessonService lessonService;
     private final IQuizService quizService;
     private final IVideoService videoService;
@@ -31,7 +33,7 @@ public class InternalCourseController {
 
     @GetMapping("/courses/{id}")
     public ApiResponse<CourseResponse> getCourseById(@PathVariable String id) {
-        return new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(id));
+        return new ApiResponse<>(true, "Course fetched successfully", courseService.getPublishedCourseById(id));
     }
 
     @GetMapping("/courses/{id}/lessons")
@@ -39,9 +41,14 @@ public class InternalCourseController {
         return new ApiResponse<>(true, "Course fetched successfully", lessonService.getLessonIdsByCourseId(id));
     }
 
+    @GetMapping("/courses/{id}/curriculum")
+    public ApiResponse<CourseCurriculumResponse> getCourseCurriculum(@PathVariable String id) {
+        return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getPublishedCurriculum(id));
+    }
+
     @GetMapping("/courses/ids")
     public ApiResponse<List<CourseResponse>> getCoursesByIds(@RequestParam List<String> ids) {
-        return new ApiResponse<>(true, "Courses fetched successfully", courseService.getCourseByIds(ids));
+        return new ApiResponse<>(true, "Courses fetched successfully", courseService.getPublishedCourseByIds(ids));
     }
 
     @PostMapping("/courses/{id}/update-rating")

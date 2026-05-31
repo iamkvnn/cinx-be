@@ -13,6 +13,7 @@ import com.cinx.social.dto.request.UpdateQuestionRequest;
 import com.cinx.social.dto.response.AnswerDto;
 import com.cinx.social.dto.response.CheckEnrollmentStatus;
 import com.cinx.social.dto.response.QuestionDto;
+import com.cinx.social.event.CourseAnswerCreatedEvent;
 import com.cinx.social.event.CourseQuestionCreatedEvent;
 import com.cinx.social.mapper.CourseQnAMapper;
 import com.cinx.social.messaging.CourseQnAEventPublisher;
@@ -29,6 +30,7 @@ import com.cinx.social.model.Report;
 import com.cinx.social.model.ReportType;
 import com.cinx.social.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -43,6 +45,7 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
+@Slf4j
 public class CourseQnAService implements ICourseQnAService {
     private final CourseQuestionRepository questionRepository;
     private final CourseAnswerRepository answerRepository;
@@ -214,15 +217,35 @@ public class CourseQnAService implements ICourseQnAService {
         answer.setUserId(userId);
         answer.setQuestionId(questionId);
         
+        String parentAuthorId = null;
         if (request.getParentAnswerId() != null) {
             CourseAnswer parent = answerRepository.findById(request.getParentAnswerId())
                     .orElseThrow(() -> new NotFoundException("Parent answer not found"));
             answer.setDepth(parent.getDepth() + 1);
+            parentAuthorId = parent.getUserId();
         } else {
             answer.setDepth(0);
         }
 
         answer = answerRepository.save(answer);
+
+        // Publish event
+        try {
+            CourseAnswerCreatedEvent event = CourseAnswerCreatedEvent.builder()
+                    .eventId(java.util.UUID.randomUUID().toString())
+                    .answerId(answer.getId())
+                    .questionId(question.getId())
+                    .courseId(question.getCourseId())
+                    .questionAuthorId(question.getUserId())
+                    .parentAnswerAuthorId(parentAuthorId)
+                    .answeredByUserId(userId)
+                    .occurredAt(java.time.Instant.now())
+                    .build();
+            eventPublisher.publishAnswerCreatedEvent(event);
+        } catch (Exception e) {
+            log.error("Failed to publish CourseAnswerCreatedEvent", e);
+        }
+
         return mapper.toDto(answer);
     }
 

@@ -39,11 +39,6 @@ public class QuizLesson {
     @Builder.Default
     private Boolean hasPendingSync = false;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lessonId", insertable = false, updatable = false)
-    private Lesson lesson;
-
     @OneToMany(mappedBy = "quizLesson")
     private List<QuizQuestion> questions;
 }

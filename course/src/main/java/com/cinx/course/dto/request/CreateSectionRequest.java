@@ -1,16 +1,17 @@
 package com.cinx.course.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
-import jakarta.validation.constraints.NotNull;
 
 public record CreateSectionRequest(
         @NotBlank
+        @Schema(example = "Introduction to Spring Boot")
         String title,
+        @Schema(example = "Basic concepts and setup")
         String description,
         @Min(0)
-        Long duration,
-        @NotNull
-        Integer orderIndex
+        @Schema(example = "3600")
+        Long duration
 ) {
 }

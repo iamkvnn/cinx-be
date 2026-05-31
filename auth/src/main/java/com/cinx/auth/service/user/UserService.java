@@ -6,8 +6,7 @@ import com.cinx.auth.dto.request.*;
 import com.cinx.auth.dto.response.GoogleProfileResponse;
 import com.cinx.auth.model.User;
 import com.cinx.auth.repository.UserRepository;
-import java.util.Map;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import com.cinx.auth.messaging.AuthNotificationPublisher;
 import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.auth.utils.OtpGenerator;
 import com.cinx.common.exception.AlreadyExistException;
@@ -27,7 +26,7 @@ public class UserService implements IUserService {
     private final UserRepository userRepository;
     private final IUserProfileService userProfileService;
     private final PasswordEncoder passwordEncoder;
-    private final RabbitTemplate rabbitTemplate;
+    private final AuthNotificationPublisher authNotificationPublisher;
 
     @Override
     public User findById(String id) {
@@ -47,9 +46,7 @@ public class UserService implements IUserService {
         }
 
         String otp = OtpGenerator.generateOtp();
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", dto.email(), "subject", "Mã Xác Nhận OTP", "body", "Mã xác nhận OTP của bạn là: " + otp), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        authNotificationPublisher.publishOtpVerifyEmail(dto.email(), otp);
 
         User user = userRepository.save(User
                 .builder()
@@ -82,23 +79,56 @@ public class UserService implements IUserService {
     @Override
     public User banUser(String userId, BanUserRequest request) {
         User user = findById(userId);
+
+        Integer duration = request.durationDays();
+        Integer maxDuration = request.reasonType().getMaxDurationDays();
+
+        if (maxDuration != null) {
+            if (duration == null) {
+                throw new BadRequestException("Duration is required for reason type " + request.reasonType());
+            }
+            if (duration > maxDuration) {
+                throw new BadRequestException("Duration exceeds the maximum allowed (" + maxDuration + " days) for reason type " + request.reasonType());
+            }
+        }
+
         user.setStatus(UserStatus.BANNED);
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản bị khóa", "body", "Tài khoản của bạn đã bị khóa với lý do: " + request.reason()), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        if (duration != null) {
+            user.setBanExpiresAt(LocalDateTime.now().plusDays(duration));
+        } else {
+            user.setBanExpiresAt(null);
+        }
+
         userProfileService.toggleBanUser(userId);
-        return userRepository.save(user);
+        User savedUser = userRepository.save(user);
+
+        String expirationText = duration != null ? "đến ngày " + java.time.format.DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm").format(savedUser.getBanExpiresAt()) : "vĩnh viễn";
+        String body = String.format("Tài khoản của bạn đã bị khóa %s.\nLý do: %s\nChi tiết: %s", 
+                expirationText, request.reasonType().name(), request.details());
+
+        authNotificationPublisher.publishAccountBanned(user.getEmail(), body);
+        return savedUser;
     }
 
     @Override
     public User unbanUser(String userId) {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
-        rabbitTemplate.convertAndSend("notification.send.exchange", "notification.email.send",
-                Map.of("to", user.getEmail(), "subject", "Thông báo tài khoản được mở khóa", "body", "Tài khoản của bạn đã được mở khóa. Bạn có thể đăng nhập và sử dụng dịch vụ như bình thường."), 
-                m -> { m.getMessageProperties().setMessageId(java.util.UUID.randomUUID().toString()); return m; });
+        user.setBanExpiresAt(null);
+        authNotificationPublisher.publishAccountUnbanned(user.getEmail());
         userProfileService.toggleBanUser(userId);
         return userRepository.save(user);
+    }
+
+    @Override
+    public void checkAndUnbanIfNeeded(User user) {
+        if (UserStatus.BANNED.equals(user.getStatus()) && user.getBanExpiresAt() != null && user.getBanExpiresAt().isBefore(LocalDateTime.now())) {
+            user.setStatus(UserStatus.ACTIVE);
+            user.setBanExpiresAt(null);
+            userRepository.save(user);
+            userProfileService.toggleBanUser(user.getId());
+            authNotificationPublisher.publishAccountAutoUnbanned(user.getEmail());
+        }
     }
 
     @Override

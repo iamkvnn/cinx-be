@@ -1,6 +1,7 @@
 package com.cinx.course.service.image;
 
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseImageRequest;
 import com.cinx.course.dto.request.UpdateCourseImageRequest;
 import com.cinx.course.model.Course;
@@ -10,8 +11,7 @@ import com.cinx.course.repository.CourseRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
+import org.springframework.transaction.annotation.Transactional;
 
 @Service
 @RequiredArgsConstructor
@@ -25,16 +25,14 @@ public class CourseImageService implements ICourseImageService{
     @Override
     public void saveCourseImages(String courseId, CreateCourseImageRequest request) {  
         Course course = courseRepository.findById(courseId).orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (request.getImages() != null) {
-            for (CreateCourseImageRequest.ImageDto dto : request.getImages()) {
-                course.getImages().add(
-                        CourseImage.builder()
-                                .course(course)
-                                .imageUrl(cdnUrl + "/" + dto.getFileKey())
-                                .publicId(dto.getFileKey())
-                                .build()
-                );
-            }
+        for (CreateCourseImageRequest.ImageDto dto : request.getImages()) {
+            course.getImages().add(
+                    CourseImage.builder()
+                            .course(course)
+                            .imageUrl(cdnUrl + "/" + dto.getFileKey())
+                            .publicId(dto.getFileKey())
+                            .build()
+            );
         }
         courseImageRepository.saveAll(course.getImages());
     }

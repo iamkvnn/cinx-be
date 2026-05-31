@@ -36,15 +36,13 @@ public class VideoService implements IVideoService {
             throw new AlreadyExistException("Video already exists for lessonId: " + lessonId);
         },() -> {
             var videoLesson = videoLessonMapper.toModel(request);
-            videoLesson.setVideoUrl(cdnUrl + "/" + request.getFileKey());
-            videoLesson.setLesson(lessonService.getForUpdate(lessonId, LessonType.VIDEO));
+            videoLesson.setLessonId(lessonId);
             videoLessonRepository.save(videoLesson);
         });
     }
 
     @Override
     public void updateVideo(String lessonId, UpdateVideoLessonRequest request) {
-        lessonService.getForUpdate(lessonId, LessonType.VIDEO);
         videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             videoLessonMapper.partialUpdate(existing, request);
             if (request.getFileKey() != null) {

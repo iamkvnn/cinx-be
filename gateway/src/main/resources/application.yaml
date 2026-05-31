@@ -79,8 +79,8 @@ spring:
           - id: course-service
             uri: lb://course
             predicates:
-            - Path=/api/v1/courses/**,/api/v1/categories/**,
-              /api/v1/lessons/**, /api/v1/sections/**, /api/v1/video-questions/**
+            - Path=/api/v1/courses/**,/api/v1/admin/courses/**,/api/v1/categories/**,
+              /api/v1/lessons/**, /api/v1/video-questions/**
           - id: enrollment-service
             uri: lb://enrollment
             predicates:

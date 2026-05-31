@@ -1,3 +1,8 @@
 package com.cinx.social.dto.response;
 
-public record CheckEnrollmentStatus(String courseId, boolean isEnrolled) {}
+import io.swagger.v3.oas.annotations.media.Schema;
+
+public record CheckEnrollmentStatus(
+        @Schema(example = "course_123") String courseId, 
+        @Schema(example = "true") boolean isEnrolled
+) {}

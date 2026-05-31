@@ -11,6 +11,7 @@ public interface IUserService {
     User findOrCreateUserByGoogleProfile(GoogleProfileResponse profile);
     User banUser(String userId, BanUserRequest request);
     User unbanUser(String userId);
+    void checkAndUnbanIfNeeded(User user);
     String generateOtp(String email);
     void verifyEmail(VerifyEmailRequest request);
     void resetPassword(ResetPasswordRequest request);

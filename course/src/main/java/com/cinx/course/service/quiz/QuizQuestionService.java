@@ -2,6 +2,7 @@ package com.cinx.course.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateQuizQuestionRequest;
 import com.cinx.course.dto.request.UpdateQuizOptionRequest;
 import com.cinx.course.dto.request.UpdateQuizQuestionRequest;
@@ -13,6 +14,7 @@ import com.cinx.course.model.QuizQuestion;
 import com.cinx.course.repository.QuizLessonRepository;
 import com.cinx.course.repository.QuizOptionRepository;
 import com.cinx.course.repository.QuizQuestionRepository;
+import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

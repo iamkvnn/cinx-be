@@ -1,30 +1,104 @@
 package com.cinx.course.mapper;
 
-import com.cinx.common.mapper.BaseMapper;
-import com.cinx.common.mapper.CreateMapper;
-import com.cinx.common.mapper.UpdateMapper;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
-import com.cinx.course.dto.response.CourseAggregate;
-import com.cinx.course.dto.response.CourseDetailResponse;
 import com.cinx.course.dto.response.CourseResponse;
-import com.cinx.course.messaging.event.CourseEvent;
+import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.model.Course;
+import com.cinx.course.model.CourseDraft;
+import org.mapstruct.BeanMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 import org.mapstruct.MappingTarget;
-import org.mapstruct.ReportingPolicy;
+import org.mapstruct.NullValuePropertyMappingStrategy;
 
 @Mapper(componentModel = "spring")
-public interface CourseMapper extends BaseMapper<Course, CourseResponse>,
-        CreateMapper<Course, CreateCourseRequest>,
-        UpdateMapper<Course, UpdateCourseRequest> {
+public interface CourseMapper {
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "discountRate", ignore = true)
+    @Mapping(target = "rating", ignore = true)
+    @Mapping(target = "enrollmentCount", ignore = true)
+    @Mapping(target = "instructorId", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    Course toModel(CreateCourseRequest request);
 
-    @Mapping(target = ".", source = "course")
-    @Mapping(target = "instructor", source = "instructor")
-    CourseResponse toDto(CourseAggregate aggregate);
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "discountRate", ignore = true)
+    @Mapping(target = "rating", ignore = true)
+    @Mapping(target = "enrollmentCount", ignore = true)
+    @Mapping(target = "instructorId", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    void partialUpdate(@MappingTarget Course course, UpdateCourseRequest request);
 
-    @Mapping(target = ".", source = "course")
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "course", source = ".")
+    CourseDraft toDraft(Course course);
+
+    @BeanMapping(nullValuePropertyMappingStrategy = NullValuePropertyMappingStrategy.IGNORE)
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "course", ignore = true)
+    @Mapping(target = "discountRate", ignore = true)
+    @Mapping(target = "category", ignore = true)
+    void partialUpdate(@MappingTarget CourseDraft draft, UpdateCourseRequest request);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "version", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "createdBy", ignore = true)
+    @Mapping(target = "updatedBy", ignore = true)
+    @Mapping(target = "rating", ignore = true)
+    @Mapping(target = "enrollmentCount", ignore = true)
+    @Mapping(target = "instructorId", ignore = true)
+    @Mapping(target = "status", ignore = true)
+    @Mapping(target = "images", ignore = true)
+    void copyDraftToCourse(CourseDraft draft, @MappingTarget Course course);
+
     @Mapping(target = "instructor", source = "instructor")
-    CourseDetailResponse toDetailDto(CourseAggregate aggregate);
+    CourseResponse toResponse(Course course, UserDto instructor);
+
+    @Mapping(target = "id", source = "course.id")
+    @Mapping(target = "title", source = "draft.title")
+    @Mapping(target = "description", source = "draft.description")
+    @Mapping(target = "category", source = "draft.category")
+    @Mapping(target = "instructor", source = "instructor")
+    @Mapping(target = "images", source = "course.images")
+    @Mapping(target = "price", source = "draft.price")
+    @Mapping(target = "discountedPrice", source = "draft.discountedPrice")
+    @Mapping(target = "discountRate", source = "draft.discountRate")
+    @Mapping(target = "rating", source = "course.rating")
+    @Mapping(target = "enrollmentCount", source = "course.enrollmentCount")
+    @Mapping(target = "isInSubscription", source = "draft.isInSubscription")
+    @Mapping(target = "duration", source = "draft.duration")
+    @Mapping(target = "hasCertificate", source = "draft.hasCertificate")
+    @Mapping(target = "certificateTitle", source = "draft.certificateTitle")
+    @Mapping(target = "status", source = "course.status")
+    @Mapping(target = "createdAt", source = "draft.createdAt")
+    @Mapping(target = "updatedAt", source = "draft.updatedAt")
+    CourseResponse toResponse(Course course, CourseDraft draft, UserDto instructor);
 }

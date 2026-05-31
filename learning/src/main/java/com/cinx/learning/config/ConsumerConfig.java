@@ -22,7 +22,7 @@ public class ConsumerConfig {
         factory.setConnectionFactory(connectionFactory);
 
         // Manual ack — never lose a message silently
-        factory.setAcknowledgeMode(AcknowledgeMode.MANUAL);
+        factory.setAcknowledgeMode(AcknowledgeMode.AUTO);
 
         // Tune prefetch to control how many unacknowledged messages a consumer holds
         factory.setPrefetchCount(10); // start low, increase after load testing

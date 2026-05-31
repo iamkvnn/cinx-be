@@ -14,9 +14,13 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -35,7 +39,7 @@ public class EnrollmentService implements IEnrollmentService {
             .map(EnrolledCourse::getCourseId)
             .toList();
         List<CourseResponse> courses = courseService.getCoursesByIds(courseIds).data();
-        return new PageImpl<>(courses, PageRequest.of(page, size), courses.size());
+        return new PageImpl<>(courses, enrolledCourses.getPageable(), courses.size());
     }
 
     @Override
@@ -49,15 +53,22 @@ public class EnrollmentService implements IEnrollmentService {
     }
 
     @Override
+    @Transactional
     public void enrollCourses(List<CreateEnrolledCourseRequest> requests) {
-        enrolledCourseRepository.saveAll(requests.stream()
-            .map(req ->
-                    EnrolledCourse.builder()
-                            .courseId(req.courseId())
-                            .userId(req.userId())
-                            .build()
-            ).toList()
-        ).forEach(enrolledCourse ->
+        Set<String> seen = new HashSet<>();
+        List<EnrolledCourse> toCreate = new ArrayList<>();
+        for (CreateEnrolledCourseRequest req : requests) {
+            String key = req.userId() + ":" + req.courseId();
+            if (!seen.add(key) || enrolledCourseRepository.existsByCourseIdAndUserId(req.courseId(), req.userId())) {
+                continue;
+            }
+            toCreate.add(EnrolledCourse.builder()
+                    .courseId(req.courseId())
+                    .userId(req.userId())
+                    .build());
+        }
+
+        enrolledCourseRepository.saveAll(toCreate).forEach(enrolledCourse ->
                 enrolledCourseEventProducer.publishEnrolledCourseCreatedEvent(
                         new EnrolledCourseEvent(enrolledCourse.getCourseId(), enrolledCourse.getUserId())
                 )

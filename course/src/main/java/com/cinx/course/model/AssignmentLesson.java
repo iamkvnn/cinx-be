@@ -17,11 +17,6 @@ public class AssignmentLesson {
     private String lessonId;
     private String description;
 
-    @MapsId
-    @OneToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "lessonId")
-    private Lesson lesson;
-
     @OneToMany(mappedBy = "assignmentLesson", cascade = CascadeType.ALL)
     private List<AssignmentAttachment> attachments;
 }

@@ -2,6 +2,7 @@ package com.cinx.learning.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
 import com.cinx.learning.dto.request.ChooseQuizAnswerRequest;
@@ -17,6 +18,7 @@ import com.cinx.learning.repository.QuizSessionQuestionRepository;
 import com.cinx.learning.repository.QuizSessionRepository;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
 import com.cinx.learning.service.course.CourseService;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import com.cinx.learning.service.quiz.evaluator.IQuestionEvaluator;
 import com.cinx.learning.service.quiz.evaluator.QuestionEvaluatorFactory;
@@ -25,6 +27,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -45,6 +48,7 @@ public class QuizService implements IQuizService {
     private final QuizSessionSubmissionRepository quizSessionSubmissionRepository;
     private final QuizSessionQuestionRepository quizSessionQuestionRepository;
     private final ILearningProgressService learningProgressService;
+    private final IDailyGoalService dailyGoalService;
     private final QuizSnapshotBuilder snapshotBuilder;
 
     @Override
@@ -157,6 +161,16 @@ public class QuizService implements IQuizService {
 
     @Override
     public void chooseQuizSessionQuestion(String quizSessionId, ChooseQuizAnswerRequest request) {
+        QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
+                .orElseThrow(() -> new NotFoundException("Quiz session not found"));
+        if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
+            throw new BadRequestException("Quiz session is not in progress");
+        }
+        if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
+            submitQuizSession(quizSessionId, new SubmitQuizSessionRequest(Collections.emptyList()));
+            throw new BadRequestException("Quiz session has expired and was automatically submitted");
+        }
+
         quizSessionQuestionRepository.findByQuizSessionIdAndQuestionId(quizSessionId, request.questionId())
                 .ifPresentOrElse(
                         q -> {
@@ -177,14 +191,13 @@ public class QuizService implements IQuizService {
         if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
             throw new BadRequestException("Quiz session is not in progress");
         }
-        if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Quiz session has expired");
-        }
-
-        Map<String, ChooseQuizAnswerRequest> answerMap = request.answers() == null
-                ? Collections.emptyMap()
-                : request.answers().stream()
-                        .collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, a -> a));
+        
+        boolean isExpired = quizSession.getEndTime().isBefore(LocalDateTime.now());
+        
+        Map<String, ChooseQuizAnswerRequest> answerMap = (request != null && request.answers() != null && !isExpired)
+                ? request.answers().stream()
+                        .collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, a -> a))
+                : Collections.emptyMap();
 
         List<QuizSessionQuestion> questions = quizSessionQuestionRepository.findAllByQuizSessionId(quizSessionId, Pageable.unpaged()).getContent();
         questions.forEach(q -> {
@@ -233,10 +246,19 @@ public class QuizService implements IQuizService {
 
         log.info("Quiz session {} graded. rawScore={} effectiveScore={}", quizSessionId, rawScore, effectiveScore);
 
+        boolean wasCompleted = learningProgressService.isLearningItemCompleted(
+                quizSession.getUserId(),
+                quizSession.getQuizLessonId());
+        boolean isPassed = effectiveScore >= 5.0;
+
         learningProgressService.updateLearningItemProgress(
                 quizSession.getUserId(),
                 quizSession.getQuizLessonId(),
-                new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore));
+                new UpdateLearningItemRequest(true, isPassed, effectiveScore));
+
+        if (!wasCompleted && isPassed) {
+            dailyGoalService.recordProgress(quizSession.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
+        }
 
         return quizSessionMapper.toDto(quizSession);
     }
@@ -290,10 +312,19 @@ public class QuizService implements IQuizService {
         double effectiveScore = quizScoreAggregator.aggregateScore(session.getUserId(), session.getQuizLessonId());
         log.info("Essay graded for session {}. rawScore={} effectiveScore={}", sessionId, rawScore, effectiveScore);
 
+        boolean wasCompleted = learningProgressService.isLearningItemCompleted(
+                session.getUserId(),
+                session.getQuizLessonId());
+        boolean isPassed = effectiveScore >= 5.0;
+
         learningProgressService.updateLearningItemProgress(
                 session.getUserId(),
                 session.getQuizLessonId(),
-                new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore));
+                new UpdateLearningItemRequest(true, isPassed, effectiveScore));
+
+        if (!wasCompleted && isPassed) {
+            dailyGoalService.recordProgress(session.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
+        }
 
         return quizSessionMapper.toDto(session);
     }
@@ -309,5 +340,22 @@ public class QuizService implements IQuizService {
                         ((Number) obj[1]).doubleValue() == 0 ? 0.0 : ((Number) obj[2]).doubleValue() / ((Number) obj[1]).doubleValue()
                 ))
                 .collect(Collectors.toList());
+    }
+
+    @Scheduled(fixedRateString = "${app.quiz.auto-submit.rate:60000}")
+    public void autoSubmitExpiredSessions() {
+        List<QuizSession> expiredSessions = quizSessionRepository.findExpiredSessions(QuizSessionStatus.IN_PROGRESS, LocalDateTime.now());
+        if (!expiredSessions.isEmpty()) {
+            log.info("Found {} expired quiz sessions. Starting auto-submission.", expiredSessions.size());
+        }
+        for (QuizSession session : expiredSessions) {
+            try {
+                // Submit empty request, the internal logic will use currently saved answers since it's already expired
+                submitQuizSession(session.getId(), new SubmitQuizSessionRequest(Collections.emptyList()));
+                log.info("Auto-submitted expired quiz session: {}", session.getId());
+            } catch (Exception e) {
+                log.error("Failed to auto-submit expired quiz session: {}", session.getId(), e);
+            }
+        }
     }
 }

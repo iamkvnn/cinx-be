@@ -32,13 +32,11 @@ public class Course extends AuditableEntity {
     private Boolean hasCertificate = false;
     private String certificateTitle;
     private CourseStatus status;
+    @Builder.Default
+    private Boolean isPublished = false;
 
     @ManyToOne
     private Category category;
-
-    @Builder.Default
-    @OneToMany(mappedBy = "course", cascade = CascadeType.ALL)
-    private List<Section> sections = new ArrayList<>();
 
     @Builder.Default
     @OneToMany(mappedBy = "course", cascade = CascadeType.ALL, fetch = FetchType.EAGER, orphanRemoval = true)

@@ -1,6 +1,7 @@
 package com.cinx.notification.client;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.notification.dto.response.user.UserDto;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -12,4 +13,7 @@ public interface UserClient {
     
     @GetMapping("/{userId}/fcm-tokens")
     ApiResponse<List<String>> getUserFcmTokens(@PathVariable("userId") String userId);
+
+    @GetMapping("/{id}")
+    ApiResponse<UserDto> getUserById(@PathVariable("id") String id);
 }

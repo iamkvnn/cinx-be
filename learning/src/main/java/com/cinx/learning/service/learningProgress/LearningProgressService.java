@@ -1,6 +1,7 @@
 package com.cinx.learning.service.learningProgress;
 
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseDetailResponse;
 import com.cinx.learning.dto.response.CourseProgressResponse;
@@ -18,7 +19,7 @@ import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.enrollment.EnrollmentClient;
 import com.cinx.learning.service.learningPath.ILearningPathService;
 import com.cinx.learning.service.streak.IStreakService;
-import com.cinx.learning.service.user.UserService;
+
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -41,7 +42,7 @@ public class LearningProgressService implements ILearningProgressService {
     private final IStreakService streakService;
     private final IDailyGoalService dailyGoalService;
     private final EnrollmentClient enrollmentClient;
-    private final UserService userService;
+
     private final NotificationPublisher notificationPublisher;
 
     @Override
@@ -78,6 +79,9 @@ public class LearningProgressService implements ILearningProgressService {
     @Transactional
     @Override
     public void createCourseProgress(String userId, String courseId) {
+        if (courseProgressRepository.existsByUserIdAndCourseId(userId, courseId)) {
+            return;
+        }
         List<String> lessonIds = courseService.getCourseLessonIdsByCourseId(courseId).data();
         CourseProgress courseProgress = courseProgressRepository.save(
                 CourseProgress.builder()
@@ -95,6 +99,15 @@ public class LearningProgressService implements ILearningProgressService {
                         .itemId(lessonId)
                         .build())
                 .toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public boolean isLearningItemCompleted(String userId, String itemId) {
+        return learningItemProgressRepository
+                .findByItemIdAndUserId(itemId, userId)
+                .map(LearningItemProgress::getIsCompleted)
+                .orElse(false);
     }
 
     @Transactional
@@ -120,7 +133,9 @@ public class LearningProgressService implements ILearningProgressService {
             progress.setScore(newScore);
             progress.setIsPassed(request.isPassed());
             streakService.updateStreakOnActivity(userId);
-            dailyGoalService.addXp(userId, 50);
+            dailyGoalService.recordProgress(userId, DailyGoalType.LEARNING_ITEMS_COMPLETED, 1);
+            dailyGoalService.recordProgress(userId, DailyGoalType.XP, 50);
+            dailyGoalService.recordLessonCompleted(userId, itemId);
             learningPathService.updatePathProgress(userId, itemId);
         } else if (Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
             totalScore = totalScore - (oldScore != null ? oldScore : 0.0) + newScore;
@@ -131,7 +146,25 @@ public class LearningProgressService implements ILearningProgressService {
         course.setCompletedItems(completedItems);
         course.setAvgScore(completedItems > 0 ? totalScore / completedItems : 0.0);
 
-        if (course.getTotalItems() != null && completedItems == course.getTotalItems()) {
+        boolean justCompleted = !Boolean.TRUE.equals(oldCompleted) && course.getTotalItems() != null && completedItems == course.getTotalItems();
+
+        if (justCompleted) {
+            course.setIsCompleted(true);
+            course.setCompletionTime(LocalDateTime.now());
+            
+            // Notify user of course completion
+            try {
+                String courseTitle = "your course";
+                var courseRes = courseService.getCourseById(course.getCourseId());
+                if (courseRes != null && courseRes.success() && courseRes.data() != null) {
+                    courseTitle = courseRes.data().title();
+                }
+
+                notificationPublisher.publishCourseCompleted(userId, course.getCourseId(), courseTitle);
+            } catch (Exception ex) {
+                log.error("Failed to publish course completion event for userId={}, courseId={}", userId, course.getCourseId(), ex);
+            }
+        } else if (course.getTotalItems() != null && completedItems == course.getTotalItems()) {
             course.setIsCompleted(true);
             course.setCompletionTime(LocalDateTime.now());
         }
@@ -248,6 +281,8 @@ public class LearningProgressService implements ILearningProgressService {
         courseProgress.setAvgScore(avgScore);
 
         boolean nowComplete = expectedTotal > 0 && completedCount == expectedTotal;
+        boolean justCompleted = nowComplete && !Boolean.TRUE.equals(courseProgress.getIsCompleted());
+
         courseProgress.setIsCompleted(nowComplete);
         if (nowComplete && courseProgress.getCompletionTime() == null) {
             courseProgress.setCompletionTime(LocalDateTime.now());
@@ -256,54 +291,23 @@ public class LearningProgressService implements ILearningProgressService {
         }
 
         courseProgressRepository.save(courseProgress);
-    }
 
-    private void publishLessonChangeNotifications(String courseId, String changeType,
-                                                  List<String> enrolledUserIds,
-                                                  String courseTitle) {
-        String subject = "Update in your course: " + courseTitle;
-        String body = buildEmailBody(courseTitle, changeType);
-        String inAppMessage = buildInAppMessage(courseTitle, changeType);
-
-        // In-app: single batch message for all users.
-        notificationPublisher.sendInApp(enrolledUserIds, subject, inAppMessage);
-
-        // Email: one message per user (requires their email address).
-        for (String userId : enrolledUserIds) {
+        if (justCompleted) {
             try {
-                String email = userService.getUserById(userId).data().email();
-                if (email != null && !email.isBlank()) {
-                    notificationPublisher.sendEmail(email, subject, body);
+                String courseTitle = "your course";
+                var courseRes = courseService.getCourseById(courseId);
+                if (courseRes != null && courseRes.success() && courseRes.data() != null) {
+                    courseTitle = courseRes.data().title();
                 }
+
+                notificationPublisher.publishCourseCompleted(userId, courseId, courseTitle);
             } catch (Exception ex) {
-                log.warn("Could not send email notification to userId={}: {}", userId, ex.getMessage());
+                log.error("Failed to publish course completion event for userId={}, courseId={}", userId, courseId, ex);
             }
         }
     }
 
-    private String buildEmailBody(String courseTitle, String changeType) {
-        String action = switch (changeType) {
-            case "CREATED"              -> "A new lesson has been added";
-            case "DELETED"              -> "A lesson has been removed";
-            case "PREREQUISITE_CHANGED" -> "Lesson prerequisites have been updated";
-            case "ORDER_CHANGED"        -> "Lesson order has been updated";
-            default                     -> "Lesson content has been updated";
-        };
-        return "<html><body>"
-                + "<h2>Course Update: " + courseTitle + "</h2>"
-                + "<p>" + action + " in the course <strong>" + courseTitle + "</strong>.</p>"
-                + "<p>Your learning progress has been automatically recalculated. "
-                + "Log in to see the latest state of your course.</p>"
-                + "</body></html>";
-    }
-
-    private String buildInAppMessage(String courseTitle, String changeType) {
-        return switch (changeType) {
-            case "CREATED"              -> "A new lesson was added to \"" + courseTitle + "\".";
-            case "DELETED"              -> "A lesson was removed from \"" + courseTitle + "\". Your progress has been updated.";
-            case "PREREQUISITE_CHANGED" -> "Lesson prerequisites changed in \"" + courseTitle + "\". Check your learning path.";
-            case "ORDER_CHANGED"        -> "Lesson order has changed in \"" + courseTitle + "\".";
-            default                     -> "Lesson content updated in \"" + courseTitle + "\".";
-        };
-    }
+    // Lesson-change notifications are now handled end-to-end by the notification service,
+    // which consumes course.events.exchange / course.lesson.changed events directly.
+    // No need to publish from here.
 }

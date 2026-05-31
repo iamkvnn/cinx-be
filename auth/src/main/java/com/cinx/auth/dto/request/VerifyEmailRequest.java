@@ -1,13 +1,16 @@
 package com.cinx.auth.dto.request;
 
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
 public record VerifyEmailRequest(
     @Email(message = "Email không hợp lệ")
     @NotBlank(message = "Email không được để trống")
+    @Schema(example = "nguyenvana@gmail.com")
     String email,
     @NotBlank(message = "Mã OTP không được để trống")
+    @Schema(example = "123456")
     String otp
 ) {
 }

@@ -3,6 +3,7 @@ package com.cinx.learning.service.video;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.SubmitVideoQuestionRequest;
 import com.cinx.learning.dto.request.TrackingVideoLessonRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
@@ -15,6 +16,7 @@ import com.cinx.learning.model.VideoLessonTrackingHistory;
 import com.cinx.learning.repository.InVideoAssessmentSubmissionRepository;
 import com.cinx.learning.repository.VideoLessonTrackingHistoryRepository;
 import com.cinx.learning.service.course.CourseService;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -32,6 +34,7 @@ public class VideoService implements IVideoService {
     private final VideoLessonTrackingHistoryRepository videoLessonTrackingHistoryRepository;
     private final CourseService courseService;
     private final ILearningProgressService learningProgressService;
+    private final IDailyGoalService dailyGoalService;
     private final InVideoAssessmentSubmissionRepository inVideoAssessmentSubmissionRepository;
 
     @Override
@@ -123,7 +126,11 @@ public class VideoService implements IVideoService {
         }
 
         if (watchedEnough && questionsCompleted) {
+            boolean wasCompleted = learningProgressService.isLearningItemCompleted(userId, videoLessonId);
             learningProgressService.updateLearningItemProgress(userId, videoLessonId, new UpdateLearningItemRequest(true, true, 10.0));
+            if (!wasCompleted) {
+                dailyGoalService.recordProgress(userId, DailyGoalType.VIDEOS_COMPLETED, 1);
+            }
         }
     }
 

@@ -10,7 +10,7 @@ import com.cinx.course.model.VideoLesson;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-@Mapper(componentModel = "spring")
+@Mapper(componentModel = "spring", uses = SubtitleTrackMapper.class)
 public interface VideoLessonMapper extends
         BaseMapper<VideoLesson, VideoLessonResponse>,
         CreateMapper<VideoLesson, CreateVideoLessonRequest>,
@@ -18,6 +18,9 @@ public interface VideoLessonMapper extends
 
     @Mapping(target = "hasQuestions", expression = "java(model.getQuestions() != null && !model.getQuestions().isEmpty())")
     @Mapping(target = "questionCount", expression = "java(model.getQuestions() != null ? model.getQuestions().size() : 0)")
+    @Mapping(target = "hasSubtitles", expression = "java(model.getSubtitles() != null && !model.getSubtitles().isEmpty())")
+    @Mapping(target = "subtitleCount", expression = "java(model.getSubtitles() != null ? model.getSubtitles().size() : 0)")
+    @Mapping(target = "subtitles", source = "subtitles")
     @Override
     VideoLessonResponse toDto(VideoLesson model);
 }

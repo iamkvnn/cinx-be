@@ -1,13 +1,24 @@
 package com.cinx.learning.dto.request;
 
+import com.cinx.learning.consts.DailyGoalType;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotNull;
+
 import java.time.LocalDate;
 
 public record SetDailyGoalRequest(
-    @NotNull(message = "targetXp is required")
-    @Min(value = 10, message = "targetXp must be at least 10")
-    Integer targetXp,
+    @Schema(example = "WATCH_VIDEO")
+    @NotNull(message = "goalType is required")
+    DailyGoalType goalType,
+
+    @Schema(example = "5")
+    @Min(value = 1, message = "targetValue must be at least 1")
+    Integer targetValue,
     
-    LocalDate goalDate
+    @Schema(example = "2025-01-01")
+    LocalDate goalDate,
+
+    @Schema(example = "item_123")
+    String targetItemId
 ) {}
