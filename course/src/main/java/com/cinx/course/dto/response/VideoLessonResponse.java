@@ -2,6 +2,8 @@ package com.cinx.course.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
 
+import java.util.List;
+
 public record VideoLessonResponse (
         @Schema(example = "https://example.com/videos/12345-spring-boot.mp4")
         String videoUrl,
@@ -18,6 +20,11 @@ public record VideoLessonResponse (
         @Schema(example = "true")
         Boolean hasQuestions,
         @Schema(example = "5")
-        Integer questionCount
+        Integer questionCount,
+        @Schema(example = "true")
+        Boolean hasSubtitles,
+        @Schema(example = "2")
+        Integer subtitleCount,
+        List<SubtitleTrackResponse> subtitles
 ){
 }

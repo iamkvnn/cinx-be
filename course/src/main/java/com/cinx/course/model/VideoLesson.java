@@ -26,4 +26,8 @@ public class VideoLesson {
 
     @OneToMany(mappedBy = "videoLesson", fetch = FetchType.LAZY)
     private List<VideoQuestion> questions;
+
+    @OneToMany(mappedBy = "videoLesson", fetch = FetchType.LAZY)
+    @OrderBy("isDefault DESC, languageCode ASC")
+    private List<SubtitleTrack> subtitles;
 }
