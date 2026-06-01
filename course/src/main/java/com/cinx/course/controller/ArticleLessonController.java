@@ -12,27 +12,39 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/lessons/{lessonId}/articles")
+@RequestMapping("/api/v1/courses/{courseId}/lessons/{lessonId}/articles")
 @RequiredArgsConstructor
 public class ArticleLessonController {
     private final IArticleService articleService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<ArticleLessonResponse>> getArticleByLessonId(@PathVariable String lessonId) {
-        return ResponseEntity.ok(ApiResponse.success("Success", articleService.getArticleByLessonId(lessonId)));
+    public ResponseEntity<ApiResponse<ArticleLessonResponse>> getArticleByLessonId(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
+
+        return ResponseEntity.ok(ApiResponse.success("Success", articleService.getArticleByLessonId(courseId, lessonId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createArticleLesson(@PathVariable String lessonId, @RequestBody CreateArticleLessonRequest request) {
-        articleService.createArticle(lessonId, request);
+    public ResponseEntity<ApiResponse<?>> createArticleLesson(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @RequestBody CreateArticleLessonRequest request
+    ) {
+        articleService.createArticle(courseId, lessonId, request);
         return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateArticleLesson(@PathVariable String lessonId, @RequestBody UpdateArticleLessonRequest request) {
-        articleService.updateArticle(lessonId, request);
+    public ResponseEntity<ApiResponse<?>> updateArticleLesson(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @RequestBody UpdateArticleLessonRequest request
+    ) {
+        articleService.updateArticle(courseId, lessonId, request);
         return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 }

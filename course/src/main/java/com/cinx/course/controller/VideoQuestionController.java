@@ -15,49 +15,61 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1")
+@RequestMapping("/api/v1/courses/{courseId}/lessons/{lessonId}/videos/questions")
 @RequiredArgsConstructor
 public class VideoQuestionController {
 
     private final IVideoQuestionService videoQuestionService;
 
-    @GetMapping("/lessons/{lessonId}/videos/questions")
+    @GetMapping
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<List<VideoQuestionResponse>>> getQuestionsByLessonId(
+            @PathVariable String courseId,
             @PathVariable String lessonId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Questions fetched successfully",
                 videoQuestionService.getQuestionsByLessonId(lessonId)));
     }
 
-    @GetMapping("/video-questions/{id}")
+    @GetMapping("/{id}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    public ResponseEntity<ApiResponse<VideoQuestionResponse>> getQuestionById(@PathVariable String id) {
+    public ResponseEntity<ApiResponse<VideoQuestionResponse>> getQuestionById(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @PathVariable String id
+    ) {
         return ResponseEntity
-                .ok(new ApiResponse<>(true, "Question fetched successfully", videoQuestionService.getQuestionById(id)));
+                .ok(new ApiResponse<>(true, "Question fetched successfully", videoQuestionService.getQuestionById(lessonId, id)));
     }
 
-    @PostMapping("/lessons/{lessonId}/videos/questions")
+    @PostMapping
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<VideoQuestionResponse>> createQuestion(
+            @PathVariable String courseId,
             @PathVariable String lessonId,
             @RequestBody @Valid CreateVideoQuestionRequest request) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Video question created",
                 videoQuestionService.createQuestion(lessonId, request)));
     }
 
-    @PutMapping("/video-questions/{id}")
+    @PutMapping("/{id}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<VideoQuestionResponse>> updateQuestion(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
             @PathVariable String id,
             @RequestBody @Valid UpdateVideoQuestionRequest request) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Video question updated", videoQuestionService.updateQuestion(id, request)));
+                new ApiResponse<>(true, "Video question updated", videoQuestionService.updateQuestion(lessonId, id, request)));
     }
 
-    @DeleteMapping("/video-questions/{id}")
+    @DeleteMapping("/{id}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    public ResponseEntity<ApiResponse<Void>> deleteQuestion(@PathVariable String id) {
-        videoQuestionService.deleteQuestion(id);
+    public ResponseEntity<ApiResponse<Void>> deleteQuestion(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @PathVariable String id
+    ) {
+        videoQuestionService.deleteQuestion(lessonId, id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Video question deleted", null));
     }
 }

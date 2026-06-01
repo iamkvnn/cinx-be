@@ -21,6 +21,18 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
     Optional<Lesson> findBySectionAndStableId(@Param("sectionId") String sectionId, @Param("stableId") String stableId);
 
     @Query("""
+        SELECT l
+        FROM Lesson l
+        JOIN l.section s
+        LEFT JOIN s.course c
+        LEFT JOIN s.draft d
+        LEFT JOIN d.course dc
+        WHERE l.stableId = :stableId
+            AND (c.id = :courseId OR dc.id = :courseId)
+    """)
+    List<Lesson> findByCourseAndStableId(@Param("courseId") String courseId, @Param("stableId") String stableId);
+
+    @Query("""
         SELECT l FROM Lesson l
         JOIN l.section s
         JOIN s.course c
@@ -60,6 +72,16 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
         AND (c.instructorId = :userId OR dc.instructorId = :userId)
     """)
     boolean isAccessibleByInstructor(@Param("lessonId") String lessonId, @Param("userId") String userId);
+
+    @Query("""
+        SELECT c.id
+        FROM Lesson l
+        JOIN l.section s
+        JOIN s.course c
+        WHERE l.stableId = :lessonId
+            AND c.isPublished = true
+    """)
+    Optional<String> findPublishedCourseIdByLessonStableId(@Param("lessonId") String lessonId);
 
     @Query("""
         SELECT l FROM Lesson l

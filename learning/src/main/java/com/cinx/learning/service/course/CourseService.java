@@ -19,11 +19,11 @@ public interface CourseService {
     @GetMapping("/courses/{id}/lessons")
     ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id);
 
-    @GetMapping("/quiz-lessons")
-    ApiResponse<QuizLessonResponse> getQuizLessonById(@RequestParam String lessonId);
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/quizzes")
+    ApiResponse<QuizLessonResponse> getQuizLessonById(@PathVariable String courseId, @PathVariable String lessonId);
 
-    @GetMapping("/video-lessons")
-    ApiResponse<VideoLessonResponse> getVideoLessonById(@RequestParam String lessonId);
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/videos")
+    ApiResponse<VideoLessonResponse> getVideoLessonById(@PathVariable String courseId, @PathVariable String lessonId);
 
     @GetMapping("/video-questions/{id}/check-answer")
     ApiResponse<Boolean> checkVideoQuestionAnswer(@PathVariable("id") String id, @RequestParam("answer") String answer);

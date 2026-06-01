@@ -22,31 +22,31 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/learning/quiz-sessions")
+@RequestMapping("/api/v1/learning")
 public class QuizSessionController {
     private final IQuizService quizService;
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping
+    @GetMapping("/lessons/{lessonId}/quiz-sessions")
     public ResponseEntity<PaginatedApiResponse<QuizSessionResponse>> getQuizSessions(
+            @PathVariable String lessonId,
             @RequestParam(required = false) String userId,
-            @RequestParam String quizLessonId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessions(userId, quizLessonId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessions(userId, lessonId, page, size)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{quizSessionId}")
+    @GetMapping("/quiz-sessions/{quizSessionId}")
     public ResponseEntity<ApiResponse<QuizSessionResponse>> getQuizSession(@PathVariable String quizSessionId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "", quizService.getQuizSession(quizSessionId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{quizSessionId}/questions")
+    @GetMapping("/quiz-sessions/{quizSessionId}/questions")
     public ResponseEntity<PaginatedApiResponse<QuizSessionQuestionResponse>> getQuizSessionQuestions(
             @PathVariable String quizSessionId,
             @RequestParam(defaultValue = "1") int page,
@@ -58,16 +58,17 @@ public class QuizSessionController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping
+    @PostMapping("/courses/{courseId}/lessons/{lessonId}/quiz-sessions")
     public ResponseEntity<ApiResponse<QuizSessionResponse>> createQuizSession(
-            @RequestParam String quizLessonId
+            @PathVariable String courseId,
+            @PathVariable String lessonId
     ) {
         String userId = AuthenticationUtil.extractUserId();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Quiz session created successfully", quizService.createQuizSession(userId, quizLessonId)));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Quiz session created successfully", quizService.createQuizSession(courseId, userId, lessonId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/{quizSessionId}/choose")
+    @PostMapping("/quiz-sessions/{quizSessionId}/choose")
     public ResponseEntity<ApiResponse<?>> chooseQuizSessionQuestion(
             @PathVariable String quizSessionId,
             @RequestBody ChooseQuizAnswerRequest request
@@ -77,7 +78,7 @@ public class QuizSessionController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/{quizSessionId}/submit")
+    @PostMapping("/quiz-sessions/{quizSessionId}/submit")
     public ResponseEntity<ApiResponse<QuizSessionResponse>> submitQuizSession(
             @PathVariable String quizSessionId,
             @RequestBody SubmitQuizSessionRequest request
@@ -86,13 +87,16 @@ public class QuizSessionController {
     }
 
     @Operation(summary = "Get analytical statistics for a quiz", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{quizId}/analytics")
-    public ResponseEntity<ApiResponse<List<QuizQuestionAnalyticsResponse>>> getQuizAnalytics(@PathVariable String quizId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizService.getQuizAnalytics(quizId)));
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/quiz-sessions/analytics")
+    public ResponseEntity<ApiResponse<List<QuizQuestionAnalyticsResponse>>> getQuizAnalytics(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizService.getQuizAnalytics(courseId, lessonId)));
     }
 
     @Operation(summary = "Grade essay questions in a PENDING_GRADE quiz session", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/{sessionId}/grade-essay")
+    @PostMapping("/quiz-sessions/{sessionId}/grade-essay")
     public ResponseEntity<ApiResponse<QuizSessionResponse>> gradeEssay(
             @PathVariable String sessionId,
             @Valid @RequestBody GradeEssayRequest request

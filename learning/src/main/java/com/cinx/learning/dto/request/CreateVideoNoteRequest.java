@@ -8,14 +8,6 @@ import lombok.Data;
 
 @Data
 public class CreateVideoNoteRequest {
-    @Schema(example = "course_123")
-    @NotBlank(message = "Course ID is required")
-    private String courseId;
-
-    @Schema(example = "lesson_123")
-    @NotBlank(message = "Lesson ID is required")
-    private String lessonId;
-
     @Schema(example = "This is a very important point.")
     @NotBlank(message = "Content is required")
     private String content;

@@ -24,14 +24,16 @@ public class VideoService implements IVideoService {
     private String cdnUrl;
 
     @Override
-    public VideoLessonResponse getVideoByLessonId(String lessonId) {
+    public VideoLessonResponse getVideoByLessonId(String courseId, String lessonId) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
         return videoLessonRepository.findByLessonId(lessonId)
                 .map(videoLessonMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Video not found for lessonId: " + lessonId));
     }
 
     @Override
-    public void createVideo(String lessonId, CreateVideoLessonRequest request) {
+    public void createVideo(String courseId, String lessonId, CreateVideoLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
         videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             throw new AlreadyExistException("Video already exists for lessonId: " + lessonId);
         },() -> {
@@ -42,7 +44,8 @@ public class VideoService implements IVideoService {
     }
 
     @Override
-    public void updateVideo(String lessonId, UpdateVideoLessonRequest request) {
+    public void updateVideo(String courseId, String lessonId, UpdateVideoLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
         videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             videoLessonMapper.partialUpdate(existing, request);
             if (request.getFileKey() != null) {

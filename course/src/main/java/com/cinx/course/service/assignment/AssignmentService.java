@@ -26,45 +26,48 @@ public class AssignmentService implements IAssignmentService {
     private String cdnUrl;
 
     @Override
-    public AssignmentLessonResponse getAssignmentByLessonId(String lessonId) {
+    public AssignmentLessonResponse getAssignmentByLessonId(String courseId, String lessonId) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
         return assignmentLessonRepository.findByLessonId(lessonId)
                 .map(assignmentMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Assignment not found for lessonId: " + lessonId));
     }
 
     @Override
-    public void createAssignment(String lessonId, CreateAssignmentLessonRequest request) {
-            assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
-                throw new AlreadyExistException("Assignment already exists for lessonId: " + lessonId);
-            },() -> {
-                var assignmentLesson = assignmentMapper.toModel(request);
-                assignmentLesson.setLessonId(lessonId);
-                if (assignmentLesson.getAttachments() != null) {
-                    assignmentLesson.getAttachments().forEach(attachment -> {
-                        attachment.setAttachmentUrl(cdnUrl + "/" + attachment.getFileKey());
-                        attachment.setAssignmentLesson(assignmentLesson);
-                    });
-                }
-                assignmentLessonRepository.save(assignmentLesson);
-            });
+    public void createAssignment(String courseId, String lessonId, CreateAssignmentLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
+        assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+            throw new AlreadyExistException("Assignment already exists for lessonId: " + lessonId);
+        },() -> {
+            var assignmentLesson = assignmentMapper.toModel(request);
+            assignmentLesson.setLessonId(lessonId);
+            if (assignmentLesson.getAttachments() != null) {
+                assignmentLesson.getAttachments().forEach(attachment -> {
+                    attachment.setAttachmentUrl(cdnUrl + "/" + attachment.getFileKey());
+                    attachment.setAssignmentLesson(assignmentLesson);
+                });
+            }
+            assignmentLessonRepository.save(assignmentLesson);
+        });
     }
 
     @Override
-    public void updateAssignment(String lessonId, UpdateAssignmentLessonRequest request) {
-            assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
-                assignmentMapper.partialUpdate(existing, request);
-                if (existing.getAttachments() != null && !existing.getAttachments().isEmpty()) {
-                    assignmentAttachmentRepository.deleteAll(existing.getAttachments());
-                }
-                assignmentLessonRepository.save(existing);
-                if (existing.getAttachments() != null) {
-                    assignmentAttachmentRepository.saveAll(existing.getAttachments().stream().peek(attachment -> {
-                        attachment.setAttachmentUrl(cdnUrl + "/" + attachment.getFileKey());
-                        attachment.setAssignmentLesson(existing);
-                    }).toList());
-                }
-            },() -> {
-                throw new NotFoundException("Assignment not found for lessonId: " + lessonId);
-            });
+    public void updateAssignment(String courseId, String lessonId, UpdateAssignmentLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
+        assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
+            assignmentMapper.partialUpdate(existing, request);
+            if (existing.getAttachments() != null && !existing.getAttachments().isEmpty()) {
+                assignmentAttachmentRepository.deleteAll(existing.getAttachments());
+            }
+            assignmentLessonRepository.save(existing);
+            if (existing.getAttachments() != null) {
+                assignmentAttachmentRepository.saveAll(existing.getAttachments().stream().peek(attachment -> {
+                    attachment.setAttachmentUrl(cdnUrl + "/" + attachment.getFileKey());
+                    attachment.setAssignmentLesson(existing);
+                }).toList());
+            }
+        },() -> {
+            throw new NotFoundException("Assignment not found for lessonId: " + lessonId);
+        });
     }
 }

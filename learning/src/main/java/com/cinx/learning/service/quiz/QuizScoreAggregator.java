@@ -18,11 +18,11 @@ public class QuizScoreAggregator {
     private final QuizSessionSubmissionRepository quizSessionSubmissionRepository;
     private final CourseService courseService;
 
-    public double aggregateScore(String userId, String quizLessonId) {
+    public double aggregateScore(String courseId, String userId, String quizLessonId) {
 
         ScoringMode scoringMode = null;
         try {
-            scoringMode = courseService.getQuizLessonById(quizLessonId).data().scoringMode();
+            scoringMode = courseService.getQuizLessonById(courseId, quizLessonId).data().scoringMode();
         } catch (Exception e) {
             log.warn("Could not fetch scoringMode for quizLessonId={}, defaulting to HIGHEST", quizLessonId);
         }

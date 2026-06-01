@@ -7,6 +7,8 @@ import java.util.List;
 import java.util.Optional;
 
 public interface CourseProgressRepository extends JpaRepository<CourseProgress, String> {
+    List<CourseProgress> findAllByUserId(String userId);
+
     List<CourseProgress> findAllByUserIdAndCourseIdIn(String userId, List<String> courseIds);
 
     Optional<CourseProgress> findByUserIdAndCourseId(String userId, String courseId);
@@ -14,4 +16,6 @@ public interface CourseProgressRepository extends JpaRepository<CourseProgress, 
     boolean existsByUserIdAndCourseId(String userId, String courseId);
 
     List<CourseProgress> findAllByCourseId(String courseId);
+
+    List<CourseProgress> findAllByCourseIdIn(List<String> courseIds);
 }

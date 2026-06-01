@@ -68,4 +68,11 @@ public interface CourseRepository extends JpaRepository<Course, String> {
             AND c.isPublished = true
     """)
     List<Course> findPublishedByIds(@Param("ids") List<String> ids);
+
+    long countByInstructorId(String instructorId);
+
+    long countByInstructorIdAndIsPublishedTrue(String instructorId);
+
+    @Query("SELECT AVG(c.rating) FROM Course c WHERE c.instructorId = :instructorId AND c.rating IS NOT NULL")
+    Double averageRatingByInstructorId(@Param("instructorId") String instructorId);
 }

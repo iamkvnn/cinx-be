@@ -21,6 +21,10 @@ public record RegisterRequest(
         Role role,
         @Schema(example = "MALE")
         Gender gender,
+        @Schema(example = "0987654321")
+        String phoneNumber,
+        @Schema(example = "Senior Frontend Developer")
+        String bio,
         @Schema(example = "829df83c9-cv.pdf")
         String cvFileKey
 ) {

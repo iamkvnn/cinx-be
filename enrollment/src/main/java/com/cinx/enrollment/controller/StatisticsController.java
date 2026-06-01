@@ -3,6 +3,7 @@ package com.cinx.enrollment.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.enrollment.dto.response.AdminOverviewResponse;
 import com.cinx.enrollment.dto.response.DashboardMetricsResponse;
+import com.cinx.enrollment.dto.response.InstructorRevenueResponse;
 import com.cinx.enrollment.dto.response.InstructorStatisticsResponse;
 import com.cinx.enrollment.dto.response.CourseStatisticsResponse;
 import com.cinx.enrollment.service.statistics.IStatisticsService;
@@ -11,6 +12,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -112,6 +114,18 @@ public class StatisticsController {
     ) {
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Admin range overview fetched successfully", statisticsService.getAdminRangeOverview(startDate, endDate))
+        );
+    }
+
+    @Operation(summary = "Get admin instructor revenue", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/admin/instructors/{instructorId}/revenue")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<InstructorRevenueResponse>> getInstructorRevenue(
+            @PathVariable String instructorId,
+            @RequestParam(defaultValue = "6") Integer months
+    ) {
+        return ResponseEntity.ok(
+                new ApiResponse<>(true, "Instructor revenue fetched successfully", statisticsService.getInstructorRevenue(instructorId, months))
         );
     }
 }

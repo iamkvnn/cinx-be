@@ -11,13 +11,13 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface IQuizService {
-    Page<QuizSessionResponse> getQuizSessions(String userId, String quizLessonId, int page, int size);
+    Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size);
     QuizSessionResponse getQuizSession(String id);
     Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size);
-    QuizSessionResponse createQuizSession(String userId, String quizLessonId);
+    QuizSessionResponse createQuizSession(String courseId, String userId, String lessonId);
     void chooseQuizSessionQuestion(String quizSessionId, ChooseQuizAnswerRequest request);
     QuizSessionResponse submitQuizSession(String quizSessionId, SubmitQuizSessionRequest request);
     QuizSessionResponse gradeEssay(String sessionId, GradeEssayRequest request);
 
-    List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String quizId);
+    List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String courseId, String lessonId);
 }

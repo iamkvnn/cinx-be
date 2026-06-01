@@ -76,6 +76,18 @@ public class LessonService implements ILessonService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public void ensureLessonBelongsToCourse(String courseId, String lessonId, LessonType lessonType) {
+        List<Lesson> lessons = lessonRepository.findByCourseAndStableId(courseId, lessonId);
+        if (lessons.isEmpty()) {
+            throw new NotFoundException("Lesson not found with id: " + lessonId);
+        }
+        if (lessonType != null && lessons.stream().noneMatch(lesson -> lesson.getLessonType() == lessonType)) {
+            throw new NotFoundException("Lesson not found with id: " + lessonId);
+        }
+    }
+
+    @Override
     @Transactional
     public LessonResponse createLesson(String courseId, String sectionId, CreateLessonRequest request) {
         Section section = sectionService.editableSection(courseId, sectionId);
@@ -354,7 +366,7 @@ public class LessonService implements ILessonService {
             return ORDER_STEP;
         }
         if (previous == null) {
-            return next != null && next > 1 ? next / 2 : null;
+            return next > 1 ? next / 2 : null;
         }
         if (next == null) {
             return previous + ORDER_STEP;

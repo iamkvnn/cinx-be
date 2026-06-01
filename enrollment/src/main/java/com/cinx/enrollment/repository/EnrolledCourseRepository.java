@@ -14,6 +14,8 @@ public interface EnrolledCourseRepository extends JpaRepository<EnrolledCourse, 
 
     Page<EnrolledCourse> findAllByUserId(String userId, Pageable pageable);
 
+    long countByUserId(String userId);
+
     List<EnrolledCourse> findAllByUserIdAndCourseIdIn(String userId, List<String> courseIds);
 
     @Query("SELECT e.userId FROM EnrolledCourse e WHERE e.courseId = :courseId")
@@ -27,4 +29,15 @@ public interface EnrolledCourseRepository extends JpaRepository<EnrolledCourse, 
         ORDER BY COUNT(e) DESC
     """)
     List<Object[]> findTopEnrolledCourses(LocalDateTime start, LocalDateTime end, Pageable pageable);
+
+    @Query("SELECT COUNT(DISTINCT e.userId) FROM EnrolledCourse e WHERE e.courseId IN :courseIds")
+    long countDistinctUsersByCourseIds(List<String> courseIds);
+
+    @Query("""
+        SELECT e.courseId, COUNT(e)
+        FROM EnrolledCourse e
+        WHERE e.courseId IN :courseIds
+        GROUP BY e.courseId
+    """)
+    List<Object[]> countEnrollmentsByCourseIds(List<String> courseIds);
 }

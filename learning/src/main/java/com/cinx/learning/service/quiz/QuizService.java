@@ -52,8 +52,8 @@ public class QuizService implements IQuizService {
     private final QuizSnapshotBuilder snapshotBuilder;
 
     @Override
-    public Page<QuizSessionResponse> getQuizSessions(String userId, String quizLessonId, int page, int size) {
-        return quizSessionRepository.findAllByQuizLessonId(quizLessonId, userId, PageRequest.of(page - 1, size))
+    public Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size) {
+        return quizSessionRepository.findAllByQuizLessonId(lessonId, userId, PageRequest.of(page - 1, size))
                 .map(quizSessionMapper::toDto);
     }
 
@@ -101,20 +101,21 @@ public class QuizService implements IQuizService {
 
     @Transactional
     @Override
-    public QuizSessionResponse createQuizSession(String userId, String quizLessonId) {
-        QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(quizLessonId).data();
+    public QuizSessionResponse createQuizSession(String courseId, String userId, String lessonId) {
+        QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(courseId, lessonId).data();
 
         Integer maxAttempt = quizLessonResponse.maxAttempt();
-        if (maxAttempt != null && maxAttempt <= quizSessionRepository.countByQuizLessonIdAndUserId(quizLessonId, userId)) {
+        if (maxAttempt != null && maxAttempt <= quizSessionRepository.countByQuizLessonIdAndUserId(lessonId, userId)) {
             throw new BadRequestException("You have reached the maximum number of attempts for this quiz lesson");
         }
 
         QuizSession quizSession = quizSessionRepository.save(
                 QuizSession.builder()
+                        .courseId(courseId)
                         .userId(userId)
                         .startTime(LocalDateTime.now())
                         .endTime(LocalDateTime.now().plusMinutes(quizLessonResponse.duration()))
-                        .quizLessonId(quizLessonId)
+                        .quizLessonId(lessonId)
                         .status(QuizSessionStatus.IN_PROGRESS)
                         .isReviewAllowed(quizLessonResponse.isReviewAllowed())
                         .isShowAnswersOnReview(quizLessonResponse.isShowAnswersOnReview())
@@ -160,6 +161,7 @@ public class QuizService implements IQuizService {
     }
 
     @Override
+    @Transactional
     public void chooseQuizSessionQuestion(String quizSessionId, ChooseQuizAnswerRequest request) {
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
@@ -241,6 +243,7 @@ public class QuizService implements IQuizService {
                         .build()));
 
         double effectiveScore = quizScoreAggregator.aggregateScore(
+                quizSession.getCourseId(),
                 quizSession.getUserId(),
                 quizSession.getQuizLessonId());
 
@@ -309,7 +312,7 @@ public class QuizService implements IQuizService {
         submission.setTotalCorrectAnswers(submission.getTotalCorrectAnswers() + correctCount);
         session.setQuizSessionSubmission(quizSessionSubmissionRepository.save(submission));
 
-        double effectiveScore = quizScoreAggregator.aggregateScore(session.getUserId(), session.getQuizLessonId());
+        double effectiveScore = quizScoreAggregator.aggregateScore(session.getCourseId(), session.getUserId(), session.getQuizLessonId());
         log.info("Essay graded for session {}. rawScore={} effectiveScore={}", sessionId, rawScore, effectiveScore);
 
         boolean wasCompleted = learningProgressService.isLearningItemCompleted(
@@ -330,8 +333,8 @@ public class QuizService implements IQuizService {
     }
 
     @Override
-    public List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String quizId) {
-        return quizSessionQuestionRepository.getQuizAnalyticsByQuizId(quizId)
+    public List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String courseId, String lessonId) {
+        return quizSessionQuestionRepository.getQuizAnalyticsByQuizId(lessonId)
                 .stream()
                 .map(obj -> new QuizQuestionAnalyticsResponse(
                         (String) obj[0],
@@ -343,6 +346,7 @@ public class QuizService implements IQuizService {
     }
 
     @Scheduled(fixedRateString = "${app.quiz.auto-submit.rate:60000}")
+    @Transactional
     public void autoSubmitExpiredSessions() {
         List<QuizSession> expiredSessions = quizSessionRepository.findExpiredSessions(QuizSessionStatus.IN_PROGRESS, LocalDateTime.now());
         if (!expiredSessions.isEmpty()) {

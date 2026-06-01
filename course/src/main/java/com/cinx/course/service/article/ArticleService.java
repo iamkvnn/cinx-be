@@ -20,14 +20,16 @@ public class ArticleService implements IArticleService {
     private final ILessonService lessonService;
 
     @Override
-    public ArticleLessonResponse getArticleByLessonId(String lessonId) {
+    public ArticleLessonResponse getArticleByLessonId(String courseId, String lessonId) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         return articleLessonRepository.findByLessonId(lessonId)
                 .map(articleLessonMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Article not found for lessonId: " + lessonId));
     }
 
     @Override
-    public void createArticle(String lessonId, CreateArticleLessonRequest request) {
+    public void createArticle(String courseId, String lessonId, CreateArticleLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             throw new AlreadyExistException("Article already exists for lessonId: " + lessonId);
         },() -> {
@@ -38,7 +40,8 @@ public class ArticleService implements IArticleService {
     }
 
     @Override
-    public void updateArticle(String lessonId, UpdateArticleLessonRequest request) {
+    public void updateArticle(String courseId, String lessonId, UpdateArticleLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             articleLessonMapper.partialUpdate(existing, request);
             articleLessonRepository.save(existing);

@@ -9,13 +9,13 @@ import java.util.List;
 public interface IVideoQuestionService {
     List<VideoQuestionResponse> getQuestionsByLessonId(String lessonId);
     
-    VideoQuestionResponse getQuestionById(String id);
+    VideoQuestionResponse getQuestionById(String lessonId, String id);
     
     VideoQuestionResponse createQuestion(String lessonId, CreateVideoQuestionRequest request);
     
-    VideoQuestionResponse updateQuestion(String id, UpdateVideoQuestionRequest request);
+    VideoQuestionResponse updateQuestion(String lessonId, String id, UpdateVideoQuestionRequest request);
     
-    void deleteQuestion(String id);
+    void deleteQuestion(String lessonId, String id);
     
     boolean checkAnswer(String questionId, String userAnswer);
 }

@@ -8,6 +8,8 @@ import jakarta.persistence.*;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -23,6 +25,11 @@ public class User extends AuditableEntity {
     private UserStatus status;
     private String avatarFileKey;
     private String avatarUrl;
+    private String phoneNumber;
+    @Column(length = 2000)
+    private String bio;
+    private LocalDateTime lastAccessAt;
+    private LocalDateTime instructorVerifiedAt;
     @Builder.Default
     @Column(columnDefinition = "boolean default false")
     private Boolean isReceivePushNotification = false;

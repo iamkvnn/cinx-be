@@ -20,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.time.temporal.ChronoUnit;
 import com.cinx.common.exception.BadRequestException;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -154,6 +155,46 @@ public class StatisticsService implements IStatisticsService {
         }).collect(Collectors.toList());
 
         return new CourseStatisticsResponse(totalGross, totalNet, revenueByTime);
+    }
+
+    @Override
+    public InstructorRevenueResponse getInstructorRevenue(String instructorId, Integer months) {
+        int monthCount = months != null ? months : 6;
+        if (monthCount <= 0) {
+            throw new BadRequestException("Months must be greater than 0");
+        }
+
+        YearMonth endMonth = YearMonth.now();
+        YearMonth startMonth = endMonth.minusMonths(monthCount - 1L);
+        LocalDateTime start = startMonth.atDay(1).atStartOfDay();
+        LocalDateTime end = endMonth.atEndOfMonth().atTime(23, 59, 59, 999999999);
+
+        Long totalRevenue = orderItemRepository.sumGrossRevenueByInstructor(instructorId, start, end);
+        if (totalRevenue == null) totalRevenue = 0L;
+
+        Map<String, Long> revenueByLabel = new LinkedHashMap<>();
+        for (int i = 0; i < monthCount; i++) {
+            revenueByLabel.put(startMonth.plusMonths(i).format(DateTimeFormatter.ofPattern("yyyy-MM")), 0L);
+        }
+        orderItemRepository.aggregateRevenueByMonthForInstructor(instructorId, start, end)
+                .forEach(row -> revenueByLabel.put((String) row[0], ((Number) row[1]).longValue()));
+
+        List<RevenueByTimeResponse> revenueByMonth = revenueByLabel.entrySet().stream()
+                .map(entry -> new RevenueByTimeResponse(entry.getKey(), entry.getValue(), calculateNetRevenue(entry.getValue())))
+                .toList();
+
+        List<CourseRevenueResponse> courseRevenues = orderItemRepository
+                .aggregateCourseRevenueByInstructor(OrderStatus.PAID, instructorId, start, end)
+                .stream()
+                .map(row -> new CourseRevenueResponse(
+                        (String) row[0],
+                        (String) row[1],
+                        ((Number) row[2]).longValue(),
+                        ((Number) row[3]).longValue()
+                ))
+                .toList();
+
+        return new InstructorRevenueResponse(totalRevenue, revenueByMonth, courseRevenues);
     }
 
     @Override

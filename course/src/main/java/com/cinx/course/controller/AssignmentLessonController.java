@@ -12,22 +12,29 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
-@RequestMapping("/api/v1/lessons/{lessonId}/assignments")
+@RequestMapping("/api/v1/courses/{courseId}/lessons/{lessonId}/assignments")
 @RequiredArgsConstructor
 public class AssignmentLessonController {
     private final IAssignmentService assignmentService;
 
     @GetMapping
-    public ResponseEntity<ApiResponse<AssignmentLessonResponse>> getAssigmentByLessonId(@PathVariable String lessonId) {
+    public ResponseEntity<ApiResponse<AssignmentLessonResponse>> getAssigmentByLessonId(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", assignmentService.getAssignmentByLessonId(lessonId))
+                new ApiResponse<>(true, "Success", assignmentService.getAssignmentByLessonId(courseId, lessonId))
         );
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createAssigmentLesson(@PathVariable String lessonId, @RequestBody CreateAssignmentLessonRequest request) {
-        assignmentService.createAssignment(lessonId, request);
+    public ResponseEntity<ApiResponse<?>> createAssigmentLesson(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @RequestBody CreateAssignmentLessonRequest request
+    ) {
+        assignmentService.createAssignment(courseId, lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
         );
@@ -35,8 +42,12 @@ public class AssignmentLessonController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping
-    public ResponseEntity<ApiResponse<?>> updateAssigmentLesson(@PathVariable String lessonId, @RequestBody UpdateAssignmentLessonRequest request) {
-        assignmentService.updateAssignment(lessonId, request);
+    public ResponseEntity<ApiResponse<?>> updateAssigmentLesson(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @RequestBody UpdateAssignmentLessonRequest request
+    ) {
+        assignmentService.updateAssignment(courseId, lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
         );

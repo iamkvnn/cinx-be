@@ -63,14 +63,20 @@ public class InternalCourseController {
         return new ApiResponse<>(true, "Enrollment count increased successfully", null);
     }
 
-    @GetMapping("/quiz-lessons")
-    public ApiResponse<QuizLessonResponse> getQuizLessonById(@RequestParam String lessonId) {
-        return new ApiResponse<>(true, "Quiz lesson fetched successfully", quizService.getQuizByLessonId(lessonId));
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/quizzes")
+    public ApiResponse<QuizLessonResponse> getQuizLessonById(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
+        return new ApiResponse<>(true, "Quiz lesson fetched successfully", quizService.getQuizByLessonId(courseId, lessonId));
     }
 
-    @GetMapping("/video-lessons")
-    public ApiResponse<VideoLessonResponse> getVideoLessonById(@RequestParam String lessonId) {
-        return new ApiResponse<>(true, "Video lesson fetched successfully", videoService.getVideoByLessonId(lessonId));
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/videos")
+    public ApiResponse<VideoLessonResponse> getVideoLessonById(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
+        return new ApiResponse<>(true, "Video lesson fetched successfully", videoService.getVideoByLessonId(courseId, lessonId));
     }
 
     @GetMapping("/video-questions/{id}/check-answer")

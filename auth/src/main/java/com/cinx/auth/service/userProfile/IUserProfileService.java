@@ -18,4 +18,7 @@ public interface IUserProfileService {
 
     @PostMapping("/{userId}/toggle-ban")
     void toggleBanUser(@PathVariable String userId);
+
+    @PostMapping("/{userId}/last-access")
+    void updateLastAccess(@PathVariable String userId);
 }

@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/lessons/{lessonId}/quizzes/questions")
+@RequestMapping("/api/v1/courses/{courseId}/lessons/{lessonId}/quizzes/questions")
 @RequiredArgsConstructor
 public class QuizQuestionController {
 
@@ -23,7 +23,9 @@ public class QuizQuestionController {
 
     @Operation(summary = "List all questions for a quiz", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<ApiResponse<List<QuizQuestionResponse>>> getQuestions(@PathVariable String lessonId) {
+    public ResponseEntity<ApiResponse<List<QuizQuestionResponse>>> getQuestions(
+            @PathVariable String lessonId,
+            @PathVariable String courseId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizQuestionService.getQuestions(lessonId)));
     }
 
@@ -31,8 +33,8 @@ public class QuizQuestionController {
     @PostMapping
     public ResponseEntity<ApiResponse<QuizQuestionResponse>> addQuestion(
             @PathVariable String lessonId,
-            @Valid @RequestBody CreateQuizQuestionRequest request
-    ) {
+            @Valid @RequestBody CreateQuizQuestionRequest request,
+            @PathVariable String courseId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Question added successfully", quizQuestionService.addQuestion(lessonId, request)));
     }
 
@@ -42,8 +44,8 @@ public class QuizQuestionController {
     public ResponseEntity<ApiResponse<QuizQuestionResponse>> updateQuestion(
             @PathVariable String lessonId,
             @PathVariable String questionId,
-            @Valid @RequestBody UpdateQuizQuestionRequest request
-    ) {
+            @Valid @RequestBody UpdateQuizQuestionRequest request,
+            @PathVariable String courseId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Question updated successfully", quizQuestionService.updateQuestion(lessonId, questionId, request)));
     }
 
@@ -52,8 +54,8 @@ public class QuizQuestionController {
     @DeleteMapping("/{questionId}")
     public ResponseEntity<ApiResponse<?>> deleteQuestion(
             @PathVariable String lessonId,
-            @PathVariable String questionId
-    ) {
+            @PathVariable String questionId,
+            @PathVariable String courseId) {
         quizQuestionService.deleteQuestion(lessonId, questionId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Question deleted successfully", null));
     }

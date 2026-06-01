@@ -9,6 +9,7 @@ import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.RejectCourseRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.CourseResponse;
+import com.cinx.course.dto.response.InstructorCourseSummaryResponse;
 import com.cinx.course.dto.response.RejectCourseResponse;
 import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.mapper.CourseMapper;
@@ -80,6 +81,19 @@ public class CourseService implements ICourseService {
         return toResponse(distinctCourseIds.stream()
                 .map(courseMap::get)
                 .toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public InstructorCourseSummaryResponse getInstructorCourseSummary(String instructorId) {
+        long courseCount = courseRepository.countByInstructorId(instructorId);
+        long publishedCourseCount = courseRepository.countByInstructorIdAndIsPublishedTrue(instructorId);
+        Double averageRating = courseRepository.averageRatingByInstructorId(instructorId);
+        return new InstructorCourseSummaryResponse(
+                courseCount,
+                publishedCourseCount,
+                averageRating != null ? averageRating : 0.0
+        );
     }
 
     @Override

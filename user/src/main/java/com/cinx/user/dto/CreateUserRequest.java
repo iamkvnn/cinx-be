@@ -21,6 +21,10 @@ public record CreateUserRequest(
         Role role,
         @Schema(example = "MALE")
         Gender gender,
+        @Schema(example = "0987654321")
+        String phoneNumber,
+        @Schema(example = "Senior Frontend Developer")
+        String bio,
         @Schema(example = "cv_key_123")
         String cvFileKey
 ) {
