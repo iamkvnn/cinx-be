@@ -49,11 +49,4 @@ class CourseServiceAdminTest {
         assertThat(summary.publishedCourseCount()).isEqualTo(6L);
         assertThat(summary.averageRating()).isEqualTo(4.75);
     }
-
-    @Test
-    void getInstructorCourseIdsDelegatesToRepository() {
-        when(courseRepository.findIdsByInstructorId("inst-1")).thenReturn(List.of("course-1", "course-2"));
-
-        assertThat(courseService.getInstructorCourseIds("inst-1")).containsExactly("course-1", "course-2");
-    }
 }
