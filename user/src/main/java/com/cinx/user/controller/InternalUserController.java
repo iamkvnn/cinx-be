@@ -61,6 +61,12 @@ public class InternalUserController {
         return new ApiResponse<>(true, "XP added successfully", userService.addXp(userId, amount));
     }
 
+    @PostMapping("/{userId}/last-access")
+    public ApiResponse<Void> updateLastAccess(@PathVariable String userId) {
+        userService.updateLastAccess(userId);
+        return new ApiResponse<>(true, "Last access updated successfully", null);
+    }
+
     @GetMapping("/metrics/total-count")
     public ApiResponse<Long> getTotalUsersCount() {
         return new ApiResponse<>(true, "Total users count fetched successfully", userService.countTotalUsers());

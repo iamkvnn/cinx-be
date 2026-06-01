@@ -16,6 +16,7 @@ import com.cinx.learning.model.VideoLessonTrackingHistory;
 import com.cinx.learning.repository.InVideoAssessmentSubmissionRepository;
 import com.cinx.learning.repository.VideoLessonTrackingHistoryRepository;
 import com.cinx.learning.service.course.CourseService;
+import com.cinx.learning.service.activity.ILearningActivityService;
 import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import lombok.RequiredArgsConstructor;
@@ -33,32 +34,36 @@ public class VideoService implements IVideoService {
     private final VideoLessonTrackingHistoryMapper videoLessonTrackingHistoryMapper;
     private final VideoLessonTrackingHistoryRepository videoLessonTrackingHistoryRepository;
     private final CourseService courseService;
+    private final ILearningActivityService learningActivityService;
     private final ILearningProgressService learningProgressService;
     private final IDailyGoalService dailyGoalService;
     private final InVideoAssessmentSubmissionRepository inVideoAssessmentSubmissionRepository;
 
     @Override
-    public Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String videoLessonId, int page, int size) {
-        return videoLessonTrackingHistoryRepository.findByVideoLessonId(videoLessonId, PageRequest.of(page - 1, size))
+    public Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String courseId, String lessonId, int page, int size) {
+        getVideoLesson(courseId, lessonId);
+        return videoLessonTrackingHistoryRepository.findByVideoLessonId(lessonId, PageRequest.of(page - 1, size))
                 .map(videoLessonTrackingHistoryMapper::toDto);
     }
 
     @Override
-    public VideoLessonTrackingHistoryResponse getVideoLessonTrackingHistory(String userId, String videoLessonId) {
-        return videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, videoLessonId)
+    public VideoLessonTrackingHistoryResponse getVideoLessonTrackingHistory(String courseId, String userId, String lessonId) {
+        getVideoLesson(courseId, lessonId);
+        return videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, lessonId)
                 .map(videoLessonTrackingHistoryMapper::toDto)
-                .orElseThrow(() -> new NotFoundException("Tracking history not found for userId: " + userId + " and videoLessonId: " + videoLessonId));
+                .orElseThrow(() -> new NotFoundException("Tracking history not found for userId: " + userId + " and videoLessonId: " + lessonId));
     }
 
     @Override
-    public void trackVideoProgress(String userId, TrackingVideoLessonRequest request) {
+    public void trackVideoProgress(String courseId, String lessonId, String userId, TrackingVideoLessonRequest request) {
+        VideoLessonResponse videoLessonResponse = getVideoLesson(courseId, lessonId);
         if (request.currentPosition() == null || request.currentPosition() < 0) {
             throw new BadRequestException("Current position must be a non-negative integer.");
         }
-        if (request.videoLessonId() == null || request.videoLessonId().isEmpty()) {
-            throw new BadRequestException("Video lesson ID must not be null or empty.");
-        }
-        VideoLessonTrackingHistory trackingHistory = videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, request.videoLessonId())
+        Integer previousPosition = videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, lessonId)
+                .map(VideoLessonTrackingHistory::getCurrentPosition)
+                .orElse(0);
+        VideoLessonTrackingHistory trackingHistory = videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, lessonId)
                 .map(existing -> {
                     if (request.currentPosition() < existing.getCurrentPosition()) {
                         return existing; // Do not update if the new position is less than the existing position
@@ -70,21 +75,34 @@ public class VideoService implements IVideoService {
                 .orElseGet(() -> {
                     VideoLessonTrackingHistory newTrackingHistory = videoLessonTrackingHistoryMapper.toModel(request);
                     newTrackingHistory.setUserId(userId);
+                    newTrackingHistory.setVideoLessonId(lessonId);
                     newTrackingHistory.setLastTrackingTime(LocalDateTime.now());
                     return newTrackingHistory;
                 });
         videoLessonTrackingHistoryRepository.save(trackingHistory);
+        recordVideoActivity(userId, courseId, previousPosition, request.currentPosition());
         
-        VideoLessonResponse videoLessonResponse = courseService.getVideoLessonById(request.videoLessonId()).data();
         if (videoLessonResponse != null) {
-            checkAndMarkVideoCompletion(userId, request.videoLessonId(), videoLessonResponse);
+            checkAndMarkVideoCompletion(userId, lessonId, videoLessonResponse);
         }
+    }
+
+    private void recordVideoActivity(String userId, String courseId, Integer previousPosition, Integer currentPosition) {
+        int activeSeconds = currentPosition - (previousPosition != null ? previousPosition : 0);
+        if (activeSeconds <= 0) {
+            return;
+        }
+        learningActivityService.recordActivity(userId, courseId, activeSeconds);
     }
 
     @Override
     @Transactional
-    public void submitVideoQuestionAnswer(String userId, SubmitVideoQuestionRequest request) {
-        ApiResponse<Boolean> checkResult = courseService.checkVideoQuestionAnswer(request.videoAssessmentId(), request.userAnswer());
+    public void submitVideoQuestionAnswer(String courseId, String lessonId, String userId, SubmitVideoQuestionRequest request) {
+        VideoLessonResponse videoLessonResponse = getVideoLesson(courseId, lessonId);
+        ApiResponse<Boolean> checkResult = courseService.checkVideoQuestionAnswer(
+                request.videoAssessmentId(),
+                request.userAnswer()
+        );
         if (checkResult == null || !Boolean.TRUE.equals(checkResult.data())) {
             throw new BadRequestException("Incorrect answer. Please try again.");
         }
@@ -93,7 +111,7 @@ public class VideoService implements IVideoService {
                 .findByUserIdAndVideoAssessmentId(userId, request.videoAssessmentId())
                 .orElseGet(() -> InVideoAssessmentSubmission.builder()
                         .userId(userId)
-                        .videoLessonId(request.videoLessonId())
+                        .videoLessonId(lessonId)
                         .videoAssessmentId(request.videoAssessmentId())
                         .build());
                         
@@ -101,9 +119,8 @@ public class VideoService implements IVideoService {
         submission.setSubmissionTime(LocalDateTime.now());
         inVideoAssessmentSubmissionRepository.save(submission);
         
-        VideoLessonResponse videoLessonResponse = courseService.getVideoLessonById(request.videoLessonId()).data();
         if (videoLessonResponse != null) {
-            checkAndMarkVideoCompletion(userId, request.videoLessonId(), videoLessonResponse);
+            checkAndMarkVideoCompletion(userId, lessonId, videoLessonResponse);
         }
     }
 
@@ -136,8 +153,9 @@ public class VideoService implements IVideoService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<InVideoAssessmentSubmissionResponse> getVideoQuestionSubmissions(String userId, String videoLessonId) {
-        return inVideoAssessmentSubmissionRepository.findByUserIdAndVideoLessonId(userId, videoLessonId).stream()
+    public List<InVideoAssessmentSubmissionResponse> getVideoQuestionSubmissions(String courseId, String userId, String lessonId) {
+        getVideoLesson(courseId, lessonId);
+        return inVideoAssessmentSubmissionRepository.findByUserIdAndVideoLessonId(userId, lessonId).stream()
                 .map(sub -> new InVideoAssessmentSubmissionResponse(
                         sub.getVideoLessonId(),
                         sub.getVideoAssessmentId(),
@@ -146,4 +164,9 @@ public class VideoService implements IVideoService {
                 ))
                 .toList();
     }
+
+    private VideoLessonResponse getVideoLesson(String courseId, String lessonId) {
+        return courseService.getVideoLessonById(courseId, lessonId).data();
+    }
+
 }

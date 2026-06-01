@@ -8,6 +8,7 @@ import com.cinx.learning.dto.response.VideoNoteDto;
 import com.cinx.learning.mapper.VideoNoteMapper;
 import com.cinx.learning.model.VideoNote;
 import com.cinx.learning.repository.VideoNoteRepository;
+import com.cinx.learning.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,11 +21,15 @@ import java.util.stream.Collectors;
 public class VideoNoteService implements IVideoNoteService {
     private final VideoNoteRepository videoNoteRepository;
     private final VideoNoteMapper videoNoteMapper;
+    private final CourseService courseService;
 
     @Override
     @Transactional
-    public VideoNoteDto createNote(String userId, CreateVideoNoteRequest request) {
+    public VideoNoteDto createNote(String courseId, String lessonId, String userId, CreateVideoNoteRequest request) {
+        courseService.getVideoLessonById(courseId, lessonId);
         VideoNote note = videoNoteMapper.toModel(request);
+        note.setCourseId(courseId);
+        note.setLessonId(lessonId);
         note.setUserId(userId);
         note = videoNoteRepository.save(note);
         return videoNoteMapper.toDto(note);
@@ -32,7 +37,8 @@ public class VideoNoteService implements IVideoNoteService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<VideoNoteDto> getNotesByLesson(String userId, String lessonId) {
+    public List<VideoNoteDto> getNotesByLesson(String courseId, String userId, String lessonId) {
+        courseService.getVideoLessonById(courseId, lessonId);
         return videoNoteRepository.findByUserIdAndLessonId(userId, lessonId)
                 .stream().map(videoNoteMapper::toDto).collect(Collectors.toList());
     }
@@ -71,4 +77,5 @@ public class VideoNoteService implements IVideoNoteService {
         
         videoNoteRepository.delete(note);
     }
+
 }

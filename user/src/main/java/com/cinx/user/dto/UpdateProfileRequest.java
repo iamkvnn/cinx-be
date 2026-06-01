@@ -10,6 +10,10 @@ public record UpdateProfileRequest(
         String name,
         @Schema(example = "FEMALE")
         Gender gender,
+        @Schema(example = "0987654321")
+        String phoneNumber,
+        @Schema(example = "Senior Frontend Developer")
+        String bio,
         @Schema(example = "true")
         Boolean isReceivePushNotification,
         @Schema(example = "avatar_key_123")

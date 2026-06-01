@@ -3,7 +3,6 @@ package com.cinx.course.service.videoquestion;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
-import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateVideoQuestionRequest;
 import com.cinx.course.dto.request.UpdateVideoQuestionRequest;
 import com.cinx.course.dto.response.VideoOptionResponse;
@@ -16,7 +15,6 @@ import com.cinx.course.model.VideoQuestion;
 import com.cinx.course.repository.VideoLessonRepository;
 import com.cinx.course.repository.VideoOptionRepository;
 import com.cinx.course.repository.VideoQuestionRepository;
-import com.cinx.course.service.course.ICourseDraftService;
 import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -39,7 +37,7 @@ public class VideoQuestionService implements IVideoQuestionService {
     @Override
     @Transactional(readOnly = true)
     public List<VideoQuestionResponse> getQuestionsByLessonId(String lessonId) {
-        VideoLesson videoLesson = videoLessonRepository.findById(lessonId)
+        videoLessonRepository.findById(lessonId)
                 .orElseThrow(() -> new NotFoundException("Video lesson not found"));
         
         List<VideoQuestion> questions = videoQuestionRepository.findByVideoLessonLessonIdOrderByTimestampSecondsAsc(lessonId);
@@ -67,29 +65,25 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional(readOnly = true)
-    public VideoQuestionResponse getQuestionById(String id) {
-        VideoQuestion question = videoQuestionRepository.findById(id)
+    public VideoQuestionResponse getQuestionById(String lessonId, String id) {
+        VideoQuestion question = videoQuestionRepository.findByIdAndVideoLessonLessonId(id, lessonId)
                 .orElseThrow(() -> new NotFoundException("Video question not found"));
-                
-        VideoLesson videoLesson = question.getVideoLesson();
-        
-        String currentUserId = AuthenticationUtil.extractUserId();
-        boolean isInstructor = videoLesson != null && lessonService.isLessonInstructor(videoLesson.getLessonId(), currentUserId);
 
         VideoQuestionResponse q = videoQuestionMapper.toDto(question);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        boolean isInstructor = lessonService.isLessonInstructor(lessonId, currentUserId);
         if (isInstructor) {
             return q;
-        } else {
-            return new VideoQuestionResponse(
-                    q.id(),
-                    q.questionText(),
-                    q.questionType(),
-                    q.timestampSeconds(),
-                    q.options().stream()
-                            .map(o -> new VideoOptionResponse(o.id(), o.optionText(), null))
-                            .toList()
-            );
         }
+        return new VideoQuestionResponse(
+                q.id(),
+                q.questionText(),
+                q.questionType(),
+                q.timestampSeconds(),
+                q.options().stream()
+                        .map(o -> new VideoOptionResponse(o.id(), o.optionText(), null))
+                        .toList()
+        );
     }
 
     @Override
@@ -119,8 +113,8 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional
-    public VideoQuestionResponse updateQuestion(String id, UpdateVideoQuestionRequest request) {
-        VideoQuestion question = videoQuestionRepository.findById(id)
+    public VideoQuestionResponse updateQuestion(String lessonId, String id, UpdateVideoQuestionRequest request) {
+        VideoQuestion question = videoQuestionRepository.findByIdAndVideoLessonLessonId(id, lessonId)
                 .orElseThrow(() -> new NotFoundException("Video question not found"));
 
         VideoLesson videoLesson = question.getVideoLesson();
@@ -129,8 +123,6 @@ public class VideoQuestionService implements IVideoQuestionService {
         }
 
         videoQuestionMapper.partialUpdate(question, request);
-
-        // Remove old options and create new ones based on the request
         videoOptionRepository.deleteAll(question.getOptions());
         question.getOptions().clear();
 
@@ -139,7 +131,7 @@ public class VideoQuestionService implements IVideoQuestionService {
             option.setVideoQuestion(question);
             return option;
         }).toList();
-        
+
         question.getOptions().addAll(newOptions);
 
         VideoQuestion updatedQuestion = videoQuestionRepository.save(question);
@@ -148,8 +140,8 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional
-    public void deleteQuestion(String id) {
-        VideoQuestion question = videoQuestionRepository.findById(id)
+    public void deleteQuestion(String lessonId, String id) {
+        VideoQuestion question = videoQuestionRepository.findByIdAndVideoLessonLessonId(id, lessonId)
                 .orElseThrow(() -> new NotFoundException("Video question not found"));
         videoQuestionRepository.delete(question);
     }

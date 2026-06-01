@@ -13,6 +13,7 @@ import java.util.List;
 public interface ILessonService {
     List<String> getLessonIdsByCourseId(String courseId);
     Lesson getForUpdate(String courseId, String sectionId, String lessonId, LessonType lessonType);
+    void ensureLessonBelongsToCourse(String courseId, String lessonId, LessonType lessonType);
     LessonResponse createLesson(String courseId, String sectionId, CreateLessonRequest request);
     LessonResponse updateLesson(String courseId, String sectionId, String lessonId, UpdateLessonRequest request);
     List<SectionLessonsOrderResponse> reorderLessons(String courseId, ReorderLessonsRequest request);

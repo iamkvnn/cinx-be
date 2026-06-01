@@ -1,13 +1,16 @@
 package com.cinx.enrollment.service.enrollment;
 
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.enrollment.dto.response.CheckEnrollmentStatus;
 import com.cinx.enrollment.dto.response.CourseResponse;
+import com.cinx.enrollment.dto.response.UserEnrollmentSummaryResponse;
 import com.cinx.enrollment.messaging.EnrolledCourseEventProducer;
 import com.cinx.enrollment.messaging.event.EnrolledCourseEvent;
 import com.cinx.enrollment.model.EnrolledCourse;
 import com.cinx.enrollment.repository.EnrolledCourseRepository;
+import com.cinx.enrollment.repository.OrderRepository;
 import com.cinx.enrollment.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -28,6 +31,7 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class EnrollmentService implements IEnrollmentService {
     private final EnrolledCourseRepository enrolledCourseRepository;
+    private final OrderRepository orderRepository;
     private final CourseService courseService;
     private final EnrolledCourseEventProducer enrolledCourseEventProducer;
 
@@ -78,5 +82,14 @@ public class EnrollmentService implements IEnrollmentService {
     @Override
     public List<String> getUserIdsEnrolledInCourse(String courseId) {
         return enrolledCourseRepository.findUserIdsByCourseId(courseId);
+    }
+
+    @Override
+    public UserEnrollmentSummaryResponse getUserEnrollmentSummary(String userId) {
+        return new UserEnrollmentSummaryResponse(
+                enrolledCourseRepository.countByUserId(userId),
+                orderRepository.sumRevenueByUserId(OrderStatus.PAID, userId),
+                orderRepository.countOrdersByUserId(OrderStatus.PAID, userId)
+        );
     }
 }

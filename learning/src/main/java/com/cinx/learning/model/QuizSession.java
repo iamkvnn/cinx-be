@@ -21,6 +21,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class QuizSession extends BaseEntity {
+    private String courseId;
     private String quizLessonId;
     private String userId;
     private LocalDateTime startTime;

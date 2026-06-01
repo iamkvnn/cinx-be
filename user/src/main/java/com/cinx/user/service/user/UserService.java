@@ -22,6 +22,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.multipart.MultipartFile;
+import java.time.LocalDateTime;
 import java.util.Optional;
 
 import java.io.IOException;
@@ -89,6 +90,8 @@ public class UserService implements IUserService {
                 .isInstructorVerified(false)
                 .status(UserStatus.ACTIVE)
                 .gender(request.gender())
+                .phoneNumber(request.phoneNumber())
+                .bio(request.bio())
                 .cvFileKey(request.cvFileKey())
                 .cvUrl(request.cvFileKey() != null ? s3CdnUrl + "/" + request.cvFileKey() : null)
                 .build());
@@ -103,6 +106,7 @@ public class UserService implements IUserService {
     public void verifyInstructor(String id) {
         User user = getOrThrowByUserId(id);
         user.setIsInstructorVerified(true);
+        user.setInstructorVerifiedAt(LocalDateTime.now());
         userRepository.save(user);
         userEventProducer.sendInstructorVerifiedEmail(user);
     }
@@ -156,6 +160,14 @@ public class UserService implements IUserService {
         userMapper.partialUpdate(existingUser, dto);
         User user = userRepository.save(existingUser);
         return userMapper.toDto(user);
+    }
+
+    @Override
+    @Transactional
+    public void updateLastAccess(String userId) {
+        User user = getOrThrowByUserId(userId);
+        user.setLastAccessAt(LocalDateTime.now());
+        userRepository.save(user);
     }
 
     @Override

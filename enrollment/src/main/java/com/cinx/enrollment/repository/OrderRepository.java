@@ -27,4 +27,10 @@ public interface OrderRepository extends JpaRepository<Order, String> {
 
     @Query("SELECT COUNT(o) FROM Order o WHERE o.status = :status AND o.orderDate BETWEEN :start AND :end")
     Long countOrdersBetween(OrderStatus status, LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT COALESCE(SUM(o.totalPrice - o.discounted), 0) FROM Order o WHERE o.status = :status AND o.userId = :userId")
+    Long sumRevenueByUserId(OrderStatus status, String userId);
+
+    @Query("SELECT COUNT(o) FROM Order o WHERE o.status = :status AND o.userId = :userId")
+    Long countOrdersByUserId(OrderStatus status, String userId);
 }

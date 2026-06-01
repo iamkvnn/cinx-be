@@ -19,6 +19,7 @@ public interface IUserService {
     void rejectInstructor(String id, String reason);
     void toggleBan(String id);
     UserDto updateProfile(String id, UpdateProfileRequest dto);
+    void updateLastAccess(String userId);
 
     List<UserDto> findByIds(List<String> ids);
     

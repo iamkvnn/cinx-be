@@ -4,10 +4,6 @@ import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.constraints.NotBlank;
 
 public record SubmitVideoQuestionRequest(
-        @Schema(example = "vlesson_123")
-        @NotBlank(message = "videoLessonId must not be blank")
-        String videoLessonId,
-
         @Schema(example = "vass_123")
         @NotBlank(message = "videoAssessmentId must not be blank")
         String videoAssessmentId,

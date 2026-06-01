@@ -19,51 +19,60 @@ import java.util.List;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/api/v1/learning/video-tracking")
+@RequestMapping("/api/v1/learning")
 public class VideoTrackingController {
     private final IVideoService videoService;
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking")
     public ResponseEntity<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> getVideoLessonTrackingHistories(
-            @RequestParam String videoLessonId,
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(videoLessonId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(courseId, lessonId, page, size)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/history")
-    public ResponseEntity<ApiResponse<VideoLessonTrackingHistoryResponse>> getVideoLessonTrackingHistory(@RequestParam String videoLessonId) {
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking/history")
+    public ResponseEntity<ApiResponse<VideoLessonTrackingHistoryResponse>> getVideoLessonTrackingHistory(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
         String userId = AuthenticationUtil.extractUserId();
-        return ResponseEntity.ok(new ApiResponse<>(true, "", videoService.getVideoLessonTrackingHistory(userId, videoLessonId)));
+        return ResponseEntity.ok(new ApiResponse<>(true, "", videoService.getVideoLessonTrackingHistory(courseId, userId, lessonId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/video-lessons/{videoLessonId}/submissions")
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking/submissions")
     public ResponseEntity<ApiResponse<List<InVideoAssessmentSubmissionResponse>>> getVideoQuestionSubmissions(
-            @PathVariable String videoLessonId) {
+            @PathVariable String courseId,
+            @PathVariable String lessonId) {
         String userId = AuthenticationUtil.extractUserId();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Submissions fetched successfully", videoService.getVideoQuestionSubmissions(userId, videoLessonId)));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Submissions fetched successfully", videoService.getVideoQuestionSubmissions(courseId, userId, lessonId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping
+    @PostMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking")
     public ResponseEntity<ApiResponse<?>> trackVideoProgress(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
             @RequestBody TrackingVideoLessonRequest request) {
         String userId = AuthenticationUtil.extractUserId();
-        videoService.trackVideoProgress(userId, request);
+        videoService.trackVideoProgress(courseId, lessonId, userId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Video progress tracked successfully", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PostMapping("/questions/submit")
+    @PostMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking/questions/submit")
     public ResponseEntity<ApiResponse<?>> submitVideoQuestionAnswer(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
             @RequestBody SubmitVideoQuestionRequest request) {
         String userId = AuthenticationUtil.extractUserId();
-        videoService.submitVideoQuestionAnswer(userId, request);
+        videoService.submitVideoQuestionAnswer(courseId, lessonId, userId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Answer submitted successfully", null));
     }
 }

@@ -82,6 +82,7 @@ public class AuthenticationService implements IAuthenticationService {
             throw new BadRequestException("Instructor account is not verified by admin");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
+        recordLastAccess(user.getId());
         return generateTokens(payload);
     }
 
@@ -95,7 +96,7 @@ public class AuthenticationService implements IAuthenticationService {
         if (user.getStatus().equals(UserStatus.BANNED)) {
             throw new BadRequestException("User account is banned");
         }
-        
+        recordLastAccess(user.getId());
         return generateTokens(new JWTPayload(user.getId(), user.getRole().name()));
     }
 
@@ -152,11 +153,20 @@ public class AuthenticationService implements IAuthenticationService {
             if (user.getStatus().equals(UserStatus.BANNED)) {
                 throw new BadRequestException("User account is banned");
             }
+            recordLastAccess(user.getId());
             JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
             return generateTokens(payload);
         }
         catch (JOSEException | ParseException e) {
             throw new RuntimeException(e);
+        }
+    }
+
+    private void recordLastAccess(String userId) {
+        try {
+            userProfileService.updateLastAccess(userId);
+        } catch (Exception ignored) {
+            // Login must not fail if the profile service is temporarily unavailable.
         }
     }
 }

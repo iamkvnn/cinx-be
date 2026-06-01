@@ -2,9 +2,11 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PresignedUrlResponse;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateSubtitleTrackRequest;
 import com.cinx.course.dto.request.UpdateSubtitleTrackRequest;
 import com.cinx.course.dto.response.SubtitleTrackResponse;
+import com.cinx.course.service.lesson.ILessonService;
 import com.cinx.course.service.subtitle.ISubtitleTrackService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -24,14 +26,17 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/lessons/{lessonId}/videos/subtitles")
+@RequestMapping("/api/v1/courses/{courseId}/lessons/{lessonId}/videos/subtitles")
 @RequiredArgsConstructor
 public class SubtitleTrackController {
     private final ISubtitleTrackService subtitleTrackService;
 
     @GetMapping
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    public ResponseEntity<ApiResponse<List<SubtitleTrackResponse>>> getSubtitles(@PathVariable String lessonId) {
+    public ResponseEntity<ApiResponse<List<SubtitleTrackResponse>>> getSubtitles(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
         return ResponseEntity.ok(ApiResponse.success(
                 "Subtitles fetched successfully",
                 subtitleTrackService.getSubtitlesByLessonId(lessonId)
@@ -41,6 +46,7 @@ public class SubtitleTrackController {
     @GetMapping("/presigned-url")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<PresignedUrlResponse>> getSubtitlePresignedUrl(
+            @PathVariable String courseId,
             @PathVariable String lessonId,
             @RequestParam String fileName,
             @RequestParam String contentType,
@@ -55,6 +61,7 @@ public class SubtitleTrackController {
     @PostMapping
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<SubtitleTrackResponse>> createSubtitle(
+            @PathVariable String courseId,
             @PathVariable String lessonId,
             @RequestBody @Valid CreateSubtitleTrackRequest request
     ) {
@@ -67,6 +74,7 @@ public class SubtitleTrackController {
     @PutMapping("/{subtitleId}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<SubtitleTrackResponse>> updateSubtitle(
+            @PathVariable String courseId,
             @PathVariable String lessonId,
             @PathVariable String subtitleId,
             @RequestBody @Valid UpdateSubtitleTrackRequest request
@@ -80,6 +88,7 @@ public class SubtitleTrackController {
     @DeleteMapping("/{subtitleId}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<Void>> deleteSubtitle(
+            @PathVariable String courseId,
             @PathVariable String lessonId,
             @PathVariable String subtitleId
     ) {

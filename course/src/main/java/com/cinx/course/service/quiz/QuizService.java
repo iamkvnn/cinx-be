@@ -39,7 +39,8 @@ public class QuizService implements IQuizService {
 
     @Override
     @Transactional(readOnly = true)
-    public QuizLessonResponse getQuizByLessonId(String lessonId) {
+    public QuizLessonResponse getQuizByLessonId(String courseId, String lessonId) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         return quizLessonRepository.findByLessonId(lessonId)
                 .map(quizMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Quiz not found for lessonId: " + lessonId));
@@ -47,7 +48,8 @@ public class QuizService implements IQuizService {
 
     @Transactional
     @Override
-    public void createQuiz(String lessonId, CreateQuizLessonRequest request) {
+    public void createQuiz(String courseId, String lessonId, CreateQuizLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         if (request.getQuestions().size() < request.getNumberOfQuestionPerQuizSession()) {
             throw new BadRequestException(
                     "Number of questions must be >= numberOfQuestionPerQuizSession");
@@ -66,7 +68,8 @@ public class QuizService implements IQuizService {
 
     @Transactional
     @Override
-    public void updateQuiz(String lessonId, UpdateQuizLessonRequest request) {
+    public void updateQuiz(String courseId, String lessonId, UpdateQuizLessonRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         QuizLesson existing = getOrThrow(lessonId);
 
         boolean scoringModeChanged = request.getScoringMode() != null
@@ -93,7 +96,8 @@ public class QuizService implements IQuizService {
 
     @Transactional
     @Override
-    public void syncQuiz(String lessonId, SyncQuizRequest request) {
+    public void syncQuiz(String courseId, String lessonId, SyncQuizRequest request) {
+        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         QuizLesson existing = getOrThrow(lessonId);
 
         if (Boolean.TRUE.equals(request.triggerRegrade())) {

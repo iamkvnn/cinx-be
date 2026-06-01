@@ -16,40 +16,47 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/v1/video-notes")
+@RequestMapping("/api/v1/learning")
 @RequiredArgsConstructor
 public class VideoNoteController {
     private final IVideoNoteService videoNoteService;
 
-    @PostMapping
+    @PostMapping("/courses/{courseId}/lessons/{lessonId}/video-notes")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    public ResponseEntity<ApiResponse<VideoNoteDto>> createNote(@Valid @RequestBody CreateVideoNoteRequest request) {
+    public ResponseEntity<ApiResponse<VideoNoteDto>> createNote(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @Valid @RequestBody CreateVideoNoteRequest request
+    ) {
         String userId = AuthenticationUtil.extractUserId();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Video note created successfully", videoNoteService.createNote(userId, request)));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Video note created successfully", videoNoteService.createNote(courseId, lessonId, userId, request)));
     }
 
-    @GetMapping("/lessons/{lessonId}")
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/video-notes")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    public ResponseEntity<ApiResponse<List<VideoNoteDto>>> getNotesByLesson(@PathVariable String lessonId) {
+    public ResponseEntity<ApiResponse<List<VideoNoteDto>>> getNotesByLesson(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
         String userId = AuthenticationUtil.extractUserId();
-        return ResponseEntity.ok(new ApiResponse<>(true, "Video notes fetched successfully", videoNoteService.getNotesByLesson(userId, lessonId)));
+        return ResponseEntity.ok(new ApiResponse<>(true, "Video notes fetched successfully", videoNoteService.getNotesByLesson(courseId, userId, lessonId)));
     }
 
-    @GetMapping("/courses/{courseId}")
+    @GetMapping("/courses/{courseId}/video-notes")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<List<VideoNoteDto>>> getNotesByCourse(@PathVariable String courseId) {
         String userId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "Video notes fetched successfully", videoNoteService.getNotesByCourse(userId, courseId)));
     }
 
-    @PutMapping("/{noteId}")
+    @PutMapping("/video-notes/{noteId}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<VideoNoteDto>> updateNote(@PathVariable String noteId, @Valid @RequestBody UpdateVideoNoteRequest request) {
         String userId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "Video note updated successfully", videoNoteService.updateNote(userId, noteId, request)));
     }
 
-    @DeleteMapping("/{noteId}")
+    @DeleteMapping("/video-notes/{noteId}")
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     public ResponseEntity<ApiResponse<Void>> deleteNote(@PathVariable String noteId) {
         String userId = AuthenticationUtil.extractUserId();

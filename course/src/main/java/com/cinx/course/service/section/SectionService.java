@@ -187,7 +187,7 @@ public class SectionService implements ISectionService {
             return ORDER_STEP;
         }
         if (previous == null) {
-            return next != null && next > 1 ? next / 2 : null;
+            return next > 1 ? next / 2 : null;
         }
         if (next == null) {
             return previous + ORDER_STEP;
