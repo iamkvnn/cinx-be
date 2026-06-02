@@ -7,6 +7,7 @@ import com.cinx.enrollment.dto.response.InstructorRevenueResponse;
 import com.cinx.enrollment.dto.response.InstructorStatisticsResponse;
 import com.cinx.enrollment.dto.response.CourseStatisticsResponse;
 import com.cinx.enrollment.service.statistics.IStatisticsService;
+import com.cinx.enrollment.service.statistics.StatisticsGroupBy;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -39,93 +40,55 @@ public class StatisticsController {
         );
     }
 
-    @Operation(summary = "Get yearly instructor statistics", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/instructor/overview/yearly")
-    public ResponseEntity<ApiResponse<InstructorStatisticsResponse>> getInstructorYearlyOverview(
-            @RequestParam(required = false) Integer year
-    ) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Instructor yearly statistics fetched successfully", statisticsService.getInstructorYearlyOverview(year))
-        );
-    }
-
-    @Operation(summary = "Get monthly instructor statistics", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/instructor/overview/monthly")
-    public ResponseEntity<ApiResponse<InstructorStatisticsResponse>> getInstructorMonthlyOverview(
-            @RequestParam Integer year,
-            @RequestParam Integer month
-    ) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Instructor monthly statistics fetched successfully", statisticsService.getInstructorMonthlyOverview(year, month))
-        );
-    }
-
-    @Operation(summary = "Get range instructor statistics", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/instructor/overview/range")
-    public ResponseEntity<ApiResponse<InstructorStatisticsResponse>> getInstructorRangeOverview(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
-    ) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Instructor range statistics fetched successfully", statisticsService.getInstructorRangeOverview(startDate, endDate))
-        );
-    }
-
-    @Operation(summary = "Get course specific statistics", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/instructor/courses/{courseId}")
-    public ResponseEntity<ApiResponse<CourseStatisticsResponse>> getCourseStatistics(
-            @PathVariable String courseId,
-            @RequestParam(required = false) Integer year,
-            @RequestParam(required = false) Integer month,
+    @Operation(summary = "Get instructor statistics", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/instructor/overview")
+    public ResponseEntity<ApiResponse<InstructorStatisticsResponse>> getInstructorOverview(
+            @RequestParam(required = false) StatisticsGroupBy groupBy,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Course statistics fetched successfully", statisticsService.getCourseStatistics(courseId, year, month, startDate, endDate))
+                new ApiResponse<>(true, "Instructor statistics fetched successfully", statisticsService.getInstructorOverview(groupBy, startDate, endDate))
         );
     }
 
-    @Operation(summary = "Get admin yearly overview", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/admin/overview/yearly")
-    public ResponseEntity<ApiResponse<AdminOverviewResponse>> getAdminYearlyOverview(
-            @RequestParam(required = false) Integer year
+    @Operation(summary = "Get course specific statistics overview", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/instructor/courses/{courseId}/overview")
+    public ResponseEntity<ApiResponse<CourseStatisticsResponse>> getCourseStatisticsOverview(
+            @PathVariable String courseId,
+            @RequestParam(required = false) StatisticsGroupBy groupBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Admin yearly overview fetched successfully", statisticsService.getAdminYearlyOverview(year))
+                new ApiResponse<>(true, "Course statistics fetched successfully", statisticsService.getCourseStatistics(courseId, groupBy, startDate, endDate))
         );
     }
 
-    @Operation(summary = "Get admin monthly overview", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/admin/overview/monthly")
-    public ResponseEntity<ApiResponse<AdminOverviewResponse>> getAdminMonthlyOverview(
-            @RequestParam Integer year,
-            @RequestParam Integer month
+    @Operation(summary = "Get admin overview", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/admin/overview")
+    public ResponseEntity<ApiResponse<AdminOverviewResponse>> getAdminOverview(
+            @RequestParam(required = false) StatisticsGroupBy groupBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Admin monthly overview fetched successfully", statisticsService.getAdminMonthlyOverview(year, month))
+                new ApiResponse<>(true, "Admin overview fetched successfully", statisticsService.getAdminOverview(groupBy, startDate, endDate))
         );
     }
 
-    @Operation(summary = "Get admin range overview", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/admin/overview/range")
-    public ResponseEntity<ApiResponse<AdminOverviewResponse>> getAdminRangeOverview(
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
-    ) {
-        return ResponseEntity.ok(
-                new ApiResponse<>(true, "Admin range overview fetched successfully", statisticsService.getAdminRangeOverview(startDate, endDate))
-        );
-    }
-
-    @Operation(summary = "Get admin instructor revenue", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/admin/instructors/{instructorId}/revenue")
+    @Operation(summary = "Get admin instructor revenue series", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/admin/instructors/{instructorId}/revenue/series")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<InstructorRevenueResponse>> getInstructorRevenue(
+    public ResponseEntity<ApiResponse<InstructorRevenueResponse>> getInstructorRevenueSeries(
             @PathVariable String instructorId,
-            @RequestParam(defaultValue = "6") Integer months
+            @RequestParam(required = false) StatisticsGroupBy groupBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Instructor revenue fetched successfully", statisticsService.getInstructorRevenue(instructorId, months))
+                new ApiResponse<>(true, "Instructor revenue fetched successfully", statisticsService.getInstructorRevenueSeries(instructorId, groupBy, startDate, endDate))
         );
     }
+
 }

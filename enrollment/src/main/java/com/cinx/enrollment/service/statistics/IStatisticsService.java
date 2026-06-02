@@ -11,15 +11,11 @@ import java.time.LocalDate;
 public interface IStatisticsService {
     DashboardMetricsResponse getDashboardMetrics(Integer year, Integer month);
 
-    InstructorStatisticsResponse getInstructorYearlyOverview(Integer year);
-    InstructorStatisticsResponse getInstructorMonthlyOverview(Integer year, Integer month);
-    InstructorStatisticsResponse getInstructorRangeOverview(LocalDate startDate, LocalDate endDate);
+    InstructorStatisticsResponse getInstructorOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
-    AdminOverviewResponse getAdminYearlyOverview(Integer year);
-    AdminOverviewResponse getAdminMonthlyOverview(Integer year, Integer month);
-    AdminOverviewResponse getAdminRangeOverview(LocalDate startDate, LocalDate endDate);
+    AdminOverviewResponse getAdminOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
-    CourseStatisticsResponse getCourseStatistics(String courseId, Integer year, Integer month, LocalDate startDate, LocalDate endDate);
+    CourseStatisticsResponse getCourseStatistics(String courseId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
-    InstructorRevenueResponse getInstructorRevenue(String instructorId, Integer months);
+    InstructorRevenueResponse getInstructorRevenueSeries(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 }
