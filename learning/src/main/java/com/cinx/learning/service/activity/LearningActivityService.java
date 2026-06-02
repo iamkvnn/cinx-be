@@ -5,7 +5,7 @@ import com.cinx.learning.dto.request.LearningActivityRequest;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.CourseProgressSummaryResponse;
 import com.cinx.learning.dto.response.CoursesProgressSummaryResponse;
-import com.cinx.learning.dto.response.LearningActivityByMonthResponse;
+import com.cinx.learning.dto.response.LearningActivityByTimeResponse;
 import com.cinx.learning.dto.response.UserLearningSummaryResponse;
 import com.cinx.learning.mapper.CourseProgressMapper;
 import com.cinx.learning.model.CourseProgress;
@@ -18,8 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.YearMonth;
-import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -33,6 +31,7 @@ public class LearningActivityService implements ILearningActivityService {
     private final LearningActivityDailyRepository learningActivityDailyRepository;
     private final CourseProgressRepository courseProgressRepository;
     private final CourseProgressMapper courseProgressMapper;
+    private final LearningActivityRangeResolver activityRangeResolver = new LearningActivityRangeResolver();
 
     @Override
     @Transactional
@@ -103,26 +102,14 @@ public class LearningActivityService implements ILearningActivityService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<LearningActivityByMonthResponse> getUserActivityByMonth(String userId, Integer months) {
-        int monthCount = months != null ? months : 6;
-        if (monthCount <= 0) {
-            throw new BadRequestException("Months must be greater than 0");
-        }
-        YearMonth endMonth = YearMonth.now();
-        YearMonth startMonth = endMonth.minusMonths(monthCount - 1L);
-        LocalDate startDate = startMonth.atDay(1);
-        LocalDate endDate = endMonth.atEndOfMonth();
+    public List<LearningActivityByTimeResponse> getUserActivitySeries(String userId, LearningActivityGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
+        LearningActivityDateRange range = activityRangeResolver.resolve(groupBy, startDate, endDate);
+        List<Object[]> rows = range.groupByDay()
+                ? learningActivityDailyRepository.aggregateUserActivityByDay(userId, range.startDate(), range.endDate())
+                : learningActivityDailyRepository.aggregateUserActivityByMonth(userId, range.startDate(), range.endDate());
 
-        Map<String, Long> activityByMonth = new LinkedHashMap<>();
-        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM");
-        for (int i = 0; i < monthCount; i++) {
-            activityByMonth.put(startMonth.plusMonths(i).format(formatter), 0L);
-        }
-        learningActivityDailyRepository.aggregateUserActivityByMonth(userId, startDate, endDate)
-                .forEach(row -> activityByMonth.put((String) row[0], ((Number) row[1]).longValue()));
-
-        return activityByMonth.entrySet().stream()
-                .map(entry -> new LearningActivityByMonthResponse(entry.getKey(), entry.getValue()))
+        return fillActivityByLabel(range, rows).entrySet().stream()
+                .map(entry -> new LearningActivityByTimeResponse(entry.getKey(), entry.getValue()))
                 .toList();
     }
 
@@ -169,5 +156,12 @@ public class LearningActivityService implements ILearningActivityService {
         }
         int completedItems = progress.getCompletedItems() != null ? progress.getCompletedItems() : 0;
         return completedItems * 100.0 / progress.getTotalItems();
+    }
+
+    private Map<String, Long> fillActivityByLabel(LearningActivityDateRange range, List<Object[]> rows) {
+        Map<String, Long> activityByLabel = new LinkedHashMap<>();
+        range.bucketLabels().forEach(label -> activityByLabel.put(label, 0L));
+        rows.forEach(row -> activityByLabel.put((String) row[0], ((Number) row[1]).longValue()));
+        return activityByLabel;
     }
 }

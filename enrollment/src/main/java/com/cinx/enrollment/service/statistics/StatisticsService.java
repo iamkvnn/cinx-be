@@ -17,9 +17,6 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.YearMonth;
 import java.time.format.DateTimeFormatter;
-import java.time.temporal.ChronoUnit;
-import com.cinx.common.exception.BadRequestException;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -34,13 +31,14 @@ public class StatisticsService implements IStatisticsService {
     private final EnrolledCourseRepository enrolledCourseRepository;
     private final UserService userService;
     private final CourseService courseService;
+    private final StatisticsRangeResolver statisticsRangeResolver = new StatisticsRangeResolver();
 
     @Value("${platform.fee.percentage:20}")
     private int platformFeePercentage;
 
     @Override
     public DashboardMetricsResponse getDashboardMetrics(Integer year, Integer month) {
-        YearMonth targetMonth = (year != null && month != null) ? YearMonth.of(year, month) : YearMonth.now();
+        YearMonth targetMonth = statisticsRangeResolver.resolveDashboardMonth(year, month);
         LocalDateTime startOfMonth = targetMonth.atDay(1).atStartOfDay();
         LocalDateTime endOfMonth = targetMonth.atEndOfMonth().atTime(23, 59, 59, 999999999);
 
@@ -91,100 +89,91 @@ public class StatisticsService implements IStatisticsService {
     }
 
     @Override
-    public InstructorStatisticsResponse getInstructorYearlyOverview(Integer year) {
-        return buildInstructorStatistics(year, null, null, null);
+    public InstructorStatisticsResponse getInstructorOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
+        return buildInstructorStatistics(statisticsRangeResolver.resolve(groupBy, startDate, endDate));
     }
 
-    @Override
-    public InstructorStatisticsResponse getInstructorMonthlyOverview(Integer year, Integer month) {
-        if (year == null || month == null) {
-            throw new BadRequestException("Year and month are required");
-        }
-        return buildInstructorStatistics(year, month, null, null);
-    }
-
-    @Override
-    public InstructorStatisticsResponse getInstructorRangeOverview(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new BadRequestException("Start date and end date are required");
-        }
-        return buildInstructorStatistics(null, null, startDate, endDate);
-    }
-
-    private InstructorStatisticsResponse buildInstructorStatistics(Integer year, Integer month, LocalDate startDate, LocalDate endDate) {
+    private InstructorStatisticsResponse buildInstructorStatistics(StatisticsDateRange range) {
         String instructorId = AuthenticationUtil.extractUserId();
-        DateRangeResult range = resolveDateRange(year, month, startDate, endDate);
 
-        Long totalGross = orderItemRepository.sumGrossRevenueByInstructor(instructorId, range.start, range.end);
+        Long totalGross = orderItemRepository.sumGrossRevenueByInstructor(instructorId, range.start(), range.end());
         if (totalGross == null) totalGross = 0L;
         Long totalNet = calculateNetRevenue(totalGross);
 
-        List<CourseStats> topCourses = orderItemRepository.findTopCoursesByRevenueForInstructor(
-                instructorId, range.start, range.end, PageRequest.of(0, 5)).getContent();
+        List<CourseStats> topCoursesByRevenue = orderItemRepository.findTopCoursesByRevenueForInstructor(
+                instructorId, range.start(), range.end(), PageRequest.of(0, 5)).getContent();
+        List<String> courseIds = orderItemRepository.aggregateCourseRevenueByInstructor(OrderStatus.PAID, instructorId, range.start(), range.end())
+                .stream()
+                .map(row -> (String) row[0])
+                .toList();
+        Long enrollmentsInRange = courseIds.isEmpty() ? 0L : enrolledCourseRepository.countEnrollmentsByCourseIdsBetween(courseIds, range.start(), range.end());
+        Long distinctLearnersInRange = courseIds.isEmpty() ? 0L : enrolledCourseRepository.countDistinctLearnersByCourseIdsBetween(courseIds, range.start(), range.end());
+        List<CourseStats> topCoursesByEnrollment = courseIds.isEmpty()
+                ? List.of()
+                : toCourseStats(enrolledCourseRepository.findTopEnrolledCoursesByCourseIds(courseIds, range.start(), range.end(), PageRequest.of(0, 5)));
 
-        List<Object[]> timeStats = range.groupByDay ?
-                orderItemRepository.aggregateRevenueByDayForInstructor(instructorId, range.start, range.end) :
-                orderItemRepository.aggregateRevenueByMonthForInstructor(instructorId, range.start, range.end);
+        List<Object[]> timeStats = range.groupByDay() ?
+                orderItemRepository.aggregateRevenueByDayForInstructor(instructorId, range.start(), range.end()) :
+                orderItemRepository.aggregateRevenueByMonthForInstructor(instructorId, range.start(), range.end());
 
-        List<RevenueByTimeResponse> revenueByTime = timeStats.stream().map(row -> {
-            String timeLabel = (String) row[0];
-            Long gross = ((Number) row[1]).longValue();
-            return new RevenueByTimeResponse(timeLabel, gross, calculateNetRevenue(gross));
-        }).collect(Collectors.toList());
+        List<RevenueByTimeResponse> revenueByTime = fillRevenueByTime(range, timeStats, false);
+        List<Object[]> enrollmentRows = courseIds.isEmpty()
+                ? List.of()
+                : range.groupByDay()
+                        ? enrolledCourseRepository.aggregateEnrollmentsByCourseIdsAndDay(courseIds, range.start(), range.end())
+                        : enrolledCourseRepository.aggregateEnrollmentsByCourseIdsAndMonth(courseIds, range.start(), range.end());
+        List<EnrollmentByTimeResponse> enrollmentsByTime = fillEnrollmentsByTime(range, enrollmentRows);
 
-        return new InstructorStatisticsResponse(totalGross, totalNet, revenueByTime, topCourses);
+        return new InstructorStatisticsResponse(
+                totalGross,
+                totalNet,
+                enrollmentsInRange,
+                distinctLearnersInRange,
+                revenueByTime,
+                enrollmentsByTime,
+                topCoursesByRevenue,
+                topCoursesByEnrollment
+        );
     }
 
     @Override
-    public CourseStatisticsResponse getCourseStatistics(String courseId, Integer year, Integer month, LocalDate startDate, LocalDate endDate) {
+    public CourseStatisticsResponse getCourseStatistics(String courseId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
         String instructorId = AuthenticationUtil.extractUserId();
-        DateRangeResult range = resolveDateRange(year, month, startDate, endDate);
+        StatisticsDateRange range = statisticsRangeResolver.resolve(groupBy, startDate, endDate);
+        return buildCourseStatistics(instructorId, courseId, range);
+    }
 
-        Long totalGross = orderItemRepository.sumGrossRevenueByCourseId(instructorId, courseId, range.start, range.end);
+    private CourseStatisticsResponse buildCourseStatistics(String instructorId, String courseId, StatisticsDateRange range) {
+        Long totalGross = orderItemRepository.sumGrossRevenueByCourseId(instructorId, courseId, range.start(), range.end());
         if (totalGross == null) totalGross = 0L;
         Long totalNet = calculateNetRevenue(totalGross);
 
-        List<Object[]> timeStats = range.groupByDay ?
-                orderItemRepository.aggregateRevenueByDayForCourse(instructorId, courseId, range.start, range.end) :
-                orderItemRepository.aggregateRevenueByMonthForCourse(instructorId, courseId, range.start, range.end);
+        List<Object[]> timeStats = range.groupByDay() ?
+                orderItemRepository.aggregateRevenueByDayForCourse(instructorId, courseId, range.start(), range.end()) :
+                orderItemRepository.aggregateRevenueByMonthForCourse(instructorId, courseId, range.start(), range.end());
 
-        List<RevenueByTimeResponse> revenueByTime = timeStats.stream().map(row -> {
-            String timeLabel = (String) row[0];
-            Long gross = ((Number) row[1]).longValue();
-            return new RevenueByTimeResponse(timeLabel, gross, calculateNetRevenue(gross));
-        }).collect(Collectors.toList());
+        List<RevenueByTimeResponse> revenueByTime = fillRevenueByTime(range, timeStats, false);
 
         return new CourseStatisticsResponse(totalGross, totalNet, revenueByTime);
     }
 
     @Override
-    public InstructorRevenueResponse getInstructorRevenue(String instructorId, Integer months) {
-        int monthCount = months != null ? months : 6;
-        if (monthCount <= 0) {
-            throw new BadRequestException("Months must be greater than 0");
-        }
+    public InstructorRevenueResponse getInstructorRevenueSeries(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
+        StatisticsDateRange range = statisticsRangeResolver.resolve(groupBy, startDate, endDate);
+        return buildInstructorRevenue(instructorId, range);
+    }
 
-        YearMonth endMonth = YearMonth.now();
-        YearMonth startMonth = endMonth.minusMonths(monthCount - 1L);
-        LocalDateTime start = startMonth.atDay(1).atStartOfDay();
-        LocalDateTime end = endMonth.atEndOfMonth().atTime(23, 59, 59, 999999999);
-
-        Long totalRevenue = orderItemRepository.sumGrossRevenueByInstructor(instructorId, start, end);
+    private InstructorRevenueResponse buildInstructorRevenue(String instructorId, StatisticsDateRange range) {
+        Long totalRevenue = orderItemRepository.sumGrossRevenueByInstructor(instructorId, range.start(), range.end());
         if (totalRevenue == null) totalRevenue = 0L;
 
-        Map<String, Long> revenueByLabel = new LinkedHashMap<>();
-        for (int i = 0; i < monthCount; i++) {
-            revenueByLabel.put(startMonth.plusMonths(i).format(DateTimeFormatter.ofPattern("yyyy-MM")), 0L);
-        }
-        orderItemRepository.aggregateRevenueByMonthForInstructor(instructorId, start, end)
-                .forEach(row -> revenueByLabel.put((String) row[0], ((Number) row[1]).longValue()));
-
-        List<RevenueByTimeResponse> revenueByMonth = revenueByLabel.entrySet().stream()
-                .map(entry -> new RevenueByTimeResponse(entry.getKey(), entry.getValue(), calculateNetRevenue(entry.getValue())))
-                .toList();
+        List<Object[]> timeStats = range.groupByDay()
+                ? orderItemRepository.aggregateRevenueByDayForInstructor(instructorId, range.start(), range.end())
+                : orderItemRepository.aggregateRevenueByMonthForInstructor(instructorId, range.start(), range.end());
+        List<RevenueByTimeResponse> revenueByTime = fillRevenueByTime(range, timeStats, false);
 
         List<CourseRevenueResponse> courseRevenues = orderItemRepository
-                .aggregateCourseRevenueByInstructor(OrderStatus.PAID, instructorId, start, end)
+                .aggregateCourseRevenueByInstructor(OrderStatus.PAID, instructorId, range.start(), range.end())
                 .stream()
                 .map(row -> new CourseRevenueResponse(
                         (String) row[0],
@@ -194,95 +183,82 @@ public class StatisticsService implements IStatisticsService {
                 ))
                 .toList();
 
-        return new InstructorRevenueResponse(totalRevenue, revenueByMonth, courseRevenues);
+        return new InstructorRevenueResponse(totalRevenue, revenueByTime, courseRevenues);
     }
 
     @Override
-    public AdminOverviewResponse getAdminYearlyOverview(Integer year) {
-        return buildAdminStatistics(year, null, null, null);
+    public AdminOverviewResponse getAdminOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
+        return buildAdminStatistics(statisticsRangeResolver.resolve(groupBy, startDate, endDate));
     }
 
-    @Override
-    public AdminOverviewResponse getAdminMonthlyOverview(Integer year, Integer month) {
-        if (year == null || month == null) {
-            throw new BadRequestException("Year and month are required");
-        }
-        return buildAdminStatistics(year, month, null, null);
-    }
-
-    @Override
-    public AdminOverviewResponse getAdminRangeOverview(LocalDate startDate, LocalDate endDate) {
-        if (startDate == null || endDate == null) {
-            throw new BadRequestException("Start date and end date are required");
-        }
-        return buildAdminStatistics(null, null, startDate, endDate);
-    }
-
-    private AdminOverviewResponse buildAdminStatistics(Integer year, Integer month, LocalDate startDate, LocalDate endDate) {
-        DateRangeResult range = resolveDateRange(year, month, startDate, endDate);
-
-        Long totalGross = orderRepository.sumRevenueBetween(OrderStatus.PAID, range.start, range.end);
+    private AdminOverviewResponse buildAdminStatistics(StatisticsDateRange range) {
+        Long totalGross = orderRepository.sumRevenueBetween(OrderStatus.PAID, range.start(), range.end());
         if (totalGross == null) totalGross = 0L;
         
         Long totalPlatformFee = totalGross - calculateNetRevenue(totalGross);
-        Long totalOrders = orderRepository.countOrdersBetween(OrderStatus.PAID, range.start, range.end);
+        Long totalOrders = orderRepository.countOrdersBetween(OrderStatus.PAID, range.start(), range.end());
+        Long enrollmentsInRange = enrolledCourseRepository.countEnrollmentsBetween(range.start(), range.end());
+        Long distinctLearnersInRange = enrolledCourseRepository.countDistinctLearnersBetween(range.start(), range.end());
 
-        List<CourseStats> topCourses = orderItemRepository.findTopCoursesByRevenue(
-                range.start, range.end, PageRequest.of(0, 5)).getContent();
+        List<CourseStats> topCoursesByRevenue = orderItemRepository.findTopCoursesByRevenue(
+                range.start(), range.end(), PageRequest.of(0, 5)).getContent();
+        List<CourseStats> topCoursesByEnrollment = toCourseStats(
+                enrolledCourseRepository.findTopEnrolledCourses(range.start(), range.end(), PageRequest.of(0, 5)));
 
-        List<Object[]> timeStats = range.groupByDay ?
-                orderItemRepository.aggregatePlatformRevenueByDay(range.start, range.end) :
-                orderItemRepository.aggregatePlatformRevenueByMonth(range.start, range.end);
+        List<Object[]> timeStats = range.groupByDay() ?
+                orderItemRepository.aggregatePlatformRevenueByDay(range.start(), range.end()) :
+                orderItemRepository.aggregatePlatformRevenueByMonth(range.start(), range.end());
 
-        List<RevenueByTimeResponse> revenueByTime = timeStats.stream().map(row -> {
-            String timeLabel = (String) row[0];
-            Long gross = ((Number) row[1]).longValue();
-            Long platformFee = gross - calculateNetRevenue(gross); // the net here is the platform's net, which is the fee taken
-            // But we represent 'netRevenue' for the platform as the platform fee. Or keep gross as gross and net as platform fee.
-            return new RevenueByTimeResponse(timeLabel, gross, platformFee);
-        }).collect(Collectors.toList());
+        List<RevenueByTimeResponse> revenueByTime = fillRevenueByTime(range, timeStats, true);
+        List<Object[]> enrollmentRows = range.groupByDay()
+                ? enrolledCourseRepository.aggregateEnrollmentsByDay(range.start(), range.end())
+                : enrolledCourseRepository.aggregateEnrollmentsByMonth(range.start(), range.end());
+        List<EnrollmentByTimeResponse> enrollmentsByTime = fillEnrollmentsByTime(range, enrollmentRows);
 
-        return new AdminOverviewResponse(totalGross, totalPlatformFee, totalOrders, revenueByTime, topCourses);
+        return new AdminOverviewResponse(
+                totalGross,
+                totalPlatformFee,
+                totalOrders,
+                enrollmentsInRange,
+                totalOrders,
+                distinctLearnersInRange,
+                revenueByTime,
+                enrollmentsByTime,
+                topCoursesByRevenue,
+                topCoursesByEnrollment
+        );
     }
 
     private Long calculateNetRevenue(Long grossRevenue) {
         return grossRevenue * (100 - platformFeePercentage) / 100;
     }
 
-    private DateRangeResult resolveDateRange(Integer year, Integer month, LocalDate startDate, LocalDate endDate) {
-        LocalDateTime start;
-        LocalDateTime end;
-        boolean groupByDay;
+    private List<RevenueByTimeResponse> fillRevenueByTime(StatisticsDateRange range, List<Object[]> rows, boolean platformRevenue) {
+        Map<String, Long> revenueByLabel = new LinkedHashMap<>();
+        range.bucketLabels().forEach(label -> revenueByLabel.put(label, 0L));
+        rows.forEach(row -> revenueByLabel.put((String) row[0], ((Number) row[1]).longValue()));
 
-        if (startDate != null && endDate != null) {
-            if (startDate.isAfter(endDate)) {
-                throw new BadRequestException("Start date cannot be after end date");
-            }
-            if (ChronoUnit.DAYS.between(startDate, endDate) > 31) {
-                throw new BadRequestException("Date range cannot exceed 31 days");
-            }
-            start = startDate.atStartOfDay();
-            end = endDate.atTime(23, 59, 59, 999999999);
-            groupByDay = true;
-        } else if (year != null) {
-            if (month != null) {
-                YearMonth targetMonth = YearMonth.of(year, month);
-                start = targetMonth.atDay(1).atStartOfDay();
-                end = targetMonth.atEndOfMonth().atTime(23, 59, 59, 999999999);
-                groupByDay = true;
-            } else {
-                start = LocalDateTime.of(year, 1, 1, 0, 0);
-                end = LocalDateTime.of(year, 12, 31, 23, 59, 59, 999999999);
-                groupByDay = false; // Group by month for entire year overview
-            }
-        } else {
-            // Default to all time
-            start = LocalDateTime.of(1970, 1, 1, 0, 0);
-            end = LocalDateTime.of(2099, 12, 31, 23, 59, 59, 999999999);
-            groupByDay = false;
-        }
-        return new DateRangeResult(start, end, groupByDay);
+        return revenueByLabel.entrySet().stream()
+                .map(entry -> {
+                    Long gross = entry.getValue();
+                    Long net = platformRevenue ? gross - calculateNetRevenue(gross) : calculateNetRevenue(gross);
+                    return new RevenueByTimeResponse(entry.getKey(), gross, net);
+                })
+                .toList();
     }
 
-    private record DateRangeResult(LocalDateTime start, LocalDateTime end, boolean groupByDay) {}
+    private List<EnrollmentByTimeResponse> fillEnrollmentsByTime(StatisticsDateRange range, List<Object[]> rows) {
+        Map<String, Long> enrollmentsByLabel = new LinkedHashMap<>();
+        range.bucketLabels().forEach(label -> enrollmentsByLabel.put(label, 0L));
+        rows.forEach(row -> enrollmentsByLabel.put((String) row[0], ((Number) row[1]).longValue()));
+        return enrollmentsByLabel.entrySet().stream()
+                .map(entry -> new EnrollmentByTimeResponse(entry.getKey(), entry.getValue()))
+                .toList();
+    }
+
+    private List<CourseStats> toCourseStats(List<Object[]> rows) {
+        return rows.stream()
+                .map(row -> new CourseStats((String) row[0], null, ((Number) row[1]).longValue()))
+                .toList();
+    }
 }

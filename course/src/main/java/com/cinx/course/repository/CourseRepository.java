@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 public interface CourseRepository extends JpaRepository<Course, String> {
@@ -73,6 +74,70 @@ public interface CourseRepository extends JpaRepository<Course, String> {
 
     long countByInstructorIdAndIsPublishedTrue(String instructorId);
 
+    long countByIsPublishedTrue();
+
     @Query("SELECT AVG(c.rating) FROM Course c WHERE c.instructorId = :instructorId AND c.rating IS NOT NULL")
     Double averageRatingByInstructorId(@Param("instructorId") String instructorId);
+
+    @Query("SELECT COALESCE(SUM(c.enrollmentCount), 0) FROM Course c WHERE c.instructorId = :instructorId")
+    Long sumEnrollmentCountByInstructorId(@Param("instructorId") String instructorId);
+
+    @Query("SELECT COUNT(c) FROM Course c WHERE c.createdAt BETWEEN :start AND :end")
+    long countCreatedCoursesBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("SELECT COUNT(c) FROM Course c WHERE c.instructorId = :instructorId AND c.createdAt BETWEEN :start AND :end")
+    long countCreatedCoursesByInstructorBetween(String instructorId, LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT c.status, COUNT(c)
+        FROM Course c
+        WHERE c.createdAt BETWEEN :start AND :end
+        GROUP BY c.status
+    """)
+    List<Object[]> countCreatedCoursesByStatusBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT c.status, COUNT(c)
+        FROM Course c
+        GROUP BY c.status
+    """)
+    List<Object[]> countCurrentCoursesByStatus();
+
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m-%d'), COUNT(c)
+        FROM Course c
+        WHERE c.createdAt BETWEEN :start AND :end
+        GROUP BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m-%d')
+        ORDER BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m-%d') ASC
+    """)
+    List<Object[]> aggregateCreatedCoursesByDay(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m'), COUNT(c)
+        FROM Course c
+        WHERE c.createdAt BETWEEN :start AND :end
+        GROUP BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m')
+        ORDER BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m') ASC
+    """)
+    List<Object[]> aggregateCreatedCoursesByMonth(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m-%d'), COUNT(c)
+        FROM Course c
+        WHERE c.instructorId = :instructorId
+            AND c.createdAt BETWEEN :start AND :end
+        GROUP BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m-%d')
+        ORDER BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m-%d') ASC
+    """)
+    List<Object[]> aggregateCreatedCoursesByInstructorAndDay(String instructorId, LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m'), COUNT(c)
+        FROM Course c
+        WHERE c.instructorId = :instructorId
+            AND c.createdAt BETWEEN :start AND :end
+        GROUP BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m')
+        ORDER BY FUNCTION('DATE_FORMAT', c.createdAt, '%Y-%m') ASC
+    """)
+    List<Object[]> aggregateCreatedCoursesByInstructorAndMonth(String instructorId, LocalDateTime start, LocalDateTime end);
 }

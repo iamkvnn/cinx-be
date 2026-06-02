@@ -3,12 +3,14 @@ package com.cinx.learning.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.CoursesProgressSummaryResponse;
-import com.cinx.learning.dto.response.LearningActivityByMonthResponse;
+import com.cinx.learning.dto.response.LearningActivityByTimeResponse;
 import com.cinx.learning.dto.response.UserLearningSummaryResponse;
 import com.cinx.learning.service.activity.ILearningActivityService;
+import com.cinx.learning.service.activity.LearningActivityGroupBy;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -50,15 +53,17 @@ public class AdminLearningController {
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/users/{userId}/activity")
-    public ResponseEntity<ApiResponse<List<LearningActivityByMonthResponse>>> getUserActivity(
+    @GetMapping("/users/{userId}/activity/series")
+    public ResponseEntity<ApiResponse<List<LearningActivityByTimeResponse>>> getUserActivitySeries(
             @PathVariable String userId,
-            @RequestParam(defaultValue = "6") Integer months
+            @RequestParam(required = false) LearningActivityGroupBy groupBy,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "User learning activity fetched successfully",
-                learningActivityService.getUserActivityByMonth(userId, months)
+                learningActivityService.getUserActivitySeries(userId, groupBy, startDate, endDate)
         ));
     }
 

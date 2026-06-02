@@ -2,7 +2,7 @@ package com.cinx.learning.service.activity;
 
 import com.cinx.learning.dto.request.LearningActivityRequest;
 import com.cinx.learning.dto.response.CoursesProgressSummaryResponse;
-import com.cinx.learning.dto.response.LearningActivityByMonthResponse;
+import com.cinx.learning.dto.response.LearningActivityByTimeResponse;
 import com.cinx.learning.dto.response.UserLearningSummaryResponse;
 import com.cinx.learning.mapper.CourseProgressMapper;
 import com.cinx.learning.model.CourseProgress;
@@ -23,6 +23,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -68,7 +69,7 @@ class LearningActivityServiceTest {
     }
 
     @Test
-    void getUserActivityByMonthFillsMissingMonthsWithZero() {
+    void getUserActivitySeriesFillsMissingMonthsWithZero() {
         YearMonth endMonth = YearMonth.now();
         YearMonth startMonth = endMonth.minusMonths(2);
         String middleMonth = startMonth.plusMonths(1).format(DateTimeFormatter.ofPattern("yyyy-MM"));
@@ -78,12 +79,53 @@ class LearningActivityServiceTest {
                 endMonth.atEndOfMonth()
         )).thenReturn(List.<Object[]>of(new Object[]{middleMonth, 3600L}));
 
-        List<LearningActivityByMonthResponse> activity = learningActivityService.getUserActivityByMonth("user-1", 3);
+        List<LearningActivityByTimeResponse> activity = learningActivityService.getUserActivitySeries(
+                "user-1",
+                LearningActivityGroupBy.MONTH,
+                startMonth.atDay(1),
+                endMonth.atEndOfMonth()
+        );
 
         assertThat(activity).hasSize(3);
         assertThat(activity.get(0).activeSeconds()).isZero();
-        assertThat(activity.get(1).month()).isEqualTo(middleMonth);
+        assertThat(activity.get(1).timeLabel()).isEqualTo(middleMonth);
         assertThat(activity.get(1).activeSeconds()).isEqualTo(3600L);
+        assertThat(activity.get(2).activeSeconds()).isZero();
+    }
+
+    @Test
+    void getUserActivitySeriesRejectsMoreThanTwelveMonths() {
+        YearMonth endMonth = YearMonth.now();
+        YearMonth startMonth = endMonth.minusMonths(12);
+
+        assertThatThrownBy(() -> learningActivityService.getUserActivitySeries(
+                "user-1",
+                LearningActivityGroupBy.MONTH,
+                startMonth.atDay(1),
+                endMonth.atEndOfMonth()
+        ))
+                .isInstanceOf(com.cinx.common.exception.BadRequestException.class);
+    }
+
+    @Test
+    void getUserActivitySeriesFillsMissingDaysWithZero() {
+        LocalDate endDate = LocalDate.now();
+        LocalDate startDate = endDate.minusDays(2);
+        String middleDay = startDate.plusDays(1).format(DateTimeFormatter.ISO_LOCAL_DATE);
+        when(learningActivityDailyRepository.aggregateUserActivityByDay("user-1", startDate, endDate))
+                .thenReturn(List.<Object[]>of(new Object[]{middleDay, 900L}));
+
+        List<LearningActivityByTimeResponse> activity = learningActivityService.getUserActivitySeries(
+                "user-1",
+                LearningActivityGroupBy.DAY,
+                startDate,
+                endDate
+        );
+
+        assertThat(activity).hasSize(3);
+        assertThat(activity.get(0).activeSeconds()).isZero();
+        assertThat(activity.get(1).timeLabel()).isEqualTo(middleDay);
+        assertThat(activity.get(1).activeSeconds()).isEqualTo(900L);
         assertThat(activity.get(2).activeSeconds()).isZero();
     }
 

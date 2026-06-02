@@ -31,4 +31,39 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     @Query("SELECT COUNT(u) FROM User u WHERE u.createdAt BETWEEN :start AND :end")
     long countUsersBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT u.role, COUNT(u)
+        FROM User u
+        WHERE u.createdAt BETWEEN :start AND :end
+        GROUP BY u.role
+    """)
+    List<Object[]> countUsersByRoleBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT u.isInstructorVerified, COUNT(u)
+        FROM User u
+        WHERE u.role = com.cinx.user.consts.Role.INSTRUCTOR
+            AND u.createdAt BETWEEN :start AND :end
+        GROUP BY u.isInstructorVerified
+    """)
+    List<Object[]> countInstructorsByVerificationStatusBetween(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', u.createdAt, '%Y-%m-%d'), COUNT(u)
+        FROM User u
+        WHERE u.createdAt BETWEEN :start AND :end
+        GROUP BY FUNCTION('DATE_FORMAT', u.createdAt, '%Y-%m-%d')
+        ORDER BY FUNCTION('DATE_FORMAT', u.createdAt, '%Y-%m-%d') ASC
+    """)
+    List<Object[]> aggregateNewUsersByDay(LocalDateTime start, LocalDateTime end);
+
+    @Query("""
+        SELECT FUNCTION('DATE_FORMAT', u.createdAt, '%Y-%m'), COUNT(u)
+        FROM User u
+        WHERE u.createdAt BETWEEN :start AND :end
+        GROUP BY FUNCTION('DATE_FORMAT', u.createdAt, '%Y-%m')
+        ORDER BY FUNCTION('DATE_FORMAT', u.createdAt, '%Y-%m') ASC
+    """)
+    List<Object[]> aggregateNewUsersByMonth(LocalDateTime start, LocalDateTime end);
 }

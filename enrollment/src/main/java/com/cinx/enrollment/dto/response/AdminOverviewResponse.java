@@ -10,7 +10,15 @@ public record AdminOverviewResponse(
         Long totalPlatformFeeRevenue,
         @Schema(example = "1200")
         Long totalOrders,
+        @Schema(example = "350")
+        Long enrollmentsInRange,
+        @Schema(example = "300")
+        Long paidOrdersInRange,
+        @Schema(example = "220")
+        Long distinctLearnersInRange,
         List<RevenueByTimeResponse> platformRevenueByTime,
-        List<CourseStats> topCourses
+        List<EnrollmentByTimeResponse> enrollmentsByTime,
+        List<CourseStats> topCoursesByRevenue,
+        List<CourseStats> topCoursesByEnrollment
 ) {
 }

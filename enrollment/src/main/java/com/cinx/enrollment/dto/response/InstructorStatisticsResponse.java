@@ -8,7 +8,13 @@ public record InstructorStatisticsResponse(
         Long totalGrossRevenue,
         @Schema(example = "12000000")
         Long totalNetRevenue, // After platform fee deduction
+        @Schema(example = "120")
+        Long enrollmentsInRange,
+        @Schema(example = "80")
+        Long distinctLearnersInRange,
         List<RevenueByTimeResponse> revenueByTime,
-        List<CourseStats> topCourses
+        List<EnrollmentByTimeResponse> enrollmentsByTime,
+        List<CourseStats> topCoursesByRevenue,
+        List<CourseStats> topCoursesByEnrollment
 ) {
 }
