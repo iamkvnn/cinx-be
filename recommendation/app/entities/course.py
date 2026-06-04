@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, Boolean, Integer, Numeric, Float, DateTime, Index
+from sqlalchemy import String, Text, Integer, Float, DateTime, Index
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.mysql import JSON
 from datetime import datetime
@@ -22,7 +22,9 @@ class Course(Base):
     rating: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     enrollment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
 
-    status: Mapped[int] = mapped_column(Integer, nullable=False, default=0)  # 0 |1 | 2 | ...
+    status: Mapped[str] = mapped_column(String(50), nullable=False, default="DRAFT")  # "DRAFT", "PUBLISHED", "ARCHIVED"
+    publish_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    curriculum: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     created_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     updated_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

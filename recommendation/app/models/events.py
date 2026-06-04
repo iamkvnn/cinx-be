@@ -1,4 +1,4 @@
-from pydantic import BaseModel
+from pydantic import BaseModel, Field, AliasChoices
 from typing import Optional, List
 from datetime import datetime
 
@@ -6,7 +6,7 @@ class LessonPayload(BaseModel):
     id: str
     title: str
     lessonType: Optional[str] = None  # 'VIDEO', 'ARTICLE', 'QUIZ', 'ASSIGNMENT'
-    orderIndex: int
+    orderIndex: Optional[int] = None
     duration: Optional[int] = 0
 
 
@@ -14,36 +14,36 @@ class SectionPayload(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
-    orderIndex: int
+    orderIndex: Optional[int] = None
     duration: Optional[int] = None
-    lessons: List[LessonPayload] = []
+    lessons: List[LessonPayload] = Field(default_factory=list)
 
 
 class CategoryPayload(BaseModel):
-    id: str
-    name: str
+    id: Optional[str] = None
+    name: Optional[str] = None
 
 
 class InstructorPayload(BaseModel):
-    id: str
-    name: str
+    id: Optional[str] = None
+    name: Optional[str] = None
     email: Optional[str] = None
     gender: Optional[str] = None  # 'MALE' | 'FEMALE' | ...
     avatarUrl: Optional[str] = None
 
 
 class ImagePayload(BaseModel):
-    id: str
-    imageUrl: str
+    id: Optional[str] = None
+    imageUrl: Optional[str] = None
 
 
 class CoursePayload(BaseModel):
     id: str
     title: str
     description: Optional[str] = None
-    category: CategoryPayload
+    category: Optional[CategoryPayload] = None
     instructor: Optional[InstructorPayload] = None
-    images: List[ImagePayload] = []
+    images: List[ImagePayload] = Field(default_factory=list)
     price: Optional[float] = None
     discountedPrice: Optional[float] = None
     discountRate: Optional[int] = None
@@ -53,8 +53,9 @@ class CoursePayload(BaseModel):
     duration: Optional[int] = None
     hasCertificate: bool = False
     certificateTitle: Optional[str] = None
-    status: str = "DRAFT"  # 'DRAFT' | 'PUBLISHED' | ...
-    sections: List[SectionPayload] = []
+    status: str = "DRAFT"  # 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+    publishStatus: Optional[str] = None  # None | 'WAITING_APPROVAL' | 'PUBLISHED' | 'REJECTED'
+    sections: Optional[List[SectionPayload]] = None
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
 
@@ -77,7 +78,10 @@ class WishlistEvent(BaseModel):
 
 class UserPreferencePayload(BaseModel):
     userId: str
-    categorieIds: list[str]
+    categoryIds: list[str] = Field(
+        default_factory=list,
+        validation_alias=AliasChoices("categoryIds", "categorieIds", "categories")
+    )
 
 class UserPreferenceEvent(BaseModel):
     payload: UserPreferencePayload

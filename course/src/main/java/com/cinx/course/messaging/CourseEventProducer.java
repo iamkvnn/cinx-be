@@ -1,5 +1,6 @@
 package com.cinx.course.messaging;
 
+import com.cinx.course.messaging.event.CourseRecommendationEvent;
 import com.cinx.course.messaging.event.LessonChangedEvent;
 import com.cinx.course.messaging.event.QuizSyncEvent;
 import com.cinx.course.messaging.event.ScoringModeChangedEvent;
@@ -50,6 +51,18 @@ public class CourseEventProducer {
                 "QuizScoringModeChanged",
                 EXCHANGE,
                 "course.quiz.scoring-mode-changed",
+                event
+        );
+    }
+
+    public void publishCourseRecommendationEvent(String routingKey, String eventType, CourseRecommendationEvent event) {
+        outboxEventPublisher.enqueue(
+                UUID.randomUUID().toString(),
+                "Course",
+                event.course().id(),
+                eventType,
+                EXCHANGE,
+                routingKey,
                 event
         );
     }

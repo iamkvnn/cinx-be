@@ -42,7 +42,7 @@ public class CourseDraftService implements ICourseDraftService {
     @Transactional
     public CourseDraft getOrCreateDraft(Course course) {
         return findDraft(course).orElseGet(() -> {
-            course.setStatus(CourseStatus.DRAFT);
+            course.setPublishStatus(null);
             courseRepository.save(course);
             return clonePublishedToDraft(course);
         });
@@ -57,7 +57,7 @@ public class CourseDraftService implements ICourseDraftService {
         if (request.price() != null || request.discountedPrice() != null) {
             draft.setDiscountRate(discountRate);
         }
-        course.setStatus(CourseStatus.DRAFT);
+        course.setPublishStatus(null);
         courseRepository.save(course);
         return courseDraftRepository.save(draft);
     }
@@ -70,13 +70,14 @@ public class CourseDraftService implements ICourseDraftService {
             return List.of();
         }
         List<Lesson> draftLessons = lessonRepository.findDraftByDraft(draft.getId());
-        List<Lesson> publishedLessons = Boolean.TRUE.equals(course.getIsPublished())
+        List<Lesson> publishedLessons = course.getStatus() == CourseStatus.PUBLISHED
                 ? lessonRepository.findPublishedByCourse(course.getId())
                 : List.of();
+        List<Section> publishedSections = sectionRepository.findPublishedByCourse(course.getId());
         List<LessonChangedEvent> lessonChangedEvents = lessonChangedEvents(course, draft, draftLessons, publishedLessons);
         courseMapper.copyDraftToCourse(draft, course);
         lessonRepository.deleteAll(publishedLessons);
-        sectionRepository.deletePublishedByCourse(course.getId());
+        sectionRepository.deleteAll(publishedSections);
         List<Section> draftSections = sectionRepository.findDraftByDraft(draft.getId());
         draftSections.forEach(section -> {
             section.setCourse(course);

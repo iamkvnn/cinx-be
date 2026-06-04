@@ -1,6 +1,7 @@
 package com.cinx.course.repository;
 
 import com.cinx.course.consts.CourseStatus;
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.model.Course;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -26,6 +27,7 @@ public interface CourseRepository extends JpaRepository<Course, String> {
             AND (:priceFrom IS NULL OR c.price >= :priceFrom)
             AND (:priceTo IS NULL OR c.price <= :priceTo)
             AND (:status IS NULL OR c.status = :status)
+            AND (:publishStatus IS NULL OR c.publishStatus = :publishStatus)
     """)
     Page<Course> searchAll(
             @Param("query") String query,
@@ -35,6 +37,7 @@ public interface CourseRepository extends JpaRepository<Course, String> {
             @Param("priceFrom") Integer priceFrom,
             @Param("priceTo") Integer priceTo,
             @Param("status") CourseStatus status,
+            @Param("publishStatus") CoursePublishStatus publishStatus,
             Pageable pageable
     );
 
@@ -42,7 +45,7 @@ public interface CourseRepository extends JpaRepository<Course, String> {
         SELECT c
         FROM Course c
         LEFT JOIN c.category cat
-        WHERE c.isPublished = true
+        WHERE c.status = com.cinx.course.consts.CourseStatus.PUBLISHED
             AND (:query IS NULL OR
                 c.title LIKE %:query%
                 OR c.description LIKE %:query%)
@@ -66,15 +69,23 @@ public interface CourseRepository extends JpaRepository<Course, String> {
         SELECT c
         FROM Course c
         WHERE c.id IN :ids
-            AND c.isPublished = true
+            AND c.status = com.cinx.course.consts.CourseStatus.PUBLISHED
     """)
     List<Course> findPublishedByIds(@Param("ids") List<String> ids);
 
+    @Query("""
+        SELECT c
+        FROM Course c
+        WHERE c.id IN :ids
+            AND c.status IN (com.cinx.course.consts.CourseStatus.PUBLISHED, com.cinx.course.consts.CourseStatus.ARCHIVED)
+    """)
+    List<Course> findEnrolledReadableByIds(@Param("ids") List<String> ids);
+
     long countByInstructorId(String instructorId);
 
-    long countByInstructorIdAndIsPublishedTrue(String instructorId);
+    long countByInstructorIdAndStatus(String instructorId, CourseStatus status);
 
-    long countByIsPublishedTrue();
+    long countByStatus(CourseStatus status);
 
     @Query("SELECT AVG(c.rating) FROM Course c WHERE c.instructorId = :instructorId AND c.rating IS NOT NULL")
     Double averageRatingByInstructorId(@Param("instructorId") String instructorId);

@@ -4,7 +4,7 @@ import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.CertificateStatus;
 import com.cinx.learning.dto.response.CertificateRequestResponse;
-import com.cinx.learning.dto.response.CourseDetailResponse;
+import com.cinx.learning.dto.response.CourseResponse;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.UserDto;
 import com.cinx.learning.mapper.CertificateRequestMapper;
@@ -43,7 +43,7 @@ public class CertificateServiceImpl implements ICertificateService {
             throw new BadRequestException("You have already applied for a certificate for this course");
         }
 
-        CourseDetailResponse course = courseService.getCourseById(courseId).data();
+        CourseResponse course = courseService.getCourseById(courseId).data();
         if (Boolean.FALSE.equals(course.hasCertificate())) {
             throw new BadRequestException("This course does not offer a certificate");
         }
@@ -92,7 +92,7 @@ public class CertificateServiceImpl implements ICertificateService {
             throw new BadRequestException("Request is not in PENDING state");
         }
 
-        CourseDetailResponse courseDto = courseService.getCourseById(request.getCourseId()).data();
+        CourseResponse courseDto = courseService.getCourseById(request.getCourseId()).data();
         
         UserDto userDto = userService.getUserById(request.getUserId()).data();
         String title = courseDto.certificateTitle() != null ? courseDto.certificateTitle() : "Certificate of Completion";

@@ -2,9 +2,9 @@ package com.cinx.course.service.lesson;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.course.consts.LessonType;
-import com.cinx.course.dto.request.ReorderLessonsRequest;
-import com.cinx.course.dto.request.SectionLessonsOrderRequest;
+import com.cinx.course.dto.request.MoveLessonRequest;
 import com.cinx.course.dto.request.UpdateLessonRequest;
+import com.cinx.course.dto.response.LessonPositionResponse;
 import com.cinx.course.dto.response.LessonResponse;
 import com.cinx.course.mapper.LessonMapper;
 import com.cinx.course.model.Course;
@@ -52,28 +52,33 @@ class LessonServiceTest {
     private LessonService lessonService;
 
     @Test
-    void reorderLessons_updatesOnlyMovedLessonInsideSectionWhenSparseGapExists() {
+    void moveLesson_updatesOnlyMovedLessonInsideSectionWhenSparseGapExists() {
         Course course = course();
         CourseDraft draft = draft(course);
         Section section = section("sec-1", draft);
         Lesson first = lesson("les-1", 1024, section);
         Lesson second = lesson("les-2", 2048, section);
         Lesson third = lesson("les-3", 3072, section);
-        mockDraft(course, draft, List.of(section), List.of(first, second, third));
-        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+        mockDraft(course, draft, List.of(section), second, List.of(first, second, third));
 
-        lessonService.reorderLessons("course-1", new ReorderLessonsRequest(List.of(
-                new SectionLessonsOrderRequest("sec-1", List.of("les-1", "les-3", "les-2"))
-        )));
+        LessonPositionResponse response = lessonService.moveLesson(
+                "course-1",
+                "les-2",
+                new MoveLessonRequest("sec-1", "les-3", null)
+        );
 
-        List<Lesson> saved = capturedSavedLessons();
-        assertThat(saved).containsExactly(second);
+        Lesson saved = capturedSavedLesson();
+        assertThat(saved).isSameAs(second);
         assertThat(second.getSection()).isSameAs(section);
         assertThat(second.getOrderIndex()).isEqualTo(4096);
+        assertThat(response.lessonId()).isEqualTo("les-2");
+        assertThat(response.sectionId()).isEqualTo("sec-1");
+        assertThat(response.orderIndex()).isEqualTo(4096);
+        verify(lessonRepository, never()).saveAll(any());
     }
 
     @Test
-    void reorderLessons_movesLessonAcrossSections() {
+    void moveLesson_movesLessonAcrossSections() {
         Course course = course();
         CourseDraft draft = draft(course);
         Section firstSection = section("sec-1", draft);
@@ -81,36 +86,130 @@ class LessonServiceTest {
         Lesson first = lesson("les-1", 1024, firstSection);
         Lesson second = lesson("les-2", 2048, firstSection);
         Lesson third = lesson("les-3", 1024, secondSection);
-        mockDraft(course, draft, List.of(firstSection, secondSection), List.of(first, second, third));
-        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+        mockDraft(course, draft, List.of(firstSection, secondSection), second, List.of(first, second, third));
 
-        lessonService.reorderLessons("course-1", new ReorderLessonsRequest(List.of(
-                new SectionLessonsOrderRequest("sec-1", List.of("les-1")),
-                new SectionLessonsOrderRequest("sec-2", List.of("les-3", "les-2"))
-        )));
+        lessonService.moveLesson("course-1", "les-2", new MoveLessonRequest("sec-2", "les-3", null));
 
-        List<Lesson> saved = capturedSavedLessons();
-        assertThat(saved).containsExactly(second);
+        Lesson saved = capturedSavedLesson();
+        assertThat(saved).isSameAs(second);
         assertThat(second.getSection()).isSameAs(secondSection);
         assertThat(second.getOrderIndex()).isEqualTo(2048);
+        verify(lessonRepository, never()).saveAll(any());
     }
 
     @Test
-    void reorderLessons_rejectsDuplicateLessonIds() {
+    void moveLesson_movesLessonToEmptySection() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section firstSection = section("sec-1", draft);
+        Section secondSection = section("sec-2", draft);
+        Lesson lesson = lesson("les-1", 2048, firstSection);
+        mockDraft(course, draft, List.of(firstSection, secondSection), lesson, List.of(lesson));
+
+        lessonService.moveLesson("course-1", "les-1", new MoveLessonRequest("sec-2", null, null));
+
+        Lesson saved = capturedSavedLesson();
+        assertThat(saved).isSameAs(lesson);
+        assertThat(lesson.getSection()).isSameAs(secondSection);
+        assertThat(lesson.getOrderIndex()).isEqualTo(1024);
+        verify(lessonRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void moveLesson_noopsWhenPositionDoesNotChange() {
         Course course = course();
         CourseDraft draft = draft(course);
         Section section = section("sec-1", draft);
         Lesson first = lesson("les-1", 1024, section);
         Lesson second = lesson("les-2", 2048, section);
-        mockDraft(course, draft, List.of(section), List.of(first, second));
+        Lesson third = lesson("les-3", 3072, section);
+        mockDraft(course, draft, List.of(section), second, List.of(first, second, third));
 
-        ReorderLessonsRequest request = new ReorderLessonsRequest(List.of(
-                new SectionLessonsOrderRequest("sec-1", List.of("les-1", "les-1"))
-        ));
+        LessonPositionResponse response = lessonService.moveLesson(
+                "course-1",
+                "les-2",
+                new MoveLessonRequest("sec-1", "les-1", "les-3")
+        );
 
-        assertThatThrownBy(() -> lessonService.reorderLessons("course-1", request))
-                .isInstanceOf(BadRequestException.class);
+        assertThat(response.orderIndex()).isEqualTo(2048);
+        verify(lessonRepository, never()).save(any());
+        verify(lessonRepository, never()).saveAll(any());
+    }
 
+    @Test
+    void moveLesson_rebalancesWhenNoSparseGapExists() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section section = section("sec-1", draft);
+        Lesson first = lesson("les-1", 1, section);
+        Lesson second = lesson("les-2", 2, section);
+        Lesson third = lesson("les-3", 3, section);
+        mockDraft(course, draft, List.of(section), second, List.of(first, second, third));
+
+        lessonService.moveLesson("course-1", "les-2", new MoveLessonRequest("sec-1", null, "les-1"));
+
+        assertThat(capturedSavedLessons()).containsExactly(second, first, third);
+        assertThat(second.getOrderIndex()).isEqualTo(1024);
+        assertThat(first.getOrderIndex()).isEqualTo(2048);
+        assertThat(third.getOrderIndex()).isEqualTo(3072);
+        verify(lessonRepository, never()).save(any());
+    }
+
+    @Test
+    void moveLesson_rejectsTargetSectionOutsideDraft() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section section = section("sec-1", draft);
+        mockDraftSections(course, draft, List.of(section));
+
+        assertThatThrownBy(() -> lessonService.moveLesson(
+                "course-1",
+                "les-1",
+                new MoveLessonRequest("sec-missing", null, null)
+        )).isInstanceOf(BadRequestException.class);
+
+        verify(lessonRepository, never()).findDraftLessonForUpdate(any(), any());
+        verify(lessonRepository, never()).save(any());
+        verify(lessonRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void moveLesson_rejectsNeighborOutsideTargetSection() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section firstSection = section("sec-1", draft);
+        Section secondSection = section("sec-2", draft);
+        Lesson first = lesson("les-1", 1024, firstSection);
+        Lesson second = lesson("les-2", 2048, firstSection);
+        Lesson third = lesson("les-3", 1024, secondSection);
+        mockDraft(course, draft, List.of(firstSection, secondSection), second, List.of(first, second, third));
+
+        assertThatThrownBy(() -> lessonService.moveLesson(
+                "course-1",
+                "les-2",
+                new MoveLessonRequest("sec-2", "les-1", null)
+        )).isInstanceOf(BadRequestException.class);
+
+        verify(lessonRepository, never()).save(any());
+        verify(lessonRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void moveLesson_rejectsMovedLessonAsNeighbor() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section section = section("sec-1", draft);
+        Lesson first = lesson("les-1", 1024, section);
+        Lesson second = lesson("les-2", 2048, section);
+        mockDraft(course, draft, List.of(section), second, List.of(first, second));
+
+        assertThatThrownBy(() -> lessonService.moveLesson(
+                "course-1",
+                "les-2",
+                new MoveLessonRequest("sec-1", "les-2", null)
+        )).isInstanceOf(BadRequestException.class);
+
+        verify(lessonRepository, never()).save(any());
         verify(lessonRepository, never()).saveAll(any());
     }
 
@@ -155,11 +254,28 @@ class LessonServiceTest {
         ))).isInstanceOf(BadRequestException.class);
     }
 
-    private void mockDraft(Course course, CourseDraft draft, List<Section> sections, List<Lesson> lessons) {
+    private void mockDraft(
+            Course course,
+            CourseDraft draft,
+            List<Section> sections,
+            Lesson movedLesson,
+            List<Lesson> affectedLessons
+    ) {
+        mockDraftSections(course, draft, sections);
+        when(lessonRepository.findDraftLessonForUpdate("draft-1", movedLesson.getStableId())).thenReturn(Optional.of(movedLesson));
+        when(lessonRepository.findBySectionIdsForUpdate(any())).thenReturn(affectedLessons);
+    }
+
+    private void mockDraftSections(Course course, CourseDraft draft, List<Section> sections) {
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
         when(courseDraftService.getOrCreateDraft(course)).thenReturn(draft);
         when(sectionRepository.findDraftByDraftForUpdate("draft-1")).thenReturn(sections);
-        when(lessonRepository.findBySectionIdsForUpdate(any())).thenReturn(lessons);
+    }
+
+    private Lesson capturedSavedLesson() {
+        ArgumentCaptor<Lesson> captor = ArgumentCaptor.forClass(Lesson.class);
+        verify(lessonRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     private List<Lesson> capturedSavedLessons() {

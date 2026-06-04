@@ -18,6 +18,9 @@ public interface CourseService {
     @GetMapping("/courses/ids")
     ApiResponse<List<CourseResponse>> getCoursesByIds(@RequestParam List<String> ids);
 
+    @GetMapping("/courses/enrolled/ids")
+    ApiResponse<List<CourseResponse>> getEnrolledCoursesByIds(@RequestParam List<String> ids);
+
     @PostMapping("/courses/{id}/increase-enrollment")
     ApiResponse<Void> increaseEnrollmentCount(@PathVariable String id);
 }

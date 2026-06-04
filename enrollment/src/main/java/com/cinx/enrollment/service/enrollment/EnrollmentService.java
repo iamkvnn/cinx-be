@@ -42,7 +42,7 @@ public class EnrollmentService implements IEnrollmentService {
         List<String> courseIds = enrolledCourses.getContent().stream()
             .map(EnrolledCourse::getCourseId)
             .toList();
-        List<CourseResponse> courses = courseService.getCoursesByIds(courseIds).data();
+        List<CourseResponse> courses = courseService.getEnrolledCoursesByIds(courseIds).data();
         return new PageImpl<>(courses, enrolledCourses.getPageable(), courses.size());
     }
 

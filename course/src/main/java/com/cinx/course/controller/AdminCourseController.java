@@ -3,12 +3,13 @@ package com.cinx.course.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.RejectCourseRequest;
-import com.cinx.course.dto.response.CourseChangeResponse;
+import com.cinx.course.dto.response.CourseCurriculumResponse;
 import com.cinx.course.dto.response.CourseResponse;
-import com.cinx.course.service.change.ICourseChangeAuditService;
 import com.cinx.course.service.course.ICourseService;
+import com.cinx.course.service.curriculum.ICurriculumService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -17,15 +18,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/admin/courses")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminCourseController {
     private final ICourseService courseService;
-    private final ICourseChangeAuditService courseChangeAuditService;
+    private final ICurriculumService curriculumService;
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
@@ -38,6 +37,7 @@ public class AdminCourseController {
             @RequestParam(required = false) Integer priceFrom,
             @RequestParam(required = false) Integer priceTo,
             @RequestParam(required = false) CourseStatus status,
+            @RequestParam(required = false) CoursePublishStatus publishStatus,
             @RequestParam(required = false) String categoryId,
             @RequestParam(required = false) String instructorId
     ) {
@@ -49,6 +49,7 @@ public class AdminCourseController {
                 priceFrom,
                 priceTo,
                 status,
+                publishStatus,
                 page,
                 size,
                 sort);
@@ -62,9 +63,33 @@ public class AdminCourseController {
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/changes")
-    public ResponseEntity<ApiResponse<List<CourseChangeResponse>>> getCourseChanges(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Course changes fetched successfully", courseChangeAuditService.getCourseChangeHistory(courseId)));
+    @GetMapping("/{id}/draft")
+    public ResponseEntity<ApiResponse<CourseResponse>> getCourseDraft(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course draft fetched successfully",
+                courseService.getDraftCourseById(courseId)
+        ));
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{id}/curriculum")
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getCourseCurriculum(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course curriculum fetched successfully",
+                curriculumService.getPublishedSnapshotCurriculum(courseId)
+        ));
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{id}/draft/curriculum")
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getDraftCurriculum(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course draft curriculum fetched successfully",
+                curriculumService.getDraftCurriculum(courseId)
+        ));
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
@@ -80,5 +105,12 @@ public class AdminCourseController {
             @RequestBody RejectCourseRequest request
     ) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Course rejected successfully", courseService.rejectCourse(courseId, request)));
+    }
+
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/recommendation/replay")
+    public ResponseEntity<ApiResponse<Void>> replayRecommendationEvents() {
+        courseService.replayRecommendationEvents();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Course recommendation replay enqueued successfully", null));
     }
 }

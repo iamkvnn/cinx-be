@@ -25,6 +25,7 @@ public interface CourseMapper {
     @Mapping(target = "enrollmentCount", ignore = true)
     @Mapping(target = "instructorId", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "publishStatus", ignore = true)
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "images", ignore = true)
     Course toModel(CreateCourseRequest request);
@@ -41,6 +42,7 @@ public interface CourseMapper {
     @Mapping(target = "enrollmentCount", ignore = true)
     @Mapping(target = "instructorId", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "publishStatus", ignore = true)
     @Mapping(target = "category", ignore = true)
     @Mapping(target = "images", ignore = true)
     void partialUpdate(@MappingTarget Course course, UpdateCourseRequest request);
@@ -76,6 +78,7 @@ public interface CourseMapper {
     @Mapping(target = "enrollmentCount", ignore = true)
     @Mapping(target = "instructorId", ignore = true)
     @Mapping(target = "status", ignore = true)
+    @Mapping(target = "publishStatus", ignore = true)
     @Mapping(target = "images", ignore = true)
     void copyDraftToCourse(CourseDraft draft, @MappingTarget Course course);
 
@@ -98,6 +101,7 @@ public interface CourseMapper {
     @Mapping(target = "hasCertificate", source = "draft.hasCertificate")
     @Mapping(target = "certificateTitle", source = "draft.certificateTitle")
     @Mapping(target = "status", source = "course.status")
+    @Mapping(target = "publishStatus", source = "course.publishStatus")
     @Mapping(target = "createdAt", source = "draft.createdAt")
     @Mapping(target = "updatedAt", source = "draft.updatedAt")
     CourseResponse toResponse(Course course, CourseDraft draft, UserDto instructor);

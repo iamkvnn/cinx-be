@@ -102,30 +102,5 @@ class RecommendationService:
 
     def _to_dict(self, c, score, source):
         return {
-            "id": c.id,
-            "title": c.title,
-            "description": c.description,
-            "category": {
-                "id": c.category_id,
-                "name": c.category_name
-            },
-            "instructor": {
-                "id": c.instructor_id,
-                "name": c.instructor_name,
-                "email": c.instructor_email,
-                "gender": c.instructor_gender,
-                "avatarUrl": c.instructor_avatar_url
-            },
-            "price": float(c.price) if c.price is not None else None,
-            "discountedPrice": float(c.discounted_price) if c.discounted_price is not None else None,
-            "discountRate": c.discount_rate,
-            "rating": c.rating,
-            "enrollmentCount": c.enrollment_count,
-            "isInSubscription": c.is_in_subscription,
-            "duration": c.duration,
-            "hasCertificate": c.has_certificate,
-            "certificateTitle": c.certificate_title,
-            "status": c.status,
-            "score": round(score, 4),
-            "source": source
+            "courseId": c.id
         }

@@ -68,6 +68,15 @@ public class UserEventProducer {
         ));
     }
 
+    public void publishPreferredCategoriesUpdated(String userId, List<String> categoryIds) {
+        publish("user.preference.updated", Map.of(
+                "payload", Map.of(
+                        "userId", userId,
+                        "categoryIds", categoryIds
+                )
+        ));
+    }
+
     private void publish(String routingKey, Map<String, Object> payload) {
         rabbitTemplate.convertAndSend(EXCHANGE, routingKey, payload, msg -> {
             msg.getMessageProperties().setMessageId(UUID.randomUUID().toString());

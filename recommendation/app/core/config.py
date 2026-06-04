@@ -11,12 +11,6 @@ class Settings(BaseSettings):
     DB_USER: str
     DB_PASSWORD: str
 
-    COURSE_DB_HOST: str
-    COURSE_DB_PORT: int
-    COURSE_DB_NAME: str
-    COURSE_DB_USER: str
-    COURSE_DB_PASSWORD: str
-
     RABBITMQ_HOST: str
     RABBITMQ_PORT: int
     RABBITMQ_USER: str
@@ -27,15 +21,18 @@ class Settings(BaseSettings):
     RABBITMQ_DLX: str = "dlx.exchange"
     RABBITMQ_DLQ: str = "recommendation.course.dead.queue"
     RABBITMQ_ROUTING_KEYS: str = (
-        "course.course.created,course.course.updated,course.course.published"
+        "course.course.published,course.course.updated,course.course.archived"
     )
 
     ENROLLMENT_EXCHANGE: str = "enrollment.events.exchange"
     SOCIAL_EXCHANGE: str = "social.events.exchange"
+    USER_EXCHANGE: str = "user.events.exchange"
     ENROLLMENT_QUEUE: str = "recommendation.enrollment.queue"
     SOCIAL_QUEUE: str = "recommendation.social.queue"
+    USER_QUEUE: str = "recommendation.user.queue"
     ENROLLMENT_ROUTING_KEYS: str = "enrollment.enrollment.created"
     SOCIAL_ROUTING_KEYS: str = "social.wishlist.added,social.wishlist.removed"
+    USER_ROUTING_KEYS: str = "user.preference.updated"
 
     RECONCILE_BATCH_SIZE: int = 100
     INTERACTION_THRESHOLD_FOR_CONTENT_BASED: int = 3

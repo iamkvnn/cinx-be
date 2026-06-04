@@ -14,7 +14,8 @@ import org.springframework.cloud.openfeign.EnableFeignClients;
 )
 @SpringBootApplication(scanBasePackages = {"com.cinx.notification", "com.cinx.common"})
 @EnableDiscoveryClient
-@EnableFeignClients(basePackages = "com.cinx")public class NotificationApplication {
+@EnableFeignClients(basePackages = "com.cinx")
+public class NotificationApplication {
 	public static void main(String[] args) {
 		SpringApplication.run(NotificationApplication.class, args);
 	}
