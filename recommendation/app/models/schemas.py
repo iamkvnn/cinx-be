@@ -11,8 +11,7 @@ class OnboardingRecommendationRequest(BaseModel):
 
 
 class RecommendationItem(BaseModel):
-    course_id: int
-    score: float
+    course_id: str
 
 
 class RecommendationResponse(BaseModel):

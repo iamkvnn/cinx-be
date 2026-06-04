@@ -43,6 +43,7 @@ public interface CourseRepository extends JpaRepository<Course, String> {
         FROM Course c
         LEFT JOIN c.category cat
         WHERE c.isPublished = true
+            AND c.status != com.cinx.course.consts.CourseStatus.ARCHIVED
             AND (:query IS NULL OR
                 c.title LIKE %:query%
                 OR c.description LIKE %:query%)
@@ -67,8 +68,17 @@ public interface CourseRepository extends JpaRepository<Course, String> {
         FROM Course c
         WHERE c.id IN :ids
             AND c.isPublished = true
+            AND c.status != com.cinx.course.consts.CourseStatus.ARCHIVED
     """)
     List<Course> findPublishedByIds(@Param("ids") List<String> ids);
+
+    @Query("""
+        SELECT c
+        FROM Course c
+        WHERE c.id IN :ids
+            AND c.isPublished = true
+    """)
+    List<Course> findEnrolledReadableByIds(@Param("ids") List<String> ids);
 
     long countByInstructorId(String instructorId);
 

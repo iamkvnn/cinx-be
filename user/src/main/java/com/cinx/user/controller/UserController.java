@@ -8,6 +8,7 @@ import com.cinx.user.consts.Role;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.dto.request.DeviceTokenRequest;
+import com.cinx.user.dto.request.UpdatePreferredCategoriesRequest;
 import com.cinx.user.service.user.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -83,5 +84,13 @@ public class UserController {
         String userId = AuthenticationUtil.extractUserId();
         userService.saveDeviceToken(userId, request);
         return new ApiResponse<>(true, "Device token saved successfully", null);
+    }
+
+    @Operation(summary = "Update preferred categories", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PutMapping("/me/preferred-categories")
+    public ApiResponse<Void> updatePreferredCategories(@Valid @RequestBody UpdatePreferredCategoriesRequest request) {
+        String userId = AuthenticationUtil.extractUserId();
+        userService.updatePreferredCategories(userId, request.categoryIds());
+        return new ApiResponse<>(true, "Preferred categories updated successfully", null);
     }
 }

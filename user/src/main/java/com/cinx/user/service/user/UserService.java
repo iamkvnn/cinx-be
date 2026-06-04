@@ -203,6 +203,18 @@ public class UserService implements IUserService {
     }
 
     @Override
+    public void updatePreferredCategories(String userId, List<String> categoryIds) {
+        getOrThrowByUserId(userId);
+        List<String> normalizedCategoryIds = categoryIds.stream()
+                .filter(Objects::nonNull)
+                .map(String::trim)
+                .filter(categoryId -> !categoryId.isBlank())
+                .distinct()
+                .toList();
+        userEventProducer.publishPreferredCategoriesUpdated(userId, normalizedCategoryIds);
+    }
+
+    @Override
     @Transactional
     public UserDto addXp(String userId, Integer xpAmount) {
         User user = getOrThrowByUserId(userId);

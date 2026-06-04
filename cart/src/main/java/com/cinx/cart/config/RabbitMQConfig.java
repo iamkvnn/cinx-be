@@ -1,4 +1,4 @@
-package com.cinx.course.config;
+package com.cinx.cart.config;
 
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
@@ -13,11 +13,6 @@ import org.springframework.context.annotation.Configuration;
 @Configuration
 public class RabbitMQConfig {
     @Bean
-    public TopicExchange enrollmentExchange() {
-        return ExchangeBuilder.topicExchange("enrollment.events.exchange").durable(true).build();
-    }
-
-    @Bean
     public TopicExchange courseExchange() {
         return ExchangeBuilder.topicExchange("course.events.exchange").durable(true).build();
     }
@@ -28,29 +23,29 @@ public class RabbitMQConfig {
     }
 
     @Bean
-    public Queue enrollmentQueue() {
-        return QueueBuilder.durable("course.enrollment.queue")
+    public Queue courseArchivedQueue() {
+        return QueueBuilder.durable("cart.course-archived.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
-                .withArgument("x-dead-letter-routing-key", "course.enrollment.dead")
+                .withArgument("x-dead-letter-routing-key", "cart.course-archived.dead")
                 .build();
     }
 
     @Bean
-    public Queue enrollmentDeadLetterQueue() {
-        return QueueBuilder.durable("course.enrollment.dead.queue").build();
+    public Queue courseArchivedDeadLetterQueue() {
+        return QueueBuilder.durable("cart.course-archived.dead.queue").build();
     }
 
     @Bean
-    public Binding enrollmentBinding() {
-        return BindingBuilder.bind(enrollmentQueue())
-                .to(enrollmentExchange())
-                .with("enrollment.enrollment.created");
+    public Binding courseArchivedBinding() {
+        return BindingBuilder.bind(courseArchivedQueue())
+                .to(courseExchange())
+                .with("course.course.archived");
     }
 
     @Bean
-    public Binding enrollmentDeadLetterBinding() {
-        return BindingBuilder.bind(enrollmentDeadLetterQueue())
+    public Binding courseArchivedDeadLetterBinding() {
+        return BindingBuilder.bind(courseArchivedDeadLetterQueue())
                 .to(deadLetterExchange())
-                .with("course.enrollment.dead");
+                .with("cart.course-archived.dead");
     }
 }

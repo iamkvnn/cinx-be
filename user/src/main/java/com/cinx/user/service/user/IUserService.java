@@ -25,6 +25,7 @@ public interface IUserService {
     
     void saveDeviceToken(String userId, com.cinx.user.dto.request.DeviceTokenRequest request);
     List<String> getUserTokens(String userId);
+    void updatePreferredCategories(String userId, List<String> categoryIds);
 
     UserDto addXp(String userId, Integer xpAmount);
 

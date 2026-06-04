@@ -70,4 +70,11 @@ public class AdminCourseController {
     ) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Course rejected successfully", courseService.rejectCourse(courseId, request)));
     }
+
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/recommendation/replay")
+    public ResponseEntity<ApiResponse<Void>> replayRecommendationEvents() {
+        courseService.replayRecommendationEvents();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Course recommendation replay enqueued successfully", null));
+    }
 }

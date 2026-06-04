@@ -1,6 +1,7 @@
 package com.cinx.course.service.curriculum;
 
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.response.CourseCurriculumResponse;
 import com.cinx.course.dto.response.CurriculumSectionResponse;
 import com.cinx.course.dto.response.LessonResponse;
@@ -37,11 +38,24 @@ public class CurriculumService implements ICurriculumService {
     public CourseCurriculumResponse getPublishedCurriculum(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+        if (!Boolean.TRUE.equals(course.getIsPublished()) || course.getStatus() == CourseStatus.ARCHIVED) {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
         List<Section> sections = sectionRepository.findPublishedByCourse(course.getId());
         List<Lesson> lessons = lessonRepository.findPublishedByCourse(course.getId());
+        return toResponse(course.getId(), sections, lessons);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseCurriculumResponse getEnrolledCurriculum(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+            throw new NotFoundException("Course not found with id: " + courseId);
+        }
+        List<Section> sections = sectionRepository.findPublishedByCourse(course.getId());
+        List<Lesson> lessons = lessonRepository.findEnrolledReadableByCourse(course.getId());
         return toResponse(course.getId(), sections, lessons);
     }
 

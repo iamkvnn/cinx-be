@@ -4,6 +4,7 @@ import com.cinx.course.model.Lesson;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Lock;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
@@ -36,10 +37,22 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
         SELECT l FROM Lesson l
         JOIN l.section s
         JOIN s.course c
-        WHERE c.id = :courseId AND c.isPublished = true
+        WHERE c.id = :courseId
+            AND c.isPublished = true
+            AND c.status != com.cinx.course.consts.CourseStatus.ARCHIVED
         ORDER BY s.orderIndex ASC, s.stableId ASC, l.orderIndex ASC, l.stableId ASC
     """)
     List<Lesson> findPublishedByCourse(@Param("courseId") String courseId);
+
+    @Query("""
+        SELECT l FROM Lesson l
+        JOIN l.section s
+        JOIN s.course c
+        WHERE c.id = :courseId
+            AND c.isPublished = true
+        ORDER BY s.orderIndex ASC, s.stableId ASC, l.orderIndex ASC, l.stableId ASC
+    """)
+    List<Lesson> findEnrolledReadableByCourse(@Param("courseId") String courseId);
 
     @Query("""
         SELECT l
@@ -83,16 +96,6 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
         AND (c.instructorId = :userId OR dc.instructorId = :userId)
     """)
     boolean isAccessibleByInstructor(@Param("lessonId") String lessonId, @Param("userId") String userId);
-
-    @Query("""
-        SELECT c.id
-        FROM Lesson l
-        JOIN l.section s
-        JOIN s.course c
-        WHERE l.stableId = :lessonId
-            AND c.isPublished = true
-    """)
-    Optional<String> findPublishedCourseIdByLessonStableId(@Param("lessonId") String lessonId);
 
     @Query("""
         SELECT l FROM Lesson l

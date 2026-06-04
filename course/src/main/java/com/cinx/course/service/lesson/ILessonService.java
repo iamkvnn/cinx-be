@@ -12,6 +12,7 @@ import java.util.List;
 
 public interface ILessonService {
     List<String> getLessonIdsByCourseId(String courseId);
+    List<String> getEnrolledLessonIdsByCourseId(String courseId);
     Lesson getForUpdate(String courseId, String sectionId, String lessonId, LessonType lessonType);
     void ensureLessonBelongsToCourse(String courseId, String lessonId, LessonType lessonType);
     LessonResponse createLesson(String courseId, String sectionId, CreateLessonRequest request);

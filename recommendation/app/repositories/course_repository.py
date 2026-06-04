@@ -13,11 +13,11 @@ class CourseRepository:
 
     def delete(self, course_id: str):
         course = self.db.get(Course, course_id)
+        stmt = delete(CourseChunk).where(CourseChunk.course_id == course_id)
+        self.db.execute(stmt)
         if course:
             self.db.delete(course)
-            stmt = delete(CourseChunk).where(CourseChunk.course_id == course_id)
-            self.db.execute(stmt)
-            self.db.commit()
+        self.db.commit()
 
     def upsert(self, data: dict):
         course = self.db.get(Course, data["id"])
@@ -31,17 +31,29 @@ class CourseRepository:
             
         self.db.commit()
 
-        if course.status == 2:
-            self._upsert_course_chunks(course.id, str(course.title), str(course.description or ''))
+        if course.is_published and course.status != "ARCHIVED":
+            self._upsert_course_chunks(
+                course.id,
+                str(course.title),
+                str(course.description or ''),
+                course.curriculum or []
+            )
             
         return course
 
-    def _upsert_course_chunks(self, course_id: str, course_title: str, course_description: str):
+    def _upsert_course_chunks(self, course_id: str, course_title: str, course_description: str, curriculum: list):
         # Delete old chunks
         stmt = delete(CourseChunk).where(CourseChunk.course_id == course_id)
         self.db.execute(stmt)
         
-        content = f"Course: {course_title}. Description: {course_description}."
+        curriculum_lines = []
+        for section in curriculum:
+            curriculum_lines.append(f"Section: {section.get('title', '')}.")
+            for lesson in section.get("lessons", []):
+                curriculum_lines.append(
+                    f"Lesson: {lesson.get('title', '')}. Type: {lesson.get('lessonType', '')}."
+                )
+        content = f"Course: {course_title}. Description: {course_description}. " + " ".join(curriculum_lines)
                 
         chunk = CourseChunk(
             id=str(uuid.uuid4()),
@@ -54,12 +66,13 @@ class CourseRepository:
         self.db.commit()
 
     def get_published_courses(self):
-        stmt = select(Course).where(Course.status == 2)
+        stmt = select(Course).where(Course.is_published == True, Course.status != "ARCHIVED")
         return self.db.execute(stmt).scalars().all()
 
     def get_published_courses_by_categoryId(self, categoryIds: list[str]):
         stmt = select(Course).where(
-            Course.status == 2,
+            Course.is_published == True,
+            Course.status != "ARCHIVED",
             Course.category_id.in_(categoryIds)
         )
         return self.db.execute(stmt).scalars().all()

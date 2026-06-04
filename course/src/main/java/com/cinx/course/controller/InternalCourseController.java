@@ -36,9 +36,19 @@ public class InternalCourseController {
         return new ApiResponse<>(true, "Course fetched successfully", courseService.getPublishedCourseById(id));
     }
 
+    @GetMapping("/courses/enrolled/{id}")
+    public ApiResponse<CourseResponse> getEnrolledCourseById(@PathVariable String id) {
+        return new ApiResponse<>(true, "Course fetched successfully", courseService.getEnrolledCourseById(id));
+    }
+
     @GetMapping("/courses/{id}/lessons")
     public ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id) {
         return new ApiResponse<>(true, "Course fetched successfully", lessonService.getLessonIdsByCourseId(id));
+    }
+
+    @GetMapping("/courses/enrolled/{id}/lessons")
+    public ApiResponse<List<String>> getEnrolledCourseLessonIdsByCourseId(@PathVariable String id) {
+        return new ApiResponse<>(true, "Course fetched successfully", lessonService.getEnrolledLessonIdsByCourseId(id));
     }
 
     @GetMapping("/courses/{id}/curriculum")
@@ -46,9 +56,19 @@ public class InternalCourseController {
         return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getPublishedCurriculum(id));
     }
 
+    @GetMapping("/courses/enrolled/{id}/curriculum")
+    public ApiResponse<CourseCurriculumResponse> getEnrolledCourseCurriculum(@PathVariable String id) {
+        return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getEnrolledCurriculum(id));
+    }
+
     @GetMapping("/courses/ids")
     public ApiResponse<List<CourseResponse>> getCoursesByIds(@RequestParam List<String> ids) {
         return new ApiResponse<>(true, "Courses fetched successfully", courseService.getPublishedCourseByIds(ids));
+    }
+
+    @GetMapping("/courses/enrolled/ids")
+    public ApiResponse<List<CourseResponse>> getEnrolledCoursesByIds(@RequestParam List<String> ids) {
+        return new ApiResponse<>(true, "Courses fetched successfully", courseService.getEnrolledCourseByIds(ids));
     }
 
     @PostMapping("/courses/{id}/update-rating")

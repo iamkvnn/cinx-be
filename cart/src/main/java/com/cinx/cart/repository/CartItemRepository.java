@@ -10,6 +10,8 @@ import java.util.List;
 public interface CartItemRepository extends JpaRepository<CartItem, String> {
     void deleteAllByUserId(String userId);
 
+    void deleteAllByCourseId(String courseId);
+
     void deleteByIdAndUserId(String itemId, String userId);
 
     @Modifying

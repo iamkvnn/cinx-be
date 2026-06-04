@@ -65,6 +65,16 @@ public class CourseController {
         );
     }
 
+    @Operation(summary = "Get enrolled course", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{id}/enrolled")
+    public ResponseEntity<ApiResponse<CourseResponse>> getEnrolledCourseById(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course fetched successfully",
+                courseService.getEnrolledCourseByIdForCurrentUser(courseId)
+        ));
+    }
+
     @Operation(summary = "Get my courses", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/mine")
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getMyCourses(
@@ -108,6 +118,17 @@ public class CourseController {
                 true,
                 "Course curriculum fetched successfully",
                 curriculumService.getPublishedCurriculum(courseId)
+        ));
+    }
+
+    @Operation(summary = "Get enrolled course curriculum", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{id}/enrolled/curriculum")
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getEnrolledCurriculum(@PathVariable("id") String courseId) {
+        courseService.getEnrolledCourseByIdForCurrentUser(courseId);
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course curriculum fetched successfully",
+                curriculumService.getEnrolledCurriculum(courseId)
         ));
     }
 
@@ -178,6 +199,16 @@ public class CourseController {
         return ResponseEntity.ok().body(
                 new ApiResponse<>(true, "Course submitted successfully", courseService.submitCourse(courseId))
         );
+    }
+
+    @Operation(summary = "Archive course", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{id}/archive")
+    public ResponseEntity<ApiResponse<CourseResponse>> archiveCourse(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course archived successfully",
+                courseService.archiveCourse(courseId)
+        ));
     }
 
     @GetMapping("/{id}/reject-reason")

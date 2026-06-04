@@ -13,7 +13,10 @@ import java.util.List;
 
 public interface ICourseService {
     CourseResponse getPublishedCourseById(String courseId);
+    CourseResponse getEnrolledCourseById(String courseId);
+    CourseResponse getEnrolledCourseByIdForCurrentUser(String courseId);
     List<CourseResponse> getPublishedCourseByIds(List<String> courseIds);
+    List<CourseResponse> getEnrolledCourseByIds(List<String> courseIds);
     Page<CourseResponse> getAllPublishedCourses(String query, String categoryId, String instructorId, Integer rating, Integer priceFrom, Integer priceTo, int page, int size, String sort);
     CourseResponse getCourseById(String courseId);
     InstructorCourseSummaryResponse getInstructorCourseSummary(String instructorId);
@@ -21,9 +24,11 @@ public interface ICourseService {
     CourseResponse createCourse(CreateCourseRequest request);
     CourseResponse updateCourse(String courseId, UpdateCourseRequest request);
     CourseResponse submitCourse(String courseId);
+    CourseResponse archiveCourse(String courseId);
     CourseResponse approveCourse(String courseId);
     CourseResponse rejectCourse(String courseId, RejectCourseRequest request);
     RejectCourseResponse getRejectReason(String courseId);
     void updateCourseRating(String courseId, Double rating);
     void increaseEnrollmentCount(String courseId);
+    void replayRecommendationEvents();
 }

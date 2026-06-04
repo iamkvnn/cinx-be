@@ -26,6 +26,9 @@ public class CartService implements ICartService {
     public List<CartItemResponse> getCart() {
         String userId = AuthenticationUtil.extractUserId();
         List<CartItem> cartItems = cartItemRepository.findAllByUserId(userId);
+        if (cartItems.isEmpty()) {
+            return List.of();
+        }
         Map<String, CourseResponse> courses = courseService
                 .getCoursesByIds(cartItems
                         .parallelStream()
@@ -35,6 +38,7 @@ public class CartService implements ICartService {
                 .stream()
                 .collect(Collectors.toMap(CourseResponse::id, course -> course));
         return cartItems.stream()
+                .filter(cartItem -> courses.containsKey(cartItem.getCourseId()))
                 .map(cartItem -> new CartItemResponse(
                         cartItem.getId(),
                         courses.get(cartItem.getCourseId())

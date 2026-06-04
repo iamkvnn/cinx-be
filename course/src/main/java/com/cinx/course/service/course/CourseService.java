@@ -1,6 +1,7 @@
 package com.cinx.course.service.course;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
@@ -14,6 +15,8 @@ import com.cinx.course.dto.response.RejectCourseResponse;
 import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.mapper.CourseMapper;
 import com.cinx.course.messaging.CourseEventProducer;
+import com.cinx.course.messaging.event.CourseRecommendationEvent;
+import com.cinx.course.messaging.event.CourseRecommendationPayload;
 import com.cinx.course.model.Category;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.CourseDraft;
@@ -21,6 +24,8 @@ import com.cinx.course.model.RejectCourseReason;
 import com.cinx.course.repository.CategoryRepository;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.RejectCourseReasonRepository;
+import com.cinx.course.service.curriculum.ICurriculumService;
+import com.cinx.course.service.enrollment.EnrollmentClient;
 import com.cinx.course.service.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -29,8 +34,10 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -43,6 +50,8 @@ public class CourseService implements ICourseService {
     private final CategoryRepository categoryRepository;
     private final ICourseDraftService courseDraftService;
     private final UserService userService;
+    private final EnrollmentClient enrollmentClient;
+    private final ICurriculumService curriculumService;
     private final CourseMapper courseMapper;
     private final CourseEventProducer courseEventProducer;
 
@@ -51,9 +60,16 @@ public class CourseService implements ICourseService {
     public CourseResponse getPublishedCourseById(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+        if (!isBuyable(course)) {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
+        return toResponse(course);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseResponse getEnrolledCourseById(String courseId) {
+        Course course = findEnrolledReadableCourse(courseId);
         return toResponse(course);
     }
 
@@ -73,13 +89,26 @@ public class CourseService implements ICourseService {
                 .distinct()
                 .toList();
         List<Course> courses = courseRepository.findPublishedByIds(distinctCourseIds);
-        if (courses.size() != distinctCourseIds.size()) {
-            throw new NotFoundException("Some courses not found with ids: " + distinctCourseIds);
-        }
         Map<String, Course> courseMap = courses.stream()
                 .collect(Collectors.toMap(Course::getId, Function.identity()));
         return toResponse(distinctCourseIds.stream()
                 .map(courseMap::get)
+                .filter(Objects::nonNull)
+                .toList());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<CourseResponse> getEnrolledCourseByIds(List<String> courseIds) {
+        List<String> distinctCourseIds = courseIds.stream()
+                .distinct()
+                .toList();
+        List<Course> courses = courseRepository.findEnrolledReadableByIds(distinctCourseIds);
+        Map<String, Course> courseMap = courses.stream()
+                .collect(Collectors.toMap(Course::getId, Function.identity()));
+        return toResponse(distinctCourseIds.stream()
+                .map(courseMap::get)
+                .filter(Objects::nonNull)
                 .toList());
     }
 
@@ -181,6 +210,24 @@ public class CourseService implements ICourseService {
         return toResponse(courseRepository.save(course), draft.orElse(null));
     }
 
+    @Override
+    @Transactional
+    public CourseResponse archiveCourse(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        String userId = AuthenticationUtil.extractUserId();
+        if (!Objects.equals(course.getInstructorId(), userId)) {
+            throw new ForbiddenException("You are not allowed to archive this course");
+        }
+        if (!Boolean.TRUE.equals(course.getIsPublished()) || course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException("Only published, non-archived courses can be archived");
+        }
+        course.setStatus(CourseStatus.ARCHIVED);
+        Course savedCourse = courseRepository.save(course);
+        publishRecommendationEvent(savedCourse, "course.course.archived", "CourseArchived", false);
+        return toResponse(savedCourse);
+    }
+
     @Transactional
     @Override
     public CourseResponse approveCourse(String courseId) {
@@ -194,6 +241,7 @@ public class CourseService implements ICourseService {
         course.setIsPublished(true);
         Course savedCourse = courseRepository.save(course);
         lessonChangedEvents.forEach(courseEventProducer::publishLessonChangedEvent);
+        publishRecommendationEvent(savedCourse, "course.course.published", "CoursePublished", true);
         return toResponse(savedCourse);
     }
 
@@ -226,7 +274,8 @@ public class CourseService implements ICourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         course.setRating(rating);
-        courseRepository.save(course);
+        Course savedCourse = courseRepository.save(course);
+        publishRecommendationEvent(savedCourse, "course.course.updated", "CourseUpdated", false);
     }
 
     @Override
@@ -235,7 +284,16 @@ public class CourseService implements ICourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         course.setEnrollmentCount(course.getEnrollmentCount() == null ? 1L : course.getEnrollmentCount() + 1);
-        courseRepository.save(course);
+        Course savedCourse = courseRepository.save(course);
+        publishRecommendationEvent(savedCourse, "course.course.updated", "CourseUpdated", false);
+    }
+
+    @Override
+    @Transactional
+    public void replayRecommendationEvents() {
+        courseRepository.findAll().stream()
+                .filter(course -> Boolean.TRUE.equals(course.getIsPublished()))
+                .forEach(course -> publishRecommendationEvent(course, "course.course.updated", "CourseUpdated", true));
     }
 
     private CourseResponse toResponse(Course course) {
@@ -260,6 +318,9 @@ public class CourseService implements ICourseService {
     }
 
     private List<CourseResponse> toResponse(List<Course> courses) {
+        if (courses.isEmpty()) {
+            return List.of();
+        }
         Map<String, UserDto> instructorMap = userService.getInstructorsByIds(courses.stream()
                 .map(Course::getInstructorId)
                 .toList()).data()
@@ -279,5 +340,64 @@ public class CourseService implements ICourseService {
             return 0L;
         }
         return (long) ((price - discountedPrice) / (double) price * 100);
+    }
+
+    private Course findEnrolledReadableCourse(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+            throw new NotFoundException("Course not found with id: " + courseId);
+        }
+        return course;
+    }
+
+    private boolean isBuyable(Course course) {
+        return Boolean.TRUE.equals(course.getIsPublished()) && course.getStatus() != CourseStatus.ARCHIVED;
+    }
+
+    private void ensureCurrentUserEnrolled(String courseId) {
+        boolean enrolled = enrollmentClient.checkEnrollmentStatus(List.of(courseId)).data().stream()
+                .anyMatch(status -> courseId.equals(status.courseId()) && Boolean.TRUE.equals(status.enrolled()));
+        if (!enrolled) {
+            throw new ForbiddenException("You are not enrolled in this course");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseResponse getEnrolledCourseByIdForCurrentUser(String courseId) {
+        ensureCurrentUserEnrolled(courseId);
+        return getEnrolledCourseById(courseId);
+    }
+
+    private void publishRecommendationEvent(Course course, String routingKey, String eventType, boolean includeCurriculum) {
+        CourseResponse response = toResponse(course);
+        CourseRecommendationPayload payload = new CourseRecommendationPayload(
+                response.id(),
+                response.title(),
+                response.description(),
+                response.category(),
+                response.instructor(),
+                response.images(),
+                response.price(),
+                response.discountedPrice(),
+                response.discountRate(),
+                response.rating(),
+                response.enrollmentCount(),
+                course.getIsPublished(),
+                response.isInSubscription(),
+                response.duration(),
+                response.hasCertificate(),
+                response.certificateTitle(),
+                response.status(),
+                includeCurriculum ? curriculumService.getEnrolledCurriculum(course.getId()).sections() : null,
+                response.createdAt(),
+                response.updatedAt()
+        );
+        courseEventProducer.publishCourseRecommendationEvent(
+                routingKey,
+                eventType,
+                new CourseRecommendationEvent(payload, LocalDateTime.now())
+        );
     }
 }

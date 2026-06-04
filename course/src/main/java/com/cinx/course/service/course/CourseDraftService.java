@@ -73,10 +73,11 @@ public class CourseDraftService implements ICourseDraftService {
         List<Lesson> publishedLessons = Boolean.TRUE.equals(course.getIsPublished())
                 ? lessonRepository.findPublishedByCourse(course.getId())
                 : List.of();
+        List<Section> publishedSections = sectionRepository.findPublishedByCourse(course.getId());
         List<LessonChangedEvent> lessonChangedEvents = lessonChangedEvents(course, draft, draftLessons, publishedLessons);
         courseMapper.copyDraftToCourse(draft, course);
         lessonRepository.deleteAll(publishedLessons);
-        sectionRepository.deletePublishedByCourse(course.getId());
+        sectionRepository.deleteAll(publishedSections);
         List<Section> draftSections = sectionRepository.findDraftByDraft(draft.getId());
         draftSections.forEach(section -> {
             section.setCourse(course);

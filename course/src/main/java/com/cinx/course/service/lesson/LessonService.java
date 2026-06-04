@@ -2,6 +2,7 @@ package com.cinx.course.service.lesson;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateLessonRequest;
 import com.cinx.course.dto.request.MoveLessonRequest;
@@ -49,10 +50,24 @@ public class LessonService implements ILessonService {
     public List<String> getLessonIdsByCourseId(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+        if (!Boolean.TRUE.equals(course.getIsPublished()) || course.getStatus() == CourseStatus.ARCHIVED) {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
         return lessonRepository.findPublishedByCourse(courseId)
+                .stream()
+                .map(Lesson::getStableId)
+                .toList();
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public List<String> getEnrolledLessonIdsByCourseId(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+            throw new NotFoundException("Course not found with id: " + courseId);
+        }
+        return lessonRepository.findEnrolledReadableByCourse(courseId)
                 .stream()
                 .map(Lesson::getStableId)
                 .toList();

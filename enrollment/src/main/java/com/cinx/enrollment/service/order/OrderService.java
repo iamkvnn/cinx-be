@@ -15,6 +15,7 @@ import com.cinx.enrollment.model.OrderItem;
 import com.cinx.enrollment.repository.OrderItemRepository;
 import com.cinx.enrollment.repository.OrderRepository;
 import com.cinx.enrollment.service.cart.CartService;
+import com.cinx.enrollment.service.course.CourseService;
 import com.cinx.enrollment.service.payment.PaymentService;
 import com.cinx.enrollment.service.voucher.IVoucherService;
 import com.cinx.enrollment.utils.OrderIdGenerator;
@@ -39,6 +40,7 @@ public class OrderService implements IOrderService {
     private final OrderIdGenerator orderIdGenerator;
     private final PaymentService paymentService;
     private final CartService cartService;
+    private final CourseService courseService;
     private final OrderEventProducer orderEventProducer;
     private final IVoucherService voucherService;
 
@@ -143,14 +145,26 @@ public class OrderService implements IOrderService {
     }
 
     private List<OrderItem> createOrderItems(CreateOrderRequest request) {
-        return request.cartItems().stream()
-                .map(item -> OrderItem.builder()
-                        .courseId(item.course().id())
-                        .instructorId(item.course().instructor() != null ? item.course().instructor().id() : null)
-                        .title(item.course().title())
-                        .price(item.course().price())
-                        .discountedPrice(item.course().discountedPrice())
-                        .build())
+        List<String> courseIds = request.cartItems().stream()
+                .map(item -> item.course().id())
+                .distinct()
+                .toList();
+        Map<String, CourseResponse> coursesById = courseService.getCoursesByIds(courseIds).data().stream()
+                .collect(Collectors.toMap(CourseResponse::id, course -> course));
+        if (coursesById.size() != courseIds.size()) {
+            throw new BadRequestException("Some courses are no longer available for purchase");
+        }
+        return courseIds.stream()
+                .map(courseId -> {
+                    CourseResponse courseResponse = coursesById.get(courseId);
+                    return OrderItem.builder()
+                            .courseId(courseResponse.id())
+                            .instructorId(courseResponse.instructor() != null ? courseResponse.instructor().id() : null)
+                            .title(courseResponse.title())
+                            .price(courseResponse.price())
+                            .discountedPrice(courseResponse.discountedPrice())
+                            .build();
+                })
                 .toList();
     }
 }
