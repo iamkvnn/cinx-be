@@ -1,13 +1,11 @@
 package com.cinx.notification.messaging.consumer;
 
 import com.cinx.common.dto.ApiResponse;
-import com.cinx.notification.client.CourseClient;
 import com.cinx.notification.client.EnrollmentClient;
 import com.cinx.notification.client.UserClient;
-import com.cinx.notification.dto.response.course.CourseResponse;
 import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.messaging.context.NotificationContext;
-import com.cinx.notification.messaging.event.course.LessonChangedEvent;
+import com.cinx.notification.messaging.event.course.CourseContentPublishedEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -26,32 +24,24 @@ import java.util.Map;
 @Slf4j
 public class CourseNotificationListener {
 
-    private final CourseClient courseClient;
     private final EnrollmentClient enrollmentClient;
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
 
     @RabbitListener(queues = "notification.course.queue", ackMode = "MANUAL")
-    public void handleLessonChanged(LessonChangedEvent event, Channel channel,
-                                    @Header(AmqpHeaders.DELIVERY_TAG) long tag,
-                                    @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
-        log.info("Received course lesson changed event for courseId: {}", event.getCourseId());
+    public void handleCourseContentPublished(CourseContentPublishedEvent event, Channel channel,
+                                             @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                             @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
+        log.info("Received course content published event for courseId: {}", event.getCourseId());
         try {
             if (idempotencyService.isProcessed(messageId)) {
                 channel.basicAck(tag, false);
                 return;
             }
-            // courseTitle may be embedded; fall back to Feign if blank
             String courseTitle = event.getCourseTitle();
             if (courseTitle == null || courseTitle.isBlank()) {
-                ApiResponse<CourseResponse> courseRes = courseClient.getCourseById(event.getCourseId());
-                if (courseRes == null || !courseRes.success() || courseRes.data() == null) {
-                    log.warn("Course info not found for courseId: {}, skipping.", event.getCourseId());
-                    channel.basicAck(tag, false);
-                    return;
-                }
-                courseTitle = courseRes.data().title();
+                courseTitle = "your course";
             }
 
             ApiResponse<List<String>> enrolledRes = enrollmentClient.getUserIdsEnrolledInCourse(event.getCourseId());
@@ -63,14 +53,9 @@ public class CourseNotificationListener {
             }
 
             List<String> userIds = enrolledRes.data();
-            String action = switch (event.getChangeType().toUpperCase()) {
-                case "CREATED" -> "added";
-                case "DELETED" -> "removed";
-                default -> "updated";
-            };
 
             String title = "Course Update: " + courseTitle;
-            String message = "A lesson has been " + action + " in " + courseTitle + ". Check it out!";
+            String message = "New content has been published in " + courseTitle + ". Check it out!";
 
             // In-app: one batch for all enrolled users
             NotificationContext inAppCtx = NotificationContext.builder()
@@ -111,7 +96,7 @@ public class CourseNotificationListener {
             idempotencyService.markSuccess(messageId);
             channel.basicAck(tag, false);
         } catch (Exception e) {
-            log.error("Error processing course lesson changed event: ", e);
+            log.error("Error processing course content published event: ", e);
             try {
                 channel.basicNack(tag, false, false);
             } catch (Exception ex) {

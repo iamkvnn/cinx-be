@@ -81,7 +81,7 @@ public class RabbitMQConfig {
     public Binding lessonChangeBinding() {
         return BindingBuilder.bind(lessonChangeQueue())
                 .to(courseEventsExchange())
-                .with("course.lesson.#");
+                .with("course.content.published");
     }
 
     @Bean

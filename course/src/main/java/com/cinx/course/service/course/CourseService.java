@@ -16,6 +16,7 @@ import com.cinx.course.dto.response.RejectCourseResponse;
 import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.mapper.CourseMapper;
 import com.cinx.course.messaging.CourseEventProducer;
+import com.cinx.course.messaging.event.CourseContentPublishedEvent;
 import com.cinx.course.messaging.event.CourseRecommendationEvent;
 import com.cinx.course.messaging.event.CourseRecommendationPayload;
 import com.cinx.course.model.Category;
@@ -295,7 +296,12 @@ public class CourseService implements ICourseService {
         course.setStatus(CourseStatus.PUBLISHED);
         course.setPublishStatus(CoursePublishStatus.PUBLISHED);
         Course savedCourse = courseRepository.save(course);
-        lessonChangedEvents.forEach(courseEventProducer::publishLessonChangedEvent);
+        if (!lessonChangedEvents.isEmpty()) {
+            courseEventProducer.publishCourseContentPublishedEvent(new CourseContentPublishedEvent(
+                    savedCourse.getId(),
+                    savedCourse.getTitle()
+            ));
+        }
         publishRecommendationEvent(savedCourse, "course.course.published", "CoursePublished", true);
         return toResponse(savedCourse);
     }
@@ -495,4 +501,5 @@ public class CourseService implements ICourseService {
                 new CourseRecommendationEvent(payload, LocalDateTime.now())
         );
     }
+
 }

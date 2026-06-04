@@ -173,9 +173,8 @@ public class LearningProgressService implements ILearningProgressService {
 
     @Transactional
     @Override
-    public void recomputeCourseProgress(String courseId, String lessonId, String changeType) {
-        log.info("Recomputing course progress for courseId={} lessonId={} changeType={}",
-                courseId, lessonId, changeType);
+    public void recomputeCourseProgress(String courseId) {
+        log.info("Recomputing course progress for courseId={}", courseId);
 
         // 1. Fetch the current, authoritative lesson set from the course service.
         List<String> currentLessonIds;
@@ -305,7 +304,5 @@ public class LearningProgressService implements ILearningProgressService {
         }
     }
 
-    // Lesson-change notifications are now handled end-to-end by the notification service,
-    // which consumes course.events.exchange / course.lesson.changed events directly.
-    // No need to publish from here.
+    // Course content notifications are handled end-to-end by the notification service.
 }

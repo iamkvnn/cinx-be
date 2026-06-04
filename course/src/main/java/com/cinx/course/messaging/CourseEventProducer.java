@@ -1,6 +1,7 @@
 package com.cinx.course.messaging;
 
 import com.cinx.course.messaging.event.CourseRecommendationEvent;
+import com.cinx.course.messaging.event.CourseContentPublishedEvent;
 import com.cinx.course.messaging.event.LessonChangedEvent;
 import com.cinx.course.messaging.event.QuizSyncEvent;
 import com.cinx.course.messaging.event.ScoringModeChangedEvent;
@@ -25,6 +26,18 @@ public class CourseEventProducer {
                 "LessonChanged",
                 EXCHANGE,
                 "course.lesson.changed",
+                event
+        );
+    }
+
+    public void publishCourseContentPublishedEvent(CourseContentPublishedEvent event) {
+        outboxEventPublisher.enqueue(
+                UUID.randomUUID().toString(),
+                "Course",
+                event.getCourseId(),
+                "CourseContentPublished",
+                EXCHANGE,
+                "course.content.published",
                 event
         );
     }

@@ -14,5 +14,5 @@ public interface ILearningProgressService {
     void createCourseProgress(String userId, String courseId);
     boolean isLearningItemCompleted(String userId, String itemId);
     void updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request);
-    void recomputeCourseProgress(String courseId, String lessonId, String changeType);
+    void recomputeCourseProgress(String courseId);
 }
