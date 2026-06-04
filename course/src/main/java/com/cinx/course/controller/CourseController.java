@@ -6,11 +6,14 @@ import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
-import com.cinx.course.dto.request.ReorderLessonsRequest;
+import com.cinx.course.dto.request.MoveLessonRequest;
+import com.cinx.course.dto.request.MoveSectionRequest;
 import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.*;
 import com.cinx.course.service.course.ICourseService;
 import com.cinx.course.service.curriculum.ICurriculumService;
+import com.cinx.course.service.lesson.ILessonService;
+import com.cinx.course.service.section.ISectionService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
@@ -27,6 +30,8 @@ import java.util.List;
 public class CourseController {
     private final ICourseService courseService;
     private final ICurriculumService curriculumService;
+    private final ISectionService sectionService;
+    private final ILessonService lessonService;
 
     @GetMapping
     public ResponseEntity<PaginatedApiResponse<CourseResponse>> getAllCourses(
@@ -116,16 +121,31 @@ public class CourseController {
         ));
     }
 
-    @Operation(summary = "Reorder editable course curriculum", security = @SecurityRequirement(name = "bearer-jwt"))
-    @PutMapping("/{id}/curriculum/reorder")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> reorderCurriculum(
-            @PathVariable("id") String courseId,
-            @Valid @RequestBody ReorderLessonsRequest request
+    @Operation(summary = "Move editable course section", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PatchMapping("/{id}/curriculum/sections/{sectionId}/position")
+    public ResponseEntity<ApiResponse<SectionPositionResponse>> moveSection(
+            @PathVariable String id,
+            @PathVariable String sectionId,
+            @Valid @RequestBody MoveSectionRequest request
     ) {
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
-                "Course curriculum reordered successfully",
-                curriculumService.reorderCurriculum(courseId, request)
+                "Section position updated successfully",
+                sectionService.moveSection(id, sectionId, request)
+        ));
+    }
+
+    @Operation(summary = "Move editable course lesson", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PatchMapping("/{id}/curriculum/lessons/{lessonId}/position")
+    public ResponseEntity<ApiResponse<LessonPositionResponse>> moveLesson(
+            @PathVariable String id,
+            @PathVariable String lessonId,
+            @Valid @RequestBody MoveLessonRequest request
+    ) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Lesson position updated successfully",
+                lessonService.moveLesson(id, lessonId, request)
         ));
     }
 
@@ -136,7 +156,7 @@ public class CourseController {
         );
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@RequestBody CreateCourseRequest request) {
         return ResponseEntity.ok().body(
@@ -144,7 +164,7 @@ public class CourseController {
         );
     }
 
-    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable("id") String courseId, @Valid @RequestBody UpdateCourseRequest request) {
         return ResponseEntity.ok().body(

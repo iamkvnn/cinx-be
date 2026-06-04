@@ -1,7 +1,8 @@
 package com.cinx.course.service.section;
 
 import com.cinx.common.exception.BadRequestException;
-import com.cinx.course.dto.response.SectionResponse;
+import com.cinx.course.dto.request.MoveSectionRequest;
+import com.cinx.course.dto.response.SectionPositionResponse;
 import com.cinx.course.mapper.SectionMapper;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.CourseDraft;
@@ -41,64 +42,110 @@ class SectionServiceTest {
     private SectionService sectionService;
 
     @Test
-    void reorderSections_updatesOnlyMovedSectionWhenSparseGapExists() {
+    void moveSection_updatesOnlyMovedSectionWhenSparseGapExists() {
         Course course = course();
         CourseDraft draft = draft(course);
         Section first = section("sec-1", 1024, draft);
         Section second = section("sec-2", 2048, draft);
         Section third = section("sec-3", 3072, draft);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
-        when(courseDraftService.getOrCreateDraft(course)).thenReturn(draft);
-        when(sectionRepository.findDraftByDraftForUpdate("draft-1")).thenReturn(List.of(first, second, third));
-        when(sectionMapper.toResponse(any(Section.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+        mockDraft(course, draft, List.of(first, second, third));
 
-        List<SectionResponse> response = sectionService.reorderSections(
+        SectionPositionResponse response = sectionService.moveSection(
                 "course-1",
-                List.of("sec-1", "sec-3", "sec-2")
+                "sec-2",
+                new MoveSectionRequest("sec-3", null)
         );
 
-        List<Section> saved = capturedSavedSections();
-        assertThat(saved).containsExactly(second);
+        Section saved = capturedSavedSection();
+        assertThat(saved).isSameAs(second);
         assertThat(second.getOrderIndex()).isEqualTo(4096);
-        assertThat(response).extracting(SectionResponse::id).containsExactly("sec-1", "sec-3", "sec-2");
+        assertThat(response.sectionId()).isEqualTo("sec-2");
+        assertThat(response.orderIndex()).isEqualTo(4096);
+        verify(sectionRepository, never()).saveAll(any());
     }
 
     @Test
-    void reorderSections_rebalancesWhenNoSparseGapExists() {
+    void moveSection_movesToStart() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section first = section("sec-1", 1024, draft);
+        Section second = section("sec-2", 2048, draft);
+        Section third = section("sec-3", 3072, draft);
+        mockDraft(course, draft, List.of(first, second, third));
+
+        sectionService.moveSection("course-1", "sec-3", new MoveSectionRequest(null, "sec-1"));
+
+        assertThat(capturedSavedSection()).isSameAs(third);
+        assertThat(third.getOrderIndex()).isEqualTo(512);
+        verify(sectionRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void moveSection_noopsWhenPositionDoesNotChange() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section first = section("sec-1", 1024, draft);
+        Section second = section("sec-2", 2048, draft);
+        Section third = section("sec-3", 3072, draft);
+        mockDraft(course, draft, List.of(first, second, third));
+
+        SectionPositionResponse response = sectionService.moveSection(
+                "course-1",
+                "sec-2",
+                new MoveSectionRequest("sec-1", "sec-3")
+        );
+
+        assertThat(response.orderIndex()).isEqualTo(2048);
+        verify(sectionRepository, never()).save(any());
+        verify(sectionRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void moveSection_rebalancesWhenNoSparseGapExists() {
         Course course = course();
         CourseDraft draft = draft(course);
         Section first = section("sec-1", 1, draft);
         Section second = section("sec-2", 2, draft);
         Section third = section("sec-3", 3, draft);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
-        when(courseDraftService.getOrCreateDraft(course)).thenReturn(draft);
-        when(sectionRepository.findDraftByDraftForUpdate("draft-1")).thenReturn(List.of(first, second, third));
-        when(sectionMapper.toResponse(any(Section.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+        mockDraft(course, draft, List.of(first, second, third));
 
-        sectionService.reorderSections("course-1", List.of("sec-2", "sec-1", "sec-3"));
+        sectionService.moveSection("course-1", "sec-2", new MoveSectionRequest(null, "sec-1"));
 
         assertThat(capturedSavedSections()).containsExactly(second, first, third);
         assertThat(second.getOrderIndex()).isEqualTo(1024);
         assertThat(first.getOrderIndex()).isEqualTo(2048);
         assertThat(third.getOrderIndex()).isEqualTo(3072);
+        verify(sectionRepository, never()).save(any());
     }
 
     @Test
-    void reorderSections_rejectsDuplicateOrMissingSections() {
+    void moveSection_rejectsInvalidNeighbors() {
         Course course = course();
         CourseDraft draft = draft(course);
         Section first = section("sec-1", 1024, draft);
         Section second = section("sec-2", 2048, draft);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
-        when(courseDraftService.getOrCreateDraft(course)).thenReturn(draft);
-        when(sectionRepository.findDraftByDraftForUpdate("draft-1")).thenReturn(List.of(first, second));
+        mockDraft(course, draft, List.of(first, second));
 
-        assertThatThrownBy(() -> sectionService.reorderSections(
+        assertThatThrownBy(() -> sectionService.moveSection(
                 "course-1",
-                List.of("sec-1", "sec-1")
+                "sec-2",
+                new MoveSectionRequest("sec-2", null)
         )).isInstanceOf(BadRequestException.class);
 
+        verify(sectionRepository, never()).save(any());
         verify(sectionRepository, never()).saveAll(any());
+    }
+
+    private void mockDraft(Course course, CourseDraft draft, List<Section> sections) {
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseDraftService.getOrCreateDraft(course)).thenReturn(draft);
+        when(sectionRepository.findDraftByDraftForUpdate("draft-1")).thenReturn(sections);
+    }
+
+    private Section capturedSavedSection() {
+        ArgumentCaptor<Section> captor = ArgumentCaptor.forClass(Section.class);
+        verify(sectionRepository).save(captor.capture());
+        return captor.getValue();
     }
 
     private List<Section> capturedSavedSections() {
@@ -127,15 +174,5 @@ class SectionServiceTest {
         section.setOrderIndex(orderIndex);
         section.setDraft(draft);
         return section;
-    }
-
-    private SectionResponse response(Section section) {
-        return new SectionResponse(
-                section.getStableId(),
-                section.getTitle(),
-                section.getDescription(),
-                section.getDuration(),
-                section.getOrderIndex()
-        );
     }
 }

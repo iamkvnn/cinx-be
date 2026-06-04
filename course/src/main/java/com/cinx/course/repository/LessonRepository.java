@@ -61,6 +61,17 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
     """)
     List<Lesson> findBySectionIdsForUpdate(@Param("sectionIds") List<String> sectionIds);
 
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("""
+        SELECT l
+        FROM Lesson l
+        JOIN FETCH l.section s
+        JOIN s.draft d
+        WHERE d.id = :draftId
+            AND l.stableId = :stableId
+    """)
+    Optional<Lesson> findDraftLessonForUpdate(@Param("draftId") String draftId, @Param("stableId") String stableId);
+
     @Query("""
         SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END
         FROM Lesson l

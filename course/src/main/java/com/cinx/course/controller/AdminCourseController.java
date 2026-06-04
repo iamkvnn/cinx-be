@@ -5,9 +5,7 @@ import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.RejectCourseRequest;
-import com.cinx.course.dto.response.CourseChangeResponse;
 import com.cinx.course.dto.response.CourseResponse;
-import com.cinx.course.service.change.ICourseChangeAuditService;
 import com.cinx.course.service.course.ICourseService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -17,15 +15,12 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-
 @RestController
 @RequestMapping("/api/v1/admin/courses")
 @RequiredArgsConstructor
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminCourseController {
     private final ICourseService courseService;
-    private final ICourseChangeAuditService courseChangeAuditService;
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
@@ -59,12 +54,6 @@ public class AdminCourseController {
     @GetMapping("/{id}")
     public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
         return ResponseEntity.ok(new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(courseId)));
-    }
-
-    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/changes")
-    public ResponseEntity<ApiResponse<List<CourseChangeResponse>>> getCourseChanges(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Course changes fetched successfully", courseChangeAuditService.getCourseChangeHistory(courseId)));
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))

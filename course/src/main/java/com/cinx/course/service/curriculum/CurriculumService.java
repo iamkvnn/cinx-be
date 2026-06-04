@@ -1,7 +1,6 @@
 package com.cinx.course.service.curriculum;
 
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.course.dto.request.ReorderLessonsRequest;
 import com.cinx.course.dto.response.CourseCurriculumResponse;
 import com.cinx.course.dto.response.CurriculumSectionResponse;
 import com.cinx.course.dto.response.LessonResponse;
@@ -14,8 +13,6 @@ import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
 import com.cinx.course.service.course.ICourseDraftService;
-import com.cinx.course.service.lesson.ILessonService;
-import com.cinx.course.service.section.ISectionService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -33,8 +30,6 @@ public class CurriculumService implements ICurriculumService {
     private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
     private final ICourseDraftService courseDraftService;
-    private final ISectionService sectionService;
-    private final ILessonService lessonService;
     private final LessonMapper lessonMapper;
 
     @Override
@@ -65,19 +60,6 @@ public class CurriculumService implements ICurriculumService {
         List<Section> sections = sectionRepository.findDraftByDraft(draft.get().getId());
         List<Lesson> lessons = lessonRepository.findDraftByDraft(draft.get().getId());
         return toResponse(course.getId(), sections, lessons);
-    }
-
-    @Override
-    @Transactional
-    public CourseCurriculumResponse reorderCurriculum(String courseId, ReorderLessonsRequest request) {
-        sectionService.reorderSections(
-                courseId,
-                request.sections().stream()
-                        .map(section -> section.sectionId())
-                        .toList()
-        );
-        lessonService.reorderLessons(courseId, request);
-        return getDraftCurriculum(courseId);
     }
 
     private CourseCurriculumResponse toResponse(String courseId, List<Section> sections, List<Lesson> lessons) {

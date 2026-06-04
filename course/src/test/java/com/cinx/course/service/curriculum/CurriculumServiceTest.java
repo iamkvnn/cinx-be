@@ -2,8 +2,6 @@ package com.cinx.course.service.curriculum;
 
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
-import com.cinx.course.dto.request.ReorderLessonsRequest;
-import com.cinx.course.dto.request.SectionLessonsOrderRequest;
 import com.cinx.course.dto.response.CourseCurriculumResponse;
 import com.cinx.course.dto.response.LessonResponse;
 import com.cinx.course.mapper.LessonMapper;
@@ -15,8 +13,6 @@ import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
 import com.cinx.course.service.course.ICourseDraftService;
-import com.cinx.course.service.lesson.ILessonService;
-import com.cinx.course.service.section.ISectionService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -29,7 +25,6 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,10 +37,6 @@ class CurriculumServiceTest {
     private LessonRepository lessonRepository;
     @Mock
     private ICourseDraftService courseDraftService;
-    @Mock
-    private ISectionService sectionService;
-    @Mock
-    private ILessonService lessonService;
     @Mock
     private LessonMapper lessonMapper;
     @InjectMocks
@@ -97,30 +88,6 @@ class CurriculumServiceTest {
 
         assertThatThrownBy(() -> curriculumService.getPublishedCurriculum("course-1"))
                 .isInstanceOf(NotFoundException.class);
-    }
-
-    @Test
-    void reorderCurriculumReordersSectionsThenLessonsAndReturnsDraftCurriculum() {
-        Course course = course(true);
-        CourseDraft draft = new CourseDraft();
-        draft.setId("draft-1");
-        draft.setCourse(course);
-        Section section = section("sec-1", 1024);
-        Lesson lesson = lesson("les-1", 1024, section);
-        ReorderLessonsRequest request = new ReorderLessonsRequest(List.of(
-                new SectionLessonsOrderRequest("sec-1", List.of("les-1"))
-        ));
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
-        when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
-        when(sectionRepository.findDraftByDraft("draft-1")).thenReturn(List.of(section));
-        when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(lesson));
-        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
-
-        CourseCurriculumResponse response = curriculumService.reorderCurriculum("course-1", request);
-
-        verify(sectionService).reorderSections(any(), any());
-        verify(lessonService).reorderLessons("course-1", request);
-        assertThat(response.sections()).extracting("id").containsExactly("sec-1");
     }
 
     private Course course(boolean published) {
