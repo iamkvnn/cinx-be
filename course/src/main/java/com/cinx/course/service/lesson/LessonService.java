@@ -50,7 +50,7 @@ public class LessonService implements ILessonService {
     public List<String> getLessonIdsByCourseId(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (!Boolean.TRUE.equals(course.getIsPublished()) || course.getStatus() == CourseStatus.ARCHIVED) {
+        if (course.getStatus() != CourseStatus.PUBLISHED) {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
         return lessonRepository.findPublishedByCourse(courseId)
@@ -64,7 +64,7 @@ public class LessonService implements ILessonService {
     public List<String> getEnrolledLessonIdsByCourseId(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
         return lessonRepository.findEnrolledReadableByCourse(courseId)

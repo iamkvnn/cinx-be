@@ -5,6 +5,7 @@ import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.RejectCourseRequest;
@@ -76,10 +77,43 @@ public class CourseService implements ICourseService {
     @Override
     @Transactional(readOnly = true)
     public CourseResponse getCourseById(String courseId) {
+        return getPublishedSnapshotCourseById(courseId);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseResponse getPublishedSnapshotCourseById(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        CourseDraft draft = courseDraftService.findDraft(course).orElse(null);
-        return toResponse(course, draft);
+        ensurePublishedSnapshotExists(course);
+        return toResponse(course);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseResponse getOwnedPublishedSnapshotCourseById(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        ensureCurrentUserOwns(course);
+        ensurePublishedSnapshotExists(course);
+        return toResponse(course);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseResponse getDraftCourseById(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        return draftOnlyResponse(course);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public CourseResponse getOwnedDraftCourseById(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        ensureCurrentUserOwns(course);
+        return draftOnlyResponse(course);
     }
 
     @Override
@@ -116,7 +150,7 @@ public class CourseService implements ICourseService {
     @Transactional(readOnly = true)
     public InstructorCourseSummaryResponse getInstructorCourseSummary(String instructorId) {
         long courseCount = courseRepository.countByInstructorId(instructorId);
-        long publishedCourseCount = courseRepository.countByInstructorIdAndIsPublishedTrue(instructorId);
+        long publishedCourseCount = courseRepository.countByInstructorIdAndStatus(instructorId, CourseStatus.PUBLISHED);
         Double averageRating = courseRepository.averageRatingByInstructorId(instructorId);
         return new InstructorCourseSummaryResponse(
                 courseCount,
@@ -150,9 +184,10 @@ public class CourseService implements ICourseService {
             Integer priceFrom,
             Integer priceTo,
             CourseStatus status,
+            CoursePublishStatus publishStatus,
             int page, int size, String sort) {
         Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
-        Page<Course> courses = courseRepository.searchAll(query, categoryId, instructorId, rating, priceFrom, priceTo, status, pageable);
+        Page<Course> courses = courseRepository.searchAll(query, categoryId, instructorId, rating, priceFrom, priceTo, status, publishStatus, pageable);
         return toResponse(courses);
     }
 
@@ -169,6 +204,7 @@ public class CourseService implements ICourseService {
         course.setEnrollmentCount(0L);
         course.setRating(0.0);
         course.setStatus(CourseStatus.DRAFT);
+        course.setPublishStatus(null);
         course.setDiscountRate(calculateDiscountRate(request.price(), request.discountedPrice()));
         course.setCategory(category(request.categoryId()));
         return course;
@@ -179,9 +215,13 @@ public class CourseService implements ICourseService {
     public CourseResponse updateCourse(String courseId, UpdateCourseRequest request) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        ensureCurrentUserOwns(course);
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException("Archived courses cannot be updated");
+        }
         Category category = category(request.categoryId());
         Long discountRate = calculateDiscountRate(request.price(), request.discountedPrice());
-        if (Boolean.TRUE.equals(course.getIsPublished()) || courseDraftService.findDraft(course).isPresent()) {
+        if (course.getStatus() == CourseStatus.PUBLISHED || courseDraftService.findDraft(course).isPresent()) {
             CourseDraft draft = courseDraftService.updateDraft(course, request, category, discountRate);
             return toResponse(course, draft);
         }
@@ -191,6 +231,7 @@ public class CourseService implements ICourseService {
             course.setDiscountRate(discountRate);
         }
         course.setStatus(CourseStatus.DRAFT);
+        course.setPublishStatus(null);
         return toResponse(courseRepository.save(course));
     }
 
@@ -199,14 +240,18 @@ public class CourseService implements ICourseService {
     public CourseResponse submitCourse(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (course.getStatus() != CourseStatus.DRAFT && course.getStatus() != CourseStatus.REJECTED) {
-            throw new BadRequestException("Only draft or rejected courses can be submitted");
+        ensureCurrentUserOwns(course);
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException("Archived courses cannot be submitted");
+        }
+        if (course.getPublishStatus() == CoursePublishStatus.WAITING_APPROVAL) {
+            throw new BadRequestException("Course is already waiting for approval");
         }
         Optional<CourseDraft> draft = courseDraftService.findDraft(course);
-        if (draft.isEmpty() && course.getIsPublished()) {
+        if (draft.isEmpty() && course.getStatus() == CourseStatus.PUBLISHED) {
             throw new BadRequestException("Course draft not found for course id: " + courseId);
         }
-        course.setStatus(CourseStatus.WAITING_APPROVAL);
+        course.setPublishStatus(CoursePublishStatus.WAITING_APPROVAL);
         return toResponse(courseRepository.save(course), draft.orElse(null));
     }
 
@@ -215,17 +260,24 @@ public class CourseService implements ICourseService {
     public CourseResponse archiveCourse(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        String userId = AuthenticationUtil.extractUserId();
-        if (!Objects.equals(course.getInstructorId(), userId)) {
-            throw new ForbiddenException("You are not allowed to archive this course");
-        }
-        if (!Boolean.TRUE.equals(course.getIsPublished()) || course.getStatus() == CourseStatus.ARCHIVED) {
+        ensureCurrentUserOwns(course);
+        if (course.getStatus() != CourseStatus.PUBLISHED) {
             throw new BadRequestException("Only published, non-archived courses can be archived");
         }
         course.setStatus(CourseStatus.ARCHIVED);
+        course.setPublishStatus(null);
         Course savedCourse = courseRepository.save(course);
         publishRecommendationEvent(savedCourse, "course.course.archived", "CourseArchived", false);
         return toResponse(savedCourse);
+    }
+
+    @Override
+    @Transactional
+    public CourseResponse unarchiveCourse(String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        ensureCurrentUserOwns(course);
+        return unarchive(course);
     }
 
     @Transactional
@@ -233,12 +285,15 @@ public class CourseService implements ICourseService {
     public CourseResponse approveCourse(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (course.getStatus() != CourseStatus.WAITING_APPROVAL) {
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException("Archived courses cannot be approved");
+        }
+        if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
             throw new BadRequestException("Only courses waiting for approval can be approved");
         }
         var lessonChangedEvents = courseDraftService.approveDraft(course);
         course.setStatus(CourseStatus.PUBLISHED);
-        course.setIsPublished(true);
+        course.setPublishStatus(CoursePublishStatus.PUBLISHED);
         Course savedCourse = courseRepository.save(course);
         lessonChangedEvents.forEach(courseEventProducer::publishLessonChangedEvent);
         publishRecommendationEvent(savedCourse, "course.course.published", "CoursePublished", true);
@@ -250,8 +305,14 @@ public class CourseService implements ICourseService {
     public CourseResponse rejectCourse(String courseId, RejectCourseRequest request) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException("Archived courses cannot be rejected");
+        }
+        if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
+            throw new BadRequestException("Only courses waiting for approval can be rejected");
+        }
         CourseDraft draft = courseDraftService.findDraft(course).orElse(null);
-        course.setStatus(CourseStatus.REJECTED);
+        course.setPublishStatus(CoursePublishStatus.REJECTED);
         RejectCourseReason rejectReason = rejectCourseReasonRepository.findByCourse(courseId)
                 .orElseGet(() -> RejectCourseReason.builder()
                         .courseId(courseId)
@@ -292,7 +353,7 @@ public class CourseService implements ICourseService {
     @Transactional
     public void replayRecommendationEvents() {
         courseRepository.findAll().stream()
-                .filter(course -> Boolean.TRUE.equals(course.getIsPublished()))
+                .filter(course -> course.getStatus() == CourseStatus.PUBLISHED)
                 .forEach(course -> publishRecommendationEvent(course, "course.course.updated", "CourseUpdated", true));
     }
 
@@ -307,6 +368,34 @@ public class CourseService implements ICourseService {
             return courseMapper.toResponse(course, draft, instructor);
         }
         return toResponse(course);
+    }
+
+    private CourseResponse draftOnlyResponse(Course course) {
+        CourseDraft draft = courseDraftService.findDraft(course).orElse(null);
+        if (draft != null) {
+            return toResponse(course, draft);
+        }
+        if (course.getStatus() == CourseStatus.DRAFT) {
+            return toResponse(course);
+        }
+        throw new NotFoundException("Course draft not found for course id: " + course.getId());
+    }
+
+    private void ensurePublishedSnapshotExists(Course course) {
+        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
+            throw new NotFoundException("Course published snapshot not found for id: " + course.getId());
+        }
+    }
+
+    private CourseResponse unarchive(Course course) {
+        if (course.getStatus() != CourseStatus.ARCHIVED) {
+            throw new BadRequestException("Only archived courses can be unarchived");
+        }
+        course.setStatus(CourseStatus.PUBLISHED);
+        course.setPublishStatus(null);
+        Course savedCourse = courseRepository.save(course);
+        publishRecommendationEvent(savedCourse, "course.course.published", "CoursePublished", true);
+        return toResponse(savedCourse);
     }
 
     private Page<CourseResponse> toResponse(Page<Course> courses) {
@@ -345,14 +434,20 @@ public class CourseService implements ICourseService {
     private Course findEnrolledReadableCourse(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (!Boolean.TRUE.equals(course.getIsPublished())) {
+        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
             throw new NotFoundException("Course not found with id: " + courseId);
         }
         return course;
     }
 
     private boolean isBuyable(Course course) {
-        return Boolean.TRUE.equals(course.getIsPublished()) && course.getStatus() != CourseStatus.ARCHIVED;
+        return course.getStatus() == CourseStatus.PUBLISHED;
+    }
+
+    private void ensureCurrentUserOwns(Course course) {
+        if (!Objects.equals(course.getInstructorId(), AuthenticationUtil.extractUserId())) {
+            throw new ForbiddenException("You are not allowed to access this course");
+        }
     }
 
     private void ensureCurrentUserEnrolled(String courseId) {
@@ -384,12 +479,12 @@ public class CourseService implements ICourseService {
                 response.discountRate(),
                 response.rating(),
                 response.enrollmentCount(),
-                course.getIsPublished(),
                 response.isInSubscription(),
                 response.duration(),
                 response.hasCertificate(),
                 response.certificateTitle(),
                 response.status(),
+                response.publishStatus(),
                 includeCurriculum ? curriculumService.getEnrolledCurriculum(course.getId()).sections() : null,
                 response.createdAt(),
                 response.updatedAt()

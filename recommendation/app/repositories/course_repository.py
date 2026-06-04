@@ -31,7 +31,7 @@ class CourseRepository:
             
         self.db.commit()
 
-        if course.is_published and course.status != "ARCHIVED":
+        if course.status == "PUBLISHED":
             self._upsert_course_chunks(
                 course.id,
                 str(course.title),
@@ -66,13 +66,12 @@ class CourseRepository:
         self.db.commit()
 
     def get_published_courses(self):
-        stmt = select(Course).where(Course.is_published == True, Course.status != "ARCHIVED")
+        stmt = select(Course).where(Course.status == "PUBLISHED")
         return self.db.execute(stmt).scalars().all()
 
     def get_published_courses_by_categoryId(self, categoryIds: list[str]):
         stmt = select(Course).where(
-            Course.is_published == True,
-            Course.status != "ARCHIVED",
+            Course.status == "PUBLISHED",
             Course.category_id.in_(categoryIds)
         )
         return self.db.execute(stmt).scalars().all()

@@ -1,5 +1,6 @@
 package com.cinx.course.dto.response;
 
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 
 import java.time.LocalDateTime;
@@ -36,6 +37,8 @@ public record CourseResponse (
         String certificateTitle,
         @Schema(example = "PUBLISHED")
         CourseStatus status,
+        @Schema(example = "WAITING_APPROVAL")
+        CoursePublishStatus publishStatus,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
 ) {

@@ -38,8 +38,7 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
         JOIN l.section s
         JOIN s.course c
         WHERE c.id = :courseId
-            AND c.isPublished = true
-            AND c.status != com.cinx.course.consts.CourseStatus.ARCHIVED
+            AND c.status = com.cinx.course.consts.CourseStatus.PUBLISHED
         ORDER BY s.orderIndex ASC, s.stableId ASC, l.orderIndex ASC, l.stableId ASC
     """)
     List<Lesson> findPublishedByCourse(@Param("courseId") String courseId);
@@ -49,7 +48,7 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
         JOIN l.section s
         JOIN s.course c
         WHERE c.id = :courseId
-            AND c.isPublished = true
+            AND c.status IN (com.cinx.course.consts.CourseStatus.PUBLISHED, com.cinx.course.consts.CourseStatus.ARCHIVED)
         ORDER BY s.orderIndex ASC, s.stableId ASC, l.orderIndex ASC, l.stableId ASC
     """)
     List<Lesson> findEnrolledReadableByCourse(@Param("courseId") String courseId);

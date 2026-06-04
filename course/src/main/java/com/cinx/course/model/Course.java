@@ -1,6 +1,7 @@
 package com.cinx.course.model;
 
 import com.cinx.common.model.AuditableEntity;
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import jakarta.persistence.*;
 import lombok.*;
@@ -31,9 +32,11 @@ public class Course extends AuditableEntity {
     @Builder.Default
     private Boolean hasCertificate = false;
     private String certificateTitle;
+    @Enumerated(EnumType.STRING)
     private CourseStatus status;
-    @Builder.Default
-    private Boolean isPublished = false;
+
+    @Enumerated(EnumType.STRING)
+    private CoursePublishStatus publishStatus;
 
     @ManyToOne
     private Category category;

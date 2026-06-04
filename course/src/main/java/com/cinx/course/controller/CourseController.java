@@ -4,6 +4,7 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
 import com.cinx.course.dto.request.MoveLessonRequest;
@@ -86,6 +87,7 @@ public class CourseController {
             @RequestParam(required = false) Integer priceFrom,
             @RequestParam(required = false) Integer priceTo,
             @RequestParam(required = false) CourseStatus status,
+            @RequestParam(required = false) CoursePublishStatus publishStatus,
             @RequestParam(required = false) String categoryId
     ) {
         Page<CourseResponse> courses = courseService.getAllCourses(
@@ -96,6 +98,7 @@ public class CourseController {
                 priceFrom,
                 priceTo,
                 status,
+                publishStatus,
                 page,
                 size,
                 sort);
@@ -108,7 +111,17 @@ public class CourseController {
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course draft fetched successfully",
-                courseService.getCourseById(courseId)
+                courseService.getOwnedDraftCourseById(courseId)
+        ));
+    }
+
+    @Operation(summary = "Get owned published course snapshot", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{id}/published")
+    public ResponseEntity<ApiResponse<CourseResponse>> getPublishedSnapshot(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course published snapshot fetched successfully",
+                courseService.getOwnedPublishedSnapshotCourseById(courseId)
         ));
     }
 
@@ -138,7 +151,17 @@ public class CourseController {
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course draft curriculum fetched successfully",
-                curriculumService.getDraftCurriculum(courseId)
+                curriculumService.getOwnedDraftCurriculum(courseId)
+        ));
+    }
+
+    @Operation(summary = "Get owned published course curriculum snapshot", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/{id}/published/curriculum")
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getPublishedSnapshotCurriculum(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course published curriculum snapshot fetched successfully",
+                curriculumService.getOwnedPublishedSnapshotCurriculum(courseId)
         ));
     }
 
@@ -208,6 +231,16 @@ public class CourseController {
                 true,
                 "Course archived successfully",
                 courseService.archiveCourse(courseId)
+        ));
+    }
+
+    @Operation(summary = "Unarchive course", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{id}/unarchive")
+    public ResponseEntity<ApiResponse<CourseResponse>> unarchiveCourse(@PathVariable("id") String courseId) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Course unarchived successfully",
+                courseService.unarchiveCourse(courseId)
         ));
     }
 

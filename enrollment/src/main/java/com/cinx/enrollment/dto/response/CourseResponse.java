@@ -24,12 +24,14 @@ public record CourseResponse(
         Double rating,
         @Schema(example = "2500")
         Long enrollmentCount,
-        @Schema(example = "true")
-        Boolean isPublished,
         @Schema(example = "false")
         Boolean isInSubscription,
         @Schema(example = "3600")
         Long duration,
+        @Schema(example = "PUBLISHED")
+        String status,
+        @Schema(example = "PUBLISHED")
+        String publishStatus,
         @Schema(example = "2025-01-01T10:00:00")
         LocalDateTime createdAt,
         @Schema(example = "2025-01-01T10:00:00")

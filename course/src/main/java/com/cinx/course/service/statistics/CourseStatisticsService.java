@@ -1,6 +1,7 @@
 package com.cinx.course.service.statistics;
 
 import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.response.AdminCourseStatisticsOverviewResponse;
 import com.cinx.course.dto.response.InstructorCourseStatisticsOverviewResponse;
 import com.cinx.course.dto.response.StatisticsByTimeResponse;
@@ -32,7 +33,7 @@ public class CourseStatisticsService implements ICourseStatisticsService {
                 toStringLongMap(courseRepository.countCreatedCoursesByStatusBetween(range.start(), range.end())),
                 fillByTime(range, timeRows),
                 toStringLongMap(courseRepository.countCurrentCoursesByStatus()),
-                courseRepository.countByIsPublishedTrue()
+                courseRepository.countByStatus(CourseStatus.PUBLISHED)
         );
     }
 
@@ -50,7 +51,7 @@ public class CourseStatisticsService implements ICourseStatisticsService {
                 courseRepository.countCreatedCoursesByInstructorBetween(instructorId, range.start(), range.end()),
                 fillByTime(range, timeRows),
                 courseRepository.countByInstructorId(instructorId),
-                courseRepository.countByInstructorIdAndIsPublishedTrue(instructorId),
+                courseRepository.countByInstructorIdAndStatus(instructorId, CourseStatus.PUBLISHED),
                 averageRating != null ? averageRating : 0.0,
                 enrollmentSnapshot != null ? enrollmentSnapshot : 0L
         );

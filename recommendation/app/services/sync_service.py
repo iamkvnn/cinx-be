@@ -12,9 +12,10 @@ class SyncService:
     def handle_course_upsert(self, payload):
         status_raw = payload.status if hasattr(payload, "status") else "DRAFT"
         status = str(status_raw).upper() if isinstance(status_raw, str) else ("PUBLISHED" if status_raw == 2 else "DRAFT")
-        
-        is_published = getattr(payload, "isPublished", False)
-        if not is_published or status == "ARCHIVED":
+        publish_status_raw = getattr(payload, "publishStatus", None)
+        publish_status = str(publish_status_raw).upper() if isinstance(publish_status_raw, str) else None
+
+        if status != "PUBLISHED":
             self.course_repo.delete(payload.id)
             return
 
@@ -28,10 +29,10 @@ class SyncService:
             "category_id": category.get("id") if isinstance(category, dict) else getattr(category, "id", None),
             "category_name": category.get("name") if isinstance(category, dict) else getattr(category, "name", None),
             "instructor_id": instructor.get("id") if isinstance(instructor, dict) else getattr(instructor, "id", None),
-            "is_published": is_published,
             "rating": payload.rating if payload.rating is not None else 0.0,
             "enrollment_count": payload.enrollmentCount if payload.enrollmentCount is not None else 0,
             "status": status,
+            "publish_status": publish_status,
             "created_at": payload.createdAt,
             "updated_at": payload.updatedAt,
         }

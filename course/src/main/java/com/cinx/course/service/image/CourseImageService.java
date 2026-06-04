@@ -1,7 +1,6 @@
 package com.cinx.course.service.image;
 
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseImageRequest;
 import com.cinx.course.dto.request.UpdateCourseImageRequest;
 import com.cinx.course.model.Course;

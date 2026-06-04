@@ -1,5 +1,6 @@
 package com.cinx.course.messaging.event;
 
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.response.CategoryResponse;
 import com.cinx.course.dto.response.CourseImageResponse;
@@ -21,12 +22,12 @@ public record CourseRecommendationPayload(
         Long discountRate,
         Double rating,
         Long enrollmentCount,
-        Boolean isPublished,
         Boolean isInSubscription,
         Long duration,
         Boolean hasCertificate,
         String certificateTitle,
         CourseStatus status,
+        CoursePublishStatus publishStatus,
         List<CurriculumSectionResponse> sections,
         LocalDateTime createdAt,
         LocalDateTime updatedAt

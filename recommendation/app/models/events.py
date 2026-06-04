@@ -49,12 +49,12 @@ class CoursePayload(BaseModel):
     discountRate: Optional[int] = None
     rating: Optional[float] = 0.0
     enrollmentCount: int = 0
-    isPublished: bool = False
     isInSubscription: bool = False
     duration: Optional[int] = None
     hasCertificate: bool = False
     certificateTitle: Optional[str] = None
-    status: str = "DRAFT"  # 'DRAFT' | 'PUBLISHED' | ...
+    status: str = "DRAFT"  # 'DRAFT' | 'PUBLISHED' | 'ARCHIVED'
+    publishStatus: Optional[str] = None  # None | 'WAITING_APPROVAL' | 'PUBLISHED' | 'REJECTED'
     sections: Optional[List[SectionPayload]] = None
     createdAt: Optional[datetime] = None
     updatedAt: Optional[datetime] = None
