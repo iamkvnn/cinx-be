@@ -12,6 +12,7 @@ import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.auth.model.User;
 import com.cinx.auth.messaging.AuthNotificationPublisher;
+import com.cinx.common.exception.NotFoundException;
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.MACSigner;
 import com.nimbusds.jose.crypto.MACVerifier;
@@ -26,6 +27,7 @@ import java.text.ParseException;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.Date;
+import java.util.Optional;
 
 
 @Service
@@ -59,14 +61,14 @@ public class AuthenticationService implements IAuthenticationService {
     }
 
     @Override
-    public void sendChangeEmailOtp(String email) {
-        String otp = userService.generateOtp(email);
-        authNotificationPublisher.publishOtpChangeEmail(email, otp);
-    }
-
-    @Override
     public TokenResponseDto authenticate(AuthRequestDto request) {
         User user = userService.findByEmail(request.email());
+        if (user.getRole() != request.role()) {
+            throw new BadRequestException("Invalid email or password");
+        }
+        if (user.getPassword() == null) {
+            throw new BadRequestException("User registered with Google. Please login with Google");
+        }
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
             throw new BadRequestException("Invalid email or password");
         }
@@ -90,7 +92,13 @@ public class AuthenticationService implements IAuthenticationService {
     public TokenResponseDto authenticateWithGoogle(OAuthRequest request) {
         GoogleTokenResponse tokenResponse = googleAuthenticationService.exchangeCodeForToken(request);
         GoogleProfileResponse profileResponse = googleAuthenticationService.getGoogleUserProfile(tokenResponse.accessToken());
-        User user = userService.findOrCreateUserByGoogleProfile(profileResponse);
+        User user = Optional.ofNullable(userService.findByGoogleProfile(profileResponse))
+                .orElseGet(() -> {
+                    if (request.role() == Role.ADMIN) {
+                        throw new NotFoundException("Admin account not found with Google email: " + profileResponse.email());
+                    }
+                    return userService.createUserByGoogleProfile(profileResponse, request.role());
+                });
         
         userService.checkAndUnbanIfNeeded(user);
         if (user.getStatus().equals(UserStatus.BANNED)) {
