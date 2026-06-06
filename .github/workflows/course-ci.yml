@@ -1,0 +1,35 @@
+name: Course Service CI
+
+on:
+  push:
+    branches: [ "main" ]
+    paths:
+      - "course/**"
+      - "common/**"
+      - "pom.xml"
+      - ".github/workflows/course-ci.yml"
+      - ".github/workflows/course-cd.yml"
+  pull_request:
+    branches: [ "main" ]
+    paths:
+      - "course/**"
+      - "common/**"
+      - "pom.xml"
+      - ".github/workflows/course-ci.yml"
+      - ".github/workflows/course-cd.yml"
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: maven
+
+      - name: Build with Maven
+        run: mvn clean install -pl course -am -DskipTests

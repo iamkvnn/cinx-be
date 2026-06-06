@@ -1,24 +1,16 @@
-﻿name: Gateway Service CI/CD
+name: Eureka Service CD
 
 on:
   push:
     branches: [ "main" ]
     paths:
-      - "gateway/**"
+      - "eureka/**"
       - "common/**"
       - "pom.xml"
-      - ".github/workflows/gateway-ci-cd.yml"
-  pull_request:
-    branches: [ "main" ]
-    paths:
-      - "gateway/**"
-      - "common/**"
-      - "pom.xml"
-      - ".github/workflows/gateway-ci-cd.yml"
-  workflow_dispatch:
-
+      - ".github/workflows/eureka-ci.yml"
+      - ".github/workflows/eureka-cd.yml"
 jobs:
-  ci:
+  cd:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Code
@@ -32,14 +24,7 @@ jobs:
           cache: maven
 
       - name: Build with Maven
-        run: mvn clean install -pl gateway -am -DskipTests
-  cd:
-    runs-on: ubuntu-latest
-    needs: ci
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
+        run: mvn clean install -pl eureka -am -DskipTests
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -50,9 +35,9 @@ jobs:
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ./gateway
+          context: ./eureka
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-gateway:latest
+          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-eureka:latest
 
       - name: Deploy to VPS
         uses: appleboy/ssh-action@v1.0.3
@@ -63,5 +48,5 @@ jobs:
           passphrase: ${{ secrets.SSH_PASSPHRASE }}
           script: |
             cd /root/cinx-deployment
-            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cinx-gateway:latest
-            docker compose up -d --no-deps gateway
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cinx-eureka:latest
+            docker compose up -d --no-deps eureka
