@@ -1,6 +1,7 @@
 import aio_pika
 import asyncio
 import logging
+from app.core.logging import reset_context, set_context, trace_headers_from_values
 from app.core.config import settings
 from app.messaging.event_handlers import process_message
 
@@ -75,6 +76,12 @@ async def start_consumer():
         async with queue.iterator() as queue_iter:
             async for message in queue_iter:
                 async with message.process():
+                    headers = message.headers or {}
+                    trace_headers = trace_headers_from_values(
+                        str(headers.get("traceparent")) if headers.get("traceparent") else None,
+                        str(headers.get("X-Request-Id")) if headers.get("X-Request-Id") else None,
+                    )
+                    tokens = set_context(trace_headers)
                     try:
                         await process_message(message.body, message.routing_key)
                     except Exception:
@@ -96,7 +103,9 @@ async def start_consumer():
                         #     ),
                         #     routing_key=error_queue.name,
                         # )
-                    
+                    finally:
+                        reset_context(tokens)
+
     # Run all queues concurrently
     await asyncio.gather(
         consume_queue(queue_course, queue_course_error),

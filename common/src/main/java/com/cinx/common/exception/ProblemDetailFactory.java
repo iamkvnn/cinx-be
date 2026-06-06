@@ -1,5 +1,6 @@
 package com.cinx.common.exception;
 
+import com.cinx.common.logging.CorrelationContext;
 import jakarta.servlet.http.HttpServletRequest;
 import org.slf4j.MDC;
 import org.springframework.http.HttpStatus;
@@ -10,11 +11,8 @@ import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.util.List;
 import java.util.Locale;
-import java.util.UUID;
 
 public final class ProblemDetailFactory {
-    private static final String TRACE_ID_KEY = "traceId";
-
     private ProblemDetailFactory() {
     }
 
@@ -40,10 +38,11 @@ public final class ProblemDetailFactory {
     }
 
     public static String traceId() {
-        String traceId = MDC.get(TRACE_ID_KEY);
+        String traceId = MDC.get(CorrelationContext.TRACE_ID_KEY);
         if (traceId == null || traceId.isBlank()) {
-            traceId = UUID.randomUUID().toString();
-            MDC.put(TRACE_ID_KEY, traceId);
+            CorrelationContext.TraceHeaders headers = CorrelationContext.fromHeaders(null, null);
+            CorrelationContext.put(headers);
+            traceId = headers.traceId();
         }
         return traceId;
     }

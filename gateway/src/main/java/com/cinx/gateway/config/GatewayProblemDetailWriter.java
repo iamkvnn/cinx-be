@@ -13,7 +13,6 @@ import java.time.ZoneOffset;
 import java.util.LinkedHashMap;
 import java.util.Locale;
 import java.util.Map;
-import java.util.UUID;
 
 public final class GatewayProblemDetailWriter {
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -51,8 +50,8 @@ public final class GatewayProblemDetailWriter {
     }
 
     private static String traceId(ServerWebExchange exchange) {
-        String requestId = exchange.getRequest().getId();
-        return requestId == null || requestId.isBlank() ? UUID.randomUUID().toString() : requestId;
+        Object traceId = exchange.getAttribute(GatewayCorrelationFilter.TRACE_ID_ATTRIBUTE);
+        return traceId == null ? exchange.getRequest().getId() : traceId.toString();
     }
 
     private static String fallbackBody(HttpStatus status, String code, String detail) {

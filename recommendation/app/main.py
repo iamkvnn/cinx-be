@@ -1,25 +1,16 @@
-import logging
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+import logging
+
 from app.core.config import settings
 from app.core.database import ensure_schema
+from app.core.logging import CorrelationMiddleware, configure_logging
 from app.api.recommendation import router as recommendation_router
 from app.api.learning_path import router as learning_path_router
 from app.messaging.rabbitmq_consumer import start_consumer
 
 
 logger = logging.getLogger(__name__)
-
-def configure_logging():
-    logging.getLogger("app").setLevel(logging.INFO)
-    logging.getLogger(__name__).setLevel(logging.INFO)
-    root_logger = logging.getLogger()
-    root_logger.setLevel(logging.INFO)
-    if not root_logger.handlers:
-        logging.basicConfig(
-            level=logging.INFO,
-            format="%(asctime)s %(levelname)s [%(name)s] %(message)s",
-        )
 
 def log_task_result(task):
     if task.cancelled():
@@ -43,5 +34,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
+app.add_middleware(CorrelationMiddleware)
 app.include_router(recommendation_router)
 app.include_router(learning_path_router)

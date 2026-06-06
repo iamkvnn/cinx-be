@@ -1,5 +1,6 @@
 package com.cinx.common.messaging;
 
+import com.cinx.common.logging.CorrelationContext;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -85,6 +86,7 @@ public abstract class AbstractOutboxRelay<T extends OutboxMessageBase> {
             );
             headers.forEach(properties::setHeader);
         }
+        CorrelationContext.applyMissingToMessageProperties(properties);
         return new Message(outboxMessage.getPayloadJson().getBytes(StandardCharsets.UTF_8), properties);
     }
 

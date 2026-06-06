@@ -35,6 +35,46 @@ services:
     - .env
     volumes:
       - rabbitmq-data:/var/lib/rabbitmq
+  loki:
+    image: grafana/loki:3.7.0
+    container_name: loki
+    command: -config.file=/etc/loki/local-config.yaml
+    ports:
+    - "3100:3100"
+    networks:
+    - cinx-network
+    volumes:
+      - ./observability/loki-config.yaml:/etc/loki/local-config.yaml:ro
+      - loki-data:/loki
+  promtail:
+    image: grafana/promtail:3.6.11
+    container_name: promtail
+    command: -config.file=/etc/promtail/config.yml -config.expand-env=true
+    environment:
+      ENVIRONMENT: ${APP_ENV:-prod}
+    networks:
+    - cinx-network
+    depends_on:
+    - loki
+    volumes:
+      - ./observability/promtail-config.yml:/etc/promtail/config.yml:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - promtail-positions:/tmp
+  grafana:
+    image: grafana/grafana:11.6.15
+    container_name: grafana
+    ports:
+    - "3333:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+    networks:
+    - cinx-network
+    depends_on:
+    - loki
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
   eureka-server:
     container_name: eureka-server
     ports:
@@ -276,3 +316,6 @@ networks:
 volumes:
   mysql-data:
   rabbitmq-data:
+  loki-data:
+  promtail-positions:
+  grafana-data:

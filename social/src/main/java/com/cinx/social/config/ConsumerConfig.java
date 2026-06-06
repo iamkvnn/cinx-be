@@ -1,5 +1,7 @@
 package com.cinx.social.config;
 
+import com.cinx.common.logging.RabbitCorrelationAdvice;
+import com.cinx.common.logging.RabbitCorrelationReceivePostProcessor;
 import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
 import org.springframework.amqp.rabbit.connection.ConnectionFactory;
@@ -12,7 +14,9 @@ public class ConsumerConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
             ConnectionFactory connectionFactory,
-            Jackson2JsonMessageConverter jackson2JsonMessageConverter
+            Jackson2JsonMessageConverter jackson2JsonMessageConverter,
+            RabbitCorrelationReceivePostProcessor correlationReceivePostProcessor,
+            RabbitCorrelationAdvice correlationAdvice
     ) {
         SimpleRabbitListenerContainerFactory factory = new SimpleRabbitListenerContainerFactory();
         factory.setConnectionFactory(connectionFactory);
@@ -22,6 +26,8 @@ public class ConsumerConfig {
         factory.setMaxConcurrentConsumers(6);
         factory.setDefaultRequeueRejected(false);
         factory.setMessageConverter(jackson2JsonMessageConverter);
+        factory.setAfterReceivePostProcessors(correlationReceivePostProcessor);
+        factory.setAdviceChain(correlationAdvice);
         return factory;
     }
 }
