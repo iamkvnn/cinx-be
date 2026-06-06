@@ -6,6 +6,7 @@ import com.cinx.user.consts.UserStatus;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.mapper.UserMapper;
@@ -21,18 +22,11 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.multipart.MultipartFile;
 import java.time.LocalDateTime;
 import java.util.Optional;
 
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.Objects;
-import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -79,7 +73,7 @@ public class UserService implements IUserService {
     @Override
     public UserDto createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.email())) {
-            throw new AlreadyExistException("User already exists with email: " + request.email());
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "User already exists with email: " + request.email());
         }
         User user = userRepository.save(User
                 .builder()

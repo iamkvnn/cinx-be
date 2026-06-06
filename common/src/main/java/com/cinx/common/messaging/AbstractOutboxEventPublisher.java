@@ -1,5 +1,6 @@
 package com.cinx.common.messaging;
 
+import com.cinx.common.logging.CorrelationContext;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.transaction.annotation.Transactional;
@@ -50,9 +51,15 @@ public abstract class AbstractOutboxEventPublisher<T extends OutboxMessageBase> 
         message.setRoutingKey(routingKey);
         message.setStatus(OutboxStatus.PENDING);
         message.setAttempts(0);
+        Map<String, Object> eventHeaders = new java.util.LinkedHashMap<>(headers);
+        eventHeaders.putIfAbsent(CorrelationContext.TRACEPARENT_HEADER, CorrelationContext.currentTraceparent());
+        String requestId = CorrelationContext.currentRequestId();
+        if (requestId != null && !requestId.isBlank()) {
+            eventHeaders.putIfAbsent(CorrelationContext.REQUEST_ID_HEADER, requestId);
+        }
         try {
             message.setPayloadJson(objectMapper.writeValueAsString(payload));
-            message.setHeadersJson(objectMapper.writeValueAsString(headers));
+            message.setHeadersJson(objectMapper.writeValueAsString(eventHeaders));
         } catch (JsonProcessingException e) {
             throw new IllegalStateException("Failed to serialize outbox event", e);
         }

@@ -23,6 +23,6 @@ public class AssignmentSubmission extends UserSubmission {
     private Double score;
     private String feedback;
 
-    @OneToMany(mappedBy = "", fetch = FetchType.EAGER)
+    @OneToMany(mappedBy = "assignmentSubmission", fetch = FetchType.EAGER)
     private List<AssignmentSubmissionAttachment> attachments;
 }

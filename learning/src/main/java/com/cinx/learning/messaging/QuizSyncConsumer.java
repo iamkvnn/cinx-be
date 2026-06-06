@@ -3,6 +3,7 @@ package com.cinx.learning.messaging;
 import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
 import com.cinx.learning.consts.ScoringMode;
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.QuizQuestionResponse;
 import com.cinx.learning.messaging.event.QuizSyncEvent;
@@ -13,7 +14,9 @@ import com.cinx.learning.model.QuizSessionSubmission;
 import com.cinx.learning.repository.QuizScoreHistoryRepository;
 import com.cinx.learning.repository.QuizSessionQuestionRepository;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
+import com.cinx.learning.service.learningProgress.LearningItemProgressUpdateResult;
 import com.cinx.learning.service.quiz.QuizScoreAggregator;
 import com.cinx.learning.service.quiz.QuizSnapshotBuilder;
 import com.cinx.learning.service.quiz.evaluator.IQuestionEvaluator;
@@ -32,6 +35,7 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class QuizSyncConsumer {
+    private static final double PASSING_SCORE = 5.0;
 
     private final QuizScoreAggregator quizScoreAggregator;
     private final QuizSnapshotBuilder snapshotBuilder;
@@ -40,6 +44,7 @@ public class QuizSyncConsumer {
     private final QuizSessionSubmissionRepository quizSessionSubmissionRepository;
     private final QuizScoreHistoryRepository quizScoreHistoryRepository;
     private final ILearningProgressService learningProgressService;
+    private final IDailyGoalService dailyGoalService;
 
     @RabbitListener(queues = "learning.sync-and-regrade.queue", containerFactory = "rabbitListenerContainerFactory")
     @Transactional
@@ -135,12 +140,12 @@ public class QuizSyncConsumer {
                 IQuestionEvaluator evaluator = questionEvaluatorFactory.resolve(q);
                 double fraction = evaluator.evaluate(q);
                 q.setScore(fraction);
-                if (fraction > 0.0) correctCount++;
+                if (fraction >= 1.0) correctCount++;
                 totalFraction += fraction;
             }
             quizSessionQuestionRepository.saveAll(allSessionQuestions);
 
-            double newRawScore = (totalFraction / allSessionQuestions.size()) * 10.0;
+            double newRawScore = allSessionQuestions.isEmpty() ? 0.0 : (totalFraction / allSessionQuestions.size()) * 10.0;
 
             QuizSessionSubmission submission = submissionMap.get(session.getId());
 
@@ -158,7 +163,9 @@ public class QuizSyncConsumer {
                     .build());
             regradeCount++;
             log.info("Regraded session {} | old={} new={}", session.getId(), oldScore, newRawScore);
-            updateLearningProgress(session.getUserId(), session.getQuizLessonId(), event.getScoringMode());
+            if (status != QuizSessionStatus.PENDING_GRADE) {
+                updateLearningProgress(session.getUserId(), session.getQuizLessonId(), event.getScoringMode());
+            }
         }
 
         log.info("Regrade complete for quizLessonId={}. {} sessions had score changes.",
@@ -168,11 +175,14 @@ public class QuizSyncConsumer {
     private void updateLearningProgress(String userId, String quizLessonId, ScoringMode scoringMode) {
         double effectiveScore = quizScoreAggregator.aggregateScore(userId, quizLessonId, scoringMode);
 
-        learningProgressService.updateLearningItemProgress(
+        LearningItemProgressUpdateResult result = learningProgressService.updateLearningItemProgress(
                 userId,
                 quizLessonId,
-                new UpdateLearningItemRequest(true, effectiveScore >= 5.0, effectiveScore)
+                new UpdateLearningItemRequest(true, effectiveScore >= PASSING_SCORE, effectiveScore)
         );
+        if (result.passedTransition()) {
+            dailyGoalService.recordProgress(userId, DailyGoalType.QUIZZES_PASSED, 1);
+        }
 
         log.info("Updated learning progress for userId={} quizLessonId={} effectiveScore={}",
                 userId, quizLessonId, effectiveScore);

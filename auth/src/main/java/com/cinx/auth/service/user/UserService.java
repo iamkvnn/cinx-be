@@ -11,6 +11,7 @@ import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.auth.utils.OtpGenerator;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,7 +43,7 @@ public class UserService implements IUserService {
     @Override
     public void createUser(RegisterRequest dto) {
         if (userRepository.existsByEmail(dto.email())) {
-            throw new AlreadyExistException("User already exists with email: " + dto.email());
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "User already exists with email: " + dto.email());
         }
 
         String otp = OtpGenerator.generateOtp();
@@ -69,46 +70,38 @@ public class UserService implements IUserService {
         ));
     }
 
+    @Override
+    public User findByGoogleProfile(GoogleProfileResponse profile) {
+        return userRepository.findByEmail(profile.email()).orElse(null);
+    }
+
     @Transactional
     @Override
-    public User findOrCreateUserByGoogleProfile(GoogleProfileResponse profile) {
-        return userRepository.findByEmail(profile.email())
-                .orElseGet(() -> {
-                    User savedUser = userRepository.save(User.builder()
-                            .email(profile.email())
-                            .password(null)
-                            .role(Role.USER)
-                            .status(UserStatus.ACTIVE)
-                            .build());
-                    userProfileService.createUser(new CreateUserProfileRequest(
-                            savedUser.getId(),
-                            profile.name(),
-                            profile.email(),
-                            Role.USER,
-                            null,
-                            null,
-                            null,
-                            null
-                    ));
-                    return savedUser;
-                });
+    public User createUserByGoogleProfile(GoogleProfileResponse profile, Role role) {
+        User savedUser = userRepository.save(User.builder()
+                .email(profile.email())
+                .password(null)
+                .role(role)
+                .status(UserStatus.ACTIVE)
+                .build());
+        userProfileService.createUser(new CreateUserProfileRequest(
+                savedUser.getId(),
+                profile.name(),
+                profile.email(),
+                role,
+                null,
+                null,
+                null,
+                null
+        ));
+        return savedUser;
     }
 
     @Override
-    public User banUser(String userId, BanUserRequest request) {
+    public void banUser(String userId, BanUserRequest request) {
         User user = findById(userId);
 
-        Integer duration = request.durationDays();
-        Integer maxDuration = request.reasonType().getMaxDurationDays();
-
-        if (maxDuration != null) {
-            if (duration == null) {
-                throw new BadRequestException("Duration is required for reason type " + request.reasonType());
-            }
-            if (duration > maxDuration) {
-                throw new BadRequestException("Duration exceeds the maximum allowed (" + maxDuration + " days) for reason type " + request.reasonType());
-            }
-        }
+        Integer duration = getDuration(request);
 
         user.setStatus(UserStatus.BANNED);
         if (duration != null) {
@@ -125,17 +118,31 @@ public class UserService implements IUserService {
                 expirationText, request.reasonType().name(), request.details());
 
         authNotificationPublisher.publishAccountBanned(user.getEmail(), body);
-        return savedUser;
+    }
+
+    private Integer getDuration(BanUserRequest request) {
+        Integer duration = request.durationDays();
+        Integer maxDuration = request.reasonType().getMaxDurationDays();
+
+        if (maxDuration != null) {
+            if (duration == null) {
+                throw new BadRequestException(ErrorCode.BAN_DURATION_REQUIRED, "Duration is required for reason type " + request.reasonType());
+            }
+            if (duration > maxDuration) {
+                throw new BadRequestException(ErrorCode.BAN_DURATION_EXCEEDED, "Duration exceeds the maximum allowed (" + maxDuration + " days) for reason type " + request.reasonType());
+            }
+        }
+        return duration;
     }
 
     @Override
-    public User unbanUser(String userId) {
+    public void unbanUser(String userId) {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
         user.setBanExpiresAt(null);
         authNotificationPublisher.publishAccountUnbanned(user.getEmail());
         userProfileService.toggleBanUser(userId);
-        return userRepository.save(user);
+        userRepository.save(user);
     }
 
     @Override
@@ -183,7 +190,7 @@ public class UserService implements IUserService {
     public void changePassword(ChangePasswordRequest request) {
         User user = findByEmail(request.email());
         if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
-            throw new BadRequestException("Invalid old password");
+            throw new BadRequestException(ErrorCode.INVALID_OLD_PASSWORD, "Invalid old password");
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setOtp(null);
@@ -191,25 +198,12 @@ public class UserService implements IUserService {
         userRepository.save(user);
     }
 
-    @Override
-    public void changeEmail(ChangeEmailRequest request) {
-        User user = findByEmail(request.oldEmail());
-        verifyOtp(user, request.otp());
-        if (userRepository.existsByEmail(request.newEmail())) {
-            throw new AlreadyExistException("User already exists with email: " + request.newEmail());
-        }
-        user.setEmail(request.newEmail());
-        user.setOtp(null);
-        user.setOtpExpireAt(null);
-        userRepository.save(user);
-    }
-
     private void verifyOtp(User user, String otp) {
         if (Objects.isNull(user.getOtp()) || !user.getOtp().equals(otp)) {
-            throw new BadRequestException("Invalid OTP");
+            throw new BadRequestException(ErrorCode.INVALID_OTP, "Invalid OTP");
         }
         if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
+            throw new BadRequestException(ErrorCode.OTP_EXPIRED, "OTP has expired");
         }
     }
 }

@@ -3,6 +3,7 @@ name: Discovery Service CD
 on:
   workflow_run:
     workflows: ["Discovery Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

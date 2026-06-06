@@ -3,6 +3,7 @@ name: Enrollment Service CD
 on:
   workflow_run:
     workflows: ["Enrollment Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

@@ -1,6 +1,7 @@
 package com.cinx.learning.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.consts.QuizQuestionType;
@@ -20,6 +21,7 @@ import com.cinx.learning.repository.QuizSessionSubmissionRepository;
 import com.cinx.learning.service.course.CourseService;
 import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
+import com.cinx.learning.service.learningProgress.LearningItemProgressUpdateResult;
 import com.cinx.learning.service.quiz.evaluator.IQuestionEvaluator;
 import com.cinx.learning.service.quiz.evaluator.QuestionEvaluatorFactory;
 import lombok.RequiredArgsConstructor;
@@ -39,6 +41,7 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class QuizService implements IQuizService {
+    private static final double PASSING_SCORE = 5.0;
 
     private final QuizScoreAggregator quizScoreAggregator;
     private final QuestionEvaluatorFactory questionEvaluatorFactory;
@@ -53,6 +56,7 @@ public class QuizService implements IQuizService {
 
     @Override
     public Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size) {
+        validatePageRequest(page, size);
         return quizSessionRepository.findAllByQuizLessonId(lessonId, userId, PageRequest.of(page - 1, size))
                 .map(quizSessionMapper::toDto);
     }
@@ -66,12 +70,13 @@ public class QuizService implements IQuizService {
 
     @Override
     public Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size) {
+        validatePageRequest(page, size);
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
 
-        if (quizSession.getStatus() == QuizSessionStatus.SUBMITTED) {
+        if (isReviewStatus(quizSession.getStatus())) {
             if (Boolean.FALSE.equals(quizSession.getIsReviewAllowed())) {
-                throw new BadRequestException("Review is not allowed for this quiz session");
+                throw new BadRequestException(ErrorCode.QUIZ_REVIEW_NOT_ALLOWED, "Review is not allowed for this quiz session");
             }
         }
 
@@ -104,9 +109,13 @@ public class QuizService implements IQuizService {
     public QuizSessionResponse createQuizSession(String courseId, String userId, String lessonId) {
         QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(courseId, lessonId).data();
 
+        if (quizSessionRepository.existsByQuizLessonIdAndUserIdAndStatus(lessonId, userId, QuizSessionStatus.IN_PROGRESS)) {
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_ALREADY_IN_PROGRESS, "You already have an in-progress quiz session for this lesson");
+        }
+
         Integer maxAttempt = quizLessonResponse.maxAttempt();
         if (maxAttempt != null && maxAttempt <= quizSessionRepository.countByQuizLessonIdAndUserId(lessonId, userId)) {
-            throw new BadRequestException("You have reached the maximum number of attempts for this quiz lesson");
+            throw new BadRequestException(ErrorCode.QUIZ_ATTEMPT_LIMIT_REACHED, "You have reached the maximum number of attempts for this quiz lesson");
         }
 
         QuizSession quizSession = quizSessionRepository.save(
@@ -140,7 +149,10 @@ public class QuizService implements IQuizService {
         List<QuizQuestionResponse> pool = new ArrayList<>(questions);
         if (shuffleQuestions)
             Collections.shuffle(pool);
-        List<QuizQuestionResponse> selected = pool.subList(0, Math.min(numberOfQuestionPerQuizSession, pool.size()));
+        int requestedQuestionCount = numberOfQuestionPerQuizSession != null
+                ? numberOfQuestionPerQuizSession
+                : pool.size();
+        List<QuizQuestionResponse> selected = pool.subList(0, Math.min(requestedQuestionCount, pool.size()));
 
         List<QuizSessionQuestion> sessionQuestions = new ArrayList<>();
         for (int i = 0; i < selected.size(); i++) {
@@ -166,11 +178,11 @@ public class QuizService implements IQuizService {
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
         if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
-            throw new BadRequestException("Quiz session is not in progress");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_NOT_IN_PROGRESS, "Quiz session is not in progress");
         }
         if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
             submitQuizSession(quizSessionId, new SubmitQuizSessionRequest(Collections.emptyList()));
-            throw new BadRequestException("Quiz session has expired and was automatically submitted");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_EXPIRED, "Quiz session has expired and was automatically submitted");
         }
 
         quizSessionQuestionRepository.findByQuizSessionIdAndQuestionId(quizSessionId, request.questionId())
@@ -191,14 +203,13 @@ public class QuizService implements IQuizService {
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
 
         if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
-            throw new BadRequestException("Quiz session is not in progress");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_NOT_IN_PROGRESS, "Quiz session is not in progress");
         }
         
         boolean isExpired = quizSession.getEndTime().isBefore(LocalDateTime.now());
         
-        Map<String, ChooseQuizAnswerRequest> answerMap = (request != null && request.answers() != null && !isExpired)
-                ? request.answers().stream()
-                        .collect(Collectors.toMap(ChooseQuizAnswerRequest::questionId, a -> a))
+        Map<String, ChooseQuizAnswerRequest> answerMap = !isExpired
+                ? buildAnswerMap(request)
                 : Collections.emptyMap();
 
         List<QuizSessionQuestion> questions = quizSessionQuestionRepository.findAllByQuizSessionId(quizSessionId, Pageable.unpaged()).getContent();
@@ -232,7 +243,7 @@ public class QuizService implements IQuizService {
         quizSession.setStatus(hasEssay ? QuizSessionStatus.PENDING_GRADE : QuizSessionStatus.SUBMITTED);
         quizSessionRepository.save(quizSession);
 
-        double rawScore = totalScore / questions.size() * 10.0;
+        double rawScore = questions.isEmpty() ? 0.0 : totalScore / questions.size() * 10.0;
 
         quizSession.setQuizSessionSubmission(quizSessionSubmissionRepository.save(
                 QuizSessionSubmission.builder()
@@ -242,25 +253,26 @@ public class QuizService implements IQuizService {
                         .totalCorrectAnswers(correctCount)
                         .build()));
 
-        double effectiveScore = quizScoreAggregator.aggregateScore(
-                quizSession.getCourseId(),
-                quizSession.getUserId(),
-                quizSession.getQuizLessonId());
+        if (!hasEssay) {
+            double effectiveScore = quizScoreAggregator.aggregateScore(
+                    quizSession.getCourseId(),
+                    quizSession.getUserId(),
+                    quizSession.getQuizLessonId());
 
-        log.info("Quiz session {} graded. rawScore={} effectiveScore={}", quizSessionId, rawScore, effectiveScore);
+            log.info("Quiz session {} graded. rawScore={} effectiveScore={}", quizSessionId, rawScore, effectiveScore);
 
-        boolean wasCompleted = learningProgressService.isLearningItemCompleted(
-                quizSession.getUserId(),
-                quizSession.getQuizLessonId());
-        boolean isPassed = effectiveScore >= 5.0;
+            boolean isPassed = effectiveScore >= PASSING_SCORE;
 
-        learningProgressService.updateLearningItemProgress(
-                quizSession.getUserId(),
-                quizSession.getQuizLessonId(),
-                new UpdateLearningItemRequest(true, isPassed, effectiveScore));
+            LearningItemProgressUpdateResult result = learningProgressService.updateLearningItemProgress(
+                    quizSession.getUserId(),
+                    quizSession.getQuizLessonId(),
+                    new UpdateLearningItemRequest(true, isPassed, effectiveScore));
 
-        if (!wasCompleted && isPassed) {
-            dailyGoalService.recordProgress(quizSession.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
+            if (result.passedTransition()) {
+                dailyGoalService.recordProgress(quizSession.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
+            }
+        } else {
+            log.info("Quiz session {} pending essay grading. rawScore={}", quizSessionId, rawScore);
         }
 
         return quizSessionMapper.toDto(quizSession);
@@ -273,13 +285,10 @@ public class QuizService implements IQuizService {
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
 
         if (session.getStatus() != QuizSessionStatus.PENDING_GRADE) {
-            throw new BadRequestException("Quiz session is not pending essay grading");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_NOT_PENDING_GRADING, "Quiz session is not pending essay grading");
         }
 
-        Map<String, Double> scoreMap = request.scores().stream()
-                .collect(Collectors.toMap(
-                        GradeEssayRequest.EssayQuestionScore::questionId,
-                        GradeEssayRequest.EssayQuestionScore::score));
+        Map<String, Double> scoreMap = buildEssayScoreMap(request);
 
         List<QuizSessionQuestion> questions = quizSessionQuestionRepository.findAllEssayByQuizSessionId(sessionId);
         questions.stream()
@@ -287,18 +296,22 @@ public class QuizService implements IQuizService {
                 .forEach(q -> {
                     Double assignedScore = scoreMap.get(q.getQuestionId());
                     if (assignedScore == null) {
-                        throw new BadRequestException("Missing score for essay question: " + q.getQuestionId());
+                        throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Missing score for essay question: " + q.getQuestionId());
                     }
-                    q.setScore(assignedScore);
+                    q.setScore(assignedScore / 10.0);
                 });
 
         quizSessionQuestionRepository.saveAll(questions);
 
-        double totalFraction = questions.stream()
-                .mapToDouble(QuizSessionQuestion::getScore)
+        List<QuizSessionQuestion> allQuestions = quizSessionQuestionRepository
+                .findAllByQuizSessionId(sessionId, Pageable.unpaged())
+                .getContent();
+
+        double totalFraction = allQuestions.stream()
+                .mapToDouble(q -> q.getScore() != null ? q.getScore() : 0.0)
                 .sum();
-        double rawScore = questions.isEmpty() ? 0.0 : (totalFraction / questions.size()) * 10.0;
-        int correctCount = (int) questions.stream()
+        double rawScore = allQuestions.isEmpty() ? 0.0 : (totalFraction / allQuestions.size()) * 10.0;
+        int correctCount = (int) allQuestions.stream()
                 .filter(q -> q.getScore() != null && q.getScore() >= 1.0)
                 .count();
 
@@ -308,24 +321,21 @@ public class QuizService implements IQuizService {
         QuizSessionSubmission submission = quizSessionSubmissionRepository
                 .findByQuizSessionId(sessionId)
                 .orElseThrow(() -> new BadRequestException("Quiz session submission not found"));
-        submission.setScore(submission.getScore() + rawScore);
-        submission.setTotalCorrectAnswers(submission.getTotalCorrectAnswers() + correctCount);
+        submission.setScore(rawScore);
+        submission.setTotalCorrectAnswers(correctCount);
         session.setQuizSessionSubmission(quizSessionSubmissionRepository.save(submission));
 
         double effectiveScore = quizScoreAggregator.aggregateScore(session.getCourseId(), session.getUserId(), session.getQuizLessonId());
         log.info("Essay graded for session {}. rawScore={} effectiveScore={}", sessionId, rawScore, effectiveScore);
 
-        boolean wasCompleted = learningProgressService.isLearningItemCompleted(
-                session.getUserId(),
-                session.getQuizLessonId());
-        boolean isPassed = effectiveScore >= 5.0;
+        boolean isPassed = effectiveScore >= PASSING_SCORE;
 
-        learningProgressService.updateLearningItemProgress(
+        LearningItemProgressUpdateResult result = learningProgressService.updateLearningItemProgress(
                 session.getUserId(),
                 session.getQuizLessonId(),
                 new UpdateLearningItemRequest(true, isPassed, effectiveScore));
 
-        if (!wasCompleted && isPassed) {
+        if (result.passedTransition()) {
             dailyGoalService.recordProgress(session.getUserId(), DailyGoalType.QUIZZES_PASSED, 1);
         }
 
@@ -334,6 +344,7 @@ public class QuizService implements IQuizService {
 
     @Override
     public List<QuizQuestionAnalyticsResponse> getQuizAnalytics(String courseId, String lessonId) {
+        courseService.getQuizLessonById(courseId, lessonId);
         return quizSessionQuestionRepository.getQuizAnalyticsByQuizId(lessonId)
                 .stream()
                 .map(obj -> new QuizQuestionAnalyticsResponse(
@@ -360,6 +371,51 @@ public class QuizService implements IQuizService {
             } catch (Exception e) {
                 log.error("Failed to auto-submit expired quiz session: {}", session.getId(), e);
             }
+        }
+    }
+
+    private boolean isReviewStatus(QuizSessionStatus status) {
+        return status == QuizSessionStatus.SUBMITTED || status == QuizSessionStatus.GRADED;
+    }
+
+    private Map<String, ChooseQuizAnswerRequest> buildAnswerMap(SubmitQuizSessionRequest request) {
+        if (request == null || request.answers() == null || request.answers().isEmpty()) {
+            return Collections.emptyMap();
+        }
+        Map<String, ChooseQuizAnswerRequest> answerMap = new HashMap<>();
+        for (ChooseQuizAnswerRequest answer : request.answers()) {
+            if (answer == null) {
+                throw new BadRequestException(ErrorCode.QUIZ_ANSWER_INVALID, "answers must not contain null items");
+            }
+            if (answerMap.putIfAbsent(answer.questionId(), answer) != null) {
+                throw new BadRequestException(ErrorCode.QUIZ_ANSWER_INVALID, "Duplicate answer for questionId: " + answer.questionId());
+            }
+        }
+        return answerMap;
+    }
+
+    private Map<String, Double> buildEssayScoreMap(GradeEssayRequest request) {
+        if (request == null || request.scores() == null || request.scores().isEmpty()) {
+            throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Essay scores are required");
+        }
+        Map<String, Double> scoreMap = new HashMap<>();
+        for (GradeEssayRequest.EssayQuestionScore score : request.scores()) {
+            if (score == null) {
+                throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Essay scores must not contain null items");
+            }
+            if (scoreMap.putIfAbsent(score.questionId(), score.score()) != null) {
+                throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Duplicate score for essay question: " + score.questionId());
+            }
+        }
+        return scoreMap;
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 1) {
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "page must be greater than or equal to 1");
+        }
+        if (size < 1) {
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "size must be greater than or equal to 1");
         }
     }
 }

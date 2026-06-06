@@ -1,6 +1,7 @@
 package com.cinx.course.service.subtitle;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.course.consts.SubtitleFormat;
 import org.springframework.stereotype.Component;
 
@@ -21,17 +22,17 @@ public class SubtitleFileProcessor {
 
     public String normalizeLanguageCode(String languageCode) {
         if (languageCode == null || languageCode.isBlank()) {
-            throw new BadRequestException("Subtitle language code is required");
+            throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Subtitle language code is required");
         }
         try {
             Locale locale = new Locale.Builder().setLanguageTag(languageCode.trim()).build();
             String normalized = locale.toLanguageTag();
             if (normalized == null || normalized.isBlank() || "und".equalsIgnoreCase(normalized)) {
-                throw new BadRequestException("Invalid subtitle language code");
+                throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Invalid subtitle language code");
             }
             return normalized;
         } catch (RuntimeException ex) {
-            throw new BadRequestException("Invalid subtitle language code");
+            throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Invalid subtitle language code");
         }
     }
 
@@ -47,21 +48,21 @@ public class SubtitleFileProcessor {
                 || lowerContentType.equals("text/srt")) {
             return SubtitleFormat.SRT;
         }
-        throw new BadRequestException("Only .vtt and .srt subtitle files are supported");
+        throw new BadRequestException(ErrorCode.SUBTITLE_FILE_UNSUPPORTED, "Only .vtt and .srt subtitle files are supported");
     }
 
     public void validateFileSize(Long fileSize) {
         if (fileSize == null || fileSize < 1) {
-            throw new BadRequestException("Subtitle file size must be greater than 0");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "Subtitle file size must be greater than 0");
         }
         if (fileSize > MAX_SUBTITLE_FILE_SIZE) {
-            throw new BadRequestException("Subtitle file size must not exceed 5MB");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_TOO_LARGE, "Subtitle file size must not exceed 5MB");
         }
     }
 
     public String normalizeToWebVtt(SubtitleFormat format, String content) {
         if (content == null || content.isBlank()) {
-            throw new BadRequestException("Subtitle file is empty");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "Subtitle file is empty");
         }
         String normalized = stripBom(content).replace("\r\n", "\n").replace('\r', '\n').trim();
         return switch (format) {
@@ -72,11 +73,11 @@ public class SubtitleFileProcessor {
 
     private String validateWebVtt(String content) {
         if (!content.startsWith("WEBVTT")) {
-            throw new BadRequestException("WebVTT subtitle must start with WEBVTT");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "WebVTT subtitle must start with WEBVTT");
         }
         boolean hasTiming = content.lines().anyMatch(line -> VTT_TIMESTAMP.matcher(line.trim()).matches());
         if (!hasTiming) {
-            throw new BadRequestException("Subtitle file must include at least one valid cue timestamp");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "Subtitle file must include at least one valid cue timestamp");
         }
         return content.endsWith("\n") ? content : content + "\n";
     }
@@ -94,7 +95,7 @@ public class SubtitleFileProcessor {
             }
         }
         if (!hasTiming) {
-            throw new BadRequestException("SRT subtitle must include at least one valid cue timestamp");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "SRT subtitle must include at least one valid cue timestamp");
         }
         return builder.toString();
     }

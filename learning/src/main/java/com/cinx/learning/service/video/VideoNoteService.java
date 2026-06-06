@@ -1,5 +1,6 @@
 package com.cinx.learning.service.video;
 
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.dto.request.CreateVideoNoteRequest;
@@ -57,7 +58,7 @@ public class VideoNoteService implements IVideoNoteService {
                 .orElseThrow(() -> new NotFoundException("Video note not found"));
         
         if (!note.getUserId().equals(userId)) {
-            throw new ForbiddenException("You are not the owner of this note");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not the owner of this note");
         }
         
         videoNoteMapper.partialUpdate(note, request);
@@ -72,7 +73,7 @@ public class VideoNoteService implements IVideoNoteService {
                 .orElseThrow(() -> new NotFoundException("Video note not found"));
                 
         if (!note.getUserId().equals(userId)) {
-            throw new ForbiddenException("You are not the owner of this note");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not the owner of this note");
         }
         
         videoNoteRepository.delete(note);

@@ -1,6 +1,7 @@
 package com.cinx.enrollment.service.statistics;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 
 import java.time.DateTimeException;
 import java.time.LocalDate;
@@ -28,10 +29,10 @@ public class StatisticsRangeResolver {
                     : resolveLastMonths(DEFAULT_MONTH_BUCKETS);
         }
         if (startDate == null || endDate == null) {
-            throw new BadRequestException("Start date and end date are required together");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "Start date and end date are required together");
         }
         if (startDate.isAfter(endDate)) {
-            throw new BadRequestException("Start date cannot be after end date");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "Start date cannot be after end date");
         }
         return normalizedGroupBy == StatisticsGroupBy.DAY
                 ? resolveDaily(startDate, endDate)
@@ -40,10 +41,10 @@ public class StatisticsRangeResolver {
 
     private StatisticsDateRange resolveLastMonths(int months) {
         if (months <= 0) {
-            throw new BadRequestException("Months must be greater than 0");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "Months must be greater than 0");
         }
         if (months > MAX_MONTH_BUCKETS) {
-            throw new BadRequestException("Monthly statistics cannot exceed 12 months");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Monthly statistics cannot exceed 12 months");
         }
         YearMonth endMonth = YearMonth.now();
         YearMonth startMonth = endMonth.minusMonths(months - 1L);
@@ -69,7 +70,7 @@ public class StatisticsRangeResolver {
     private StatisticsDateRange resolveDaily(LocalDate startDate, LocalDate endDate) {
         long dayCount = ChronoUnit.DAYS.between(startDate, endDate) + 1L;
         if (dayCount > MAX_DAY_BUCKETS) {
-            throw new BadRequestException("Daily statistics cannot exceed 30 days");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Daily statistics cannot exceed 30 days");
         }
         validateDailyLookback(startDate);
         return dailyRange(startDate, endDate);
@@ -77,11 +78,11 @@ public class StatisticsRangeResolver {
 
     private StatisticsDateRange monthlyRange(YearMonth startMonth, YearMonth endMonth) {
         if (startMonth.isAfter(endMonth)) {
-            throw new BadRequestException("Start date cannot be after end date");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "Start date cannot be after end date");
         }
         long monthCount = ChronoUnit.MONTHS.between(startMonth, endMonth) + 1L;
         if (monthCount > MAX_MONTH_BUCKETS) {
-            throw new BadRequestException("Monthly statistics cannot exceed 12 months");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Monthly statistics cannot exceed 12 months");
         }
         validateMonthlyLookback(startMonth);
 
@@ -114,14 +115,14 @@ public class StatisticsRangeResolver {
     private void validateMonthlyLookback(YearMonth startMonth) {
         YearMonth earliestMonth = YearMonth.now().minusMonths(MAX_MONTH_BUCKETS - 1L);
         if (startMonth.isBefore(earliestMonth)) {
-            throw new BadRequestException("Statistics cannot look back more than 12 months");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Statistics cannot look back more than 12 months");
         }
     }
 
     private void validateDailyLookback(LocalDate startDate) {
         LocalDate earliestDate = LocalDate.now().minusMonths(MAX_MONTH_BUCKETS);
         if (startDate.isBefore(earliestDate)) {
-            throw new BadRequestException("Statistics cannot look back more than 12 months");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Statistics cannot look back more than 12 months");
         }
     }
 
@@ -129,7 +130,7 @@ public class StatisticsRangeResolver {
         try {
             return YearMonth.of(year, month);
         } catch (DateTimeException ex) {
-            throw new BadRequestException("Invalid year or month");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "Invalid year or month");
         }
     }
 }

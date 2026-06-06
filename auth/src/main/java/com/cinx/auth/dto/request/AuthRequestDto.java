@@ -1,5 +1,6 @@
 package com.cinx.auth.dto.request;
 
+import com.cinx.auth.consts.Role;
 import com.fasterxml.jackson.annotation.JsonAutoDetect;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -16,5 +17,8 @@ public record AuthRequestDto (
 
         @NotBlank(message = "Mật khẩu không được để trống")
         @Schema(example = "Password123!")
-        String password
+        String password,
+
+        @Schema(example = "USER")
+        Role role
 ) {}

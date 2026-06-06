@@ -1,6 +1,7 @@
 package com.cinx.course.service.videoquestion;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateVideoQuestionRequest;
@@ -93,7 +94,7 @@ public class VideoQuestionService implements IVideoQuestionService {
                 .orElseThrow(() -> new NotFoundException("Video lesson not found"));
 
         if (request.timestampSeconds() < 0 || request.timestampSeconds() > videoLesson.getDuration()) {
-            throw new BadRequestException("Timestamp must be between 0 and video duration (" + videoLesson.getDuration() + "s)");
+            throw new BadRequestException(ErrorCode.VIDEO_QUESTION_TIMESTAMP_INVALID, "Timestamp must be between 0 and video duration (" + videoLesson.getDuration() + "s)");
         }
 
         VideoQuestion question = videoQuestionMapper.toModel(request);
@@ -119,7 +120,7 @@ public class VideoQuestionService implements IVideoQuestionService {
 
         VideoLesson videoLesson = question.getVideoLesson();
         if (request.timestampSeconds() < 0 || request.timestampSeconds() > videoLesson.getDuration()) {
-            throw new BadRequestException("Timestamp must be between 0 and video duration (" + videoLesson.getDuration() + "s)");
+            throw new BadRequestException(ErrorCode.VIDEO_QUESTION_TIMESTAMP_INVALID, "Timestamp must be between 0 and video duration (" + videoLesson.getDuration() + "s)");
         }
 
         videoQuestionMapper.partialUpdate(question, request);

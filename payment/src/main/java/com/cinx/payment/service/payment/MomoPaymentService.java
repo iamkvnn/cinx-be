@@ -1,6 +1,7 @@
 package com.cinx.payment.service.payment;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.payment.config.MomoPaymentConfig;
@@ -143,7 +144,7 @@ public class MomoPaymentService extends PaymentTemplate {
             }
             MomoPayment payment = opt.get();
             if (payment.getStatus() == PaymentStatus.PAID) {
-                throw new BadRequestException("Cannot cancel a paid payment");
+                throw new BadRequestException(ErrorCode.PAYMENT_ALREADY_PAID, "Cannot cancel a paid payment");
             }
             payment.setStatus(PaymentStatus.CANCELLED);
             return paymentMapper.toDto(momoPaymentRepository.save(payment));

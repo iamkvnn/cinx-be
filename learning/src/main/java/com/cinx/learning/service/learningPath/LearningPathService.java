@@ -2,6 +2,7 @@ package com.cinx.learning.service.learningPath;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.LearningPathStatus;
 import com.cinx.learning.dto.request.AddToCartRequest;
@@ -60,7 +61,7 @@ public class LearningPathService implements ILearningPathService {
         pathRepository.findByUserIdAndStatusIn(
                 userId, List.of(LearningPathStatus.ACTIVE, LearningPathStatus.PENDING_PAYMENT))
                 .ifPresent(p -> {
-                    throw new BadRequestException("You already have an active or pending learning path. Drop or complete it to create a new one.");
+                    throw new BadRequestException(ErrorCode.LEARNING_PATH_ALREADY_ACTIVE, "You already have an active or pending learning path. Drop or complete it to create a new one.");
                 });
 
         List<String> distinctCourseIds = request.getItems().stream()

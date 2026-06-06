@@ -34,7 +34,7 @@ public class StreakService implements IStreakService {
     @Override
     public void updateStreakOnActivity(String userId) {
         LocalDate today = LocalDate.now();
-        Optional<UserStreak> streakOpt = streakRepository.findByUserId(userId);
+        Optional<UserStreak> streakOpt = streakRepository.findForUpdateByUserId(userId);
 
         UserStreak streak;
         if (streakOpt.isPresent()) {

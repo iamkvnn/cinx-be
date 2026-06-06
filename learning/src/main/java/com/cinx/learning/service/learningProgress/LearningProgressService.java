@@ -1,9 +1,13 @@
 package com.cinx.learning.service.learningProgress;
 
+import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.DailyGoalType;
+import com.cinx.learning.consts.LessonType;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseProgressResponse;
+import com.cinx.learning.dto.response.LessonResponse;
 import com.cinx.learning.dto.response.LearningItemProgressResponse;
 import com.cinx.learning.mapper.CourseProgressMapper;
 import com.cinx.learning.mapper.LearningItemProgressMapper;
@@ -40,6 +44,7 @@ public class LearningProgressService implements ILearningProgressService {
     private final IStreakService streakService;
     private final IDailyGoalService dailyGoalService;
     private final EnrollmentClient enrollmentClient;
+    private final CourseProgressCalculator courseProgressCalculator;
 
     private final NotificationPublisher notificationPublisher;
 
@@ -84,6 +89,8 @@ public class LearningProgressService implements ILearningProgressService {
         CourseProgress courseProgress = courseProgressRepository.save(
                 CourseProgress.builder()
                         .isCompleted(false)
+                        .isPassed(false)
+                        .avgScore(0.0)
                         .userId(userId)
                         .courseId(courseId)
                         .totalItems(lessonIds.size())
@@ -91,8 +98,9 @@ public class LearningProgressService implements ILearningProgressService {
                         .build()
         );
         learningItemProgressRepository.saveAll(lessonIds.stream()
-                .map(lessonId -> LearningItemProgress.builder()
+                        .map(lessonId -> LearningItemProgress.builder()
                         .isCompleted(false)
+                        .isPassed(false)
                         .courseProgress(courseProgress)
                         .itemId(lessonId)
                         .build())
@@ -110,72 +118,67 @@ public class LearningProgressService implements ILearningProgressService {
 
     @Transactional
     @Override
-    public void updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request) {
+    public LearningItemProgressUpdateResult updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request) {
         LearningItemProgress progress = learningItemProgressRepository
                 .findByItemIdAndUserId(itemId, userId)
                 .orElseThrow(() -> new NotFoundException("Learning item progress not found"));
 
         CourseProgress course = progress.getCourseProgress();
-        Boolean oldCompleted = progress.getIsCompleted();
-        Double oldScore = progress.getScore();
-        Boolean newCompleted = request.isCompleted() != null ? request.isCompleted() : oldCompleted;
-        Double newScore = request.score();
+        boolean oldCompleted = Boolean.TRUE.equals(progress.getIsCompleted());
+        boolean oldPassed = Boolean.TRUE.equals(progress.getIsPassed());
+        boolean wasCourseCompleted = Boolean.TRUE.equals(course.getIsCompleted());
+        boolean wasCoursePassed = Boolean.TRUE.equals(course.getIsPassed());
+        Boolean requestedCompleted = request.isCompleted() != null ? request.isCompleted() : oldCompleted;
+        Boolean newPassed = request.isPassed() != null ? request.isPassed() : progress.getIsPassed();
+        Double newScore = request.score() != null ? request.score() : progress.getScore();
 
-        int completedItems = course.getCompletedItems() != null ? course.getCompletedItems() : 0;
-        double totalScore = (course.getAvgScore() != null ? course.getAvgScore() : 0.0) * completedItems;
+        progress.setIsCompleted(Boolean.TRUE.equals(requestedCompleted));
+        progress.setIsPassed(newPassed);
+        progress.setScore(newScore);
+        learningItemProgressRepository.save(progress);
 
-        if (!Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
-            completedItems++;
-            totalScore += newScore;
-            progress.setIsCompleted(true);
-            progress.setScore(newScore);
-            progress.setIsPassed(request.isPassed());
+        boolean completedTransition = !oldCompleted && Boolean.TRUE.equals(progress.getIsCompleted());
+        boolean passedTransition = !oldPassed && Boolean.TRUE.equals(progress.getIsPassed());
+
+        if (completedTransition) {
             streakService.updateStreakOnActivity(userId);
             dailyGoalService.recordProgress(userId, DailyGoalType.LEARNING_ITEMS_COMPLETED, 1);
             dailyGoalService.recordProgress(userId, DailyGoalType.XP, 50);
             dailyGoalService.recordLessonCompleted(userId, itemId);
             learningPathService.updatePathProgress(userId, itemId);
-        } else if (Boolean.TRUE.equals(oldCompleted) && Boolean.TRUE.equals(newCompleted)) {
-            totalScore = totalScore - (oldScore != null ? oldScore : 0.0) + newScore;
-            progress.setScore(newScore);
-            progress.setIsPassed(request.isPassed());
         }
 
-        course.setCompletedItems(completedItems);
-        course.setAvgScore(completedItems > 0 ? totalScore / completedItems : 0.0);
-
-        boolean justCompleted = !Boolean.TRUE.equals(oldCompleted) && course.getTotalItems() != null && completedItems == course.getTotalItems();
-
-        if (justCompleted) {
-            course.setIsCompleted(true);
-            course.setCompletionTime(LocalDateTime.now());
-            
-            // Notify user of course completion
-            try {
-                String courseTitle = "your course";
-                var courseRes = courseService.getCourseById(course.getCourseId());
-                if (courseRes != null && courseRes.success() && courseRes.data() != null) {
-                    courseTitle = courseRes.data().title();
-                }
-
-                notificationPublisher.publishCourseCompleted(userId, course.getCourseId(), courseTitle);
-            } catch (Exception ex) {
-                log.error("Failed to publish course completion event for userId={}, courseId={}", userId, course.getCourseId(), ex);
-            }
-        } else if (course.getTotalItems() != null && completedItems == course.getTotalItems()) {
-            course.setIsCompleted(true);
-            course.setCompletionTime(LocalDateTime.now());
+        CourseProgressAggregate aggregate = recomputeCourseAggregate(course, userId);
+        boolean courseCompletedTransition = !wasCourseCompleted && aggregate.completed();
+        boolean coursePassedTransition = !wasCoursePassed && aggregate.passed();
+        if (coursePassedTransition) {
+            publishCourseCompleted(userId, course.getCourseId());
         }
-
-        learningItemProgressRepository.save(progress);
-        courseProgressRepository.save(course);
+        return new LearningItemProgressUpdateResult(
+                completedTransition,
+                passedTransition,
+                courseCompletedTransition,
+                coursePassedTransition);
     }
 
     @Transactional
     @Override
-    public void recomputeCourseProgress(String courseId, String lessonId, String changeType) {
-        log.info("Recomputing course progress for courseId={} lessonId={} changeType={}",
-                courseId, lessonId, changeType);
+    public void completeArticleItem(String userId, String itemId) {
+        LearningItemProgress progress = learningItemProgressRepository
+                .findByItemIdAndUserId(itemId, userId)
+                .orElseThrow(() -> new NotFoundException("Learning item progress not found"));
+        String courseId = progress.getCourseProgress().getCourseId();
+        LessonResponse lesson = courseService.getEnrolledLessonById(courseId, itemId).data();
+        if (lesson == null || lesson.lessonType() != LessonType.ARTICLE) {
+            throw new BadRequestException(ErrorCode.LESSON_TYPE_INVALID, "Only article lessons can be manually marked complete");
+        }
+        updateLearningItemProgress(userId, itemId, new UpdateLearningItemRequest(true, true, 10.0));
+    }
+
+    @Transactional
+    @Override
+    public void recomputeCourseProgress(String courseId) {
+        log.info("Recomputing course progress for courseId={}", courseId);
 
         // 1. Fetch the current, authoritative lesson set from the course service.
         List<String> currentLessonIds;
@@ -230,7 +233,7 @@ public class LearningProgressService implements ILearningProgressService {
                 learningItemProgressRepository.findAllByUserIdAndCourseId(userId, courseId);
 
         Map<String, LearningItemProgress> existingByItemId = existingItems.stream()
-                .collect(Collectors.toMap(LearningItemProgress::getItemId, i -> i));
+                .collect(Collectors.toMap(LearningItemProgress::getItemId, i -> i, (first, duplicate) -> first));
 
         Set<String> currentSet = new HashSet<>(currentLessonIds);
 
@@ -250,6 +253,7 @@ public class LearningProgressService implements ILearningProgressService {
                 .<LearningItemProgress>map(lid -> LearningItemProgress.builder()
                         .itemId(lid)
                         .isCompleted(false)
+                        .isPassed(false)
                         .courseProgress(courseProgress)
                         .build())
                 .toList();
@@ -259,53 +263,66 @@ public class LearningProgressService implements ILearningProgressService {
                     toAdd.size(), userId, courseId);
         }
 
-        // Recompute aggregates from the remaining completed rows.
-        List<LearningItemProgress> remainingCompleted = existingItems.stream()
+        List<LearningItemProgress> currentItems =
+                learningItemProgressRepository.findAllByUserIdAndCourseId(userId, courseId);
+
+        List<LearningItemProgress> currentCourseItems = currentItems.stream()
                 .filter(item -> currentSet.contains(item.getItemId()))
-                .filter(item -> Boolean.TRUE.equals(item.getIsCompleted()))
                 .toList();
+        boolean wasPassed = Boolean.TRUE.equals(courseProgress.getIsPassed());
+        CourseProgressAggregate aggregate = courseProgressCalculator.calculate(currentCourseItems, expectedTotal);
+        applyCourseAggregate(courseProgress, aggregate);
+        boolean justPassed = aggregate.passed() && !wasPassed;
 
-        int completedCount = remainingCompleted.size();
-        double avgScore = 0.0;
-        if (completedCount > 0) {
-            double total = remainingCompleted.stream()
-                    .mapToDouble(item -> item.getScore() != null ? item.getScore() : 0.0)
-                    .sum();
-            avgScore = total / completedCount;
-        }
-
-        courseProgress.setTotalItems(expectedTotal);
-        courseProgress.setCompletedItems(completedCount);
-        courseProgress.setAvgScore(avgScore);
-
-        boolean nowComplete = expectedTotal > 0 && completedCount == expectedTotal;
-        boolean justCompleted = nowComplete && !Boolean.TRUE.equals(courseProgress.getIsCompleted());
-
-        courseProgress.setIsCompleted(nowComplete);
-        if (nowComplete && courseProgress.getCompletionTime() == null) {
+        if (aggregate.completed() && courseProgress.getCompletionTime() == null) {
             courseProgress.setCompletionTime(LocalDateTime.now());
-        } else if (!nowComplete) {
+        } else if (!aggregate.completed()) {
             courseProgress.setCompletionTime(null);
         }
 
         courseProgressRepository.save(courseProgress);
 
-        if (justCompleted) {
-            try {
-                String courseTitle = "your course";
-                var courseRes = courseService.getCourseById(courseId);
-                if (courseRes != null && courseRes.success() && courseRes.data() != null) {
-                    courseTitle = courseRes.data().title();
-                }
-
-                notificationPublisher.publishCourseCompleted(userId, courseId, courseTitle);
-            } catch (Exception ex) {
-                log.error("Failed to publish course completion event for userId={}, courseId={}", userId, courseId, ex);
-            }
+        if (justPassed) {
+            publishCourseCompleted(userId, courseId);
         }
     }
 
-    // Lesson-change notifications are now handled end-to-end by the notification service,
-    // which consumes course.events.exchange / course.lesson.changed events directly.
-    // No need to publish from here.
+    private CourseProgressAggregate recomputeCourseAggregate(CourseProgress course, String userId) {
+        List<LearningItemProgress> items =
+                learningItemProgressRepository.findAllByUserIdAndCourseId(userId, course.getCourseId());
+        CourseProgressAggregate aggregate = courseProgressCalculator.calculate(items, course.getTotalItems());
+        applyCourseAggregate(course, aggregate);
+        if (aggregate.completed() && course.getCompletionTime() == null) {
+            course.setCompletionTime(LocalDateTime.now());
+        } else if (!aggregate.completed()) {
+            course.setCompletionTime(null);
+        }
+
+        courseProgressRepository.save(course);
+        return aggregate;
+    }
+
+    private void applyCourseAggregate(CourseProgress course, CourseProgressAggregate aggregate) {
+        course.setTotalItems(aggregate.totalItems());
+        course.setCompletedItems(aggregate.completedItems());
+        course.setAvgScore(aggregate.avgScore());
+        course.setIsCompleted(aggregate.completed());
+        course.setIsPassed(aggregate.passed());
+    }
+
+    private void publishCourseCompleted(String userId, String courseId) {
+        try {
+            String courseTitle = "your course";
+            var courseRes = courseService.getCourseById(courseId);
+            if (courseRes != null && courseRes.success() && courseRes.data() != null) {
+                courseTitle = courseRes.data().title();
+            }
+
+            notificationPublisher.publishCourseCompleted(userId, courseId, courseTitle);
+        } catch (Exception ex) {
+            log.error("Failed to publish course completion event for userId={}, courseId={}", userId, courseId, ex);
+        }
+    }
+
+    // Course content notifications are handled end-to-end by the notification service.
 }

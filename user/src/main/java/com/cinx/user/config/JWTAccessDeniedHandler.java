@@ -1,10 +1,10 @@
 package com.cinx.user.config;
 
-import com.cinx.common.dto.ApiResponse;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.cinx.common.exception.ErrorCode;
+import com.cinx.common.exception.ProblemDetailResponseWriter;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.http.MediaType;
+import org.springframework.http.HttpStatus;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.web.access.AccessDeniedHandler;
 import org.springframework.stereotype.Component;
@@ -16,12 +16,6 @@ public class JWTAccessDeniedHandler implements AccessDeniedHandler {
 
     @Override
     public void handle(HttpServletRequest request, HttpServletResponse response, AccessDeniedException accessDeniedException) throws IOException {
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-
-        ApiResponse apiResponse = new ApiResponse(false, "Access denied", null);
-
-        final ObjectMapper mapper = new ObjectMapper();
-        response.getWriter().write(mapper.writeValueAsString(apiResponse));
+        ProblemDetailResponseWriter.write(request, response, HttpStatus.FORBIDDEN, ErrorCode.FORBIDDEN, "Access denied");
     }
 }

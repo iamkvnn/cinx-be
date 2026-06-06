@@ -2,6 +2,8 @@ package com.cinx.learning.model;
 
 import com.cinx.common.model.BaseEntity;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -16,6 +18,7 @@ import java.time.LocalDate;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = "user_id"))
 public class UserStreak extends BaseEntity {
     private String userId;
     private Integer currentStreak;

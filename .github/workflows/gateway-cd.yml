@@ -3,6 +3,7 @@ name: Gateway Service CD
 on:
   workflow_run:
     workflows: ["Gateway Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

@@ -7,7 +7,6 @@ import com.cinx.auth.dto.response.TokenResponseDto;
 public interface IAuthenticationService {
     void sendVerifyOtp(String email);
     void sendForgotPasswordOtp(String email);
-    void sendChangeEmailOtp(String email);
     TokenResponseDto authenticateWithGoogle(OAuthRequest request);
     TokenResponseDto authenticate(AuthRequestDto request);
     TokenResponseDto generateTokens(JWTPayload payload);

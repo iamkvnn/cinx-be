@@ -1,6 +1,7 @@
 package com.cinx.course.utils;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -23,29 +24,29 @@ public final class OrderIndexUtils {
             String itemName
     ) {
         if (previousId != null && Objects.equals(previousId, movedId)) {
-            throw new BadRequestException("Previous " + itemName + " cannot be the moved " + itemName);
+            throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Previous " + itemName + " cannot be the moved " + itemName);
         }
         if (nextId != null && Objects.equals(nextId, movedId)) {
-            throw new BadRequestException("Next " + itemName + " cannot be the moved " + itemName);
+            throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Next " + itemName + " cannot be the moved " + itemName);
         }
         if (previousId == null && nextId == null) {
             if (orderedItems.isEmpty()) {
                 return 0;
             }
-            throw new BadRequestException("Move position must include previous or next " + itemName);
+            throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Move position must include previous or next " + itemName);
         }
 
         int previousIndex = previousId == null ? -1 : indexOf(orderedItems, previousId, idExtractor);
         int nextIndex = nextId == null ? -1 : indexOf(orderedItems, nextId, idExtractor);
         if (previousId != null && previousIndex < 0) {
-            throw new BadRequestException("Previous " + itemName + " does not belong to the target position: " + previousId);
+            throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Previous " + itemName + " does not belong to the target position: " + previousId);
         }
         if (nextId != null && nextIndex < 0) {
-            throw new BadRequestException("Next " + itemName + " does not belong to the target position: " + nextId);
+            throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Next " + itemName + " does not belong to the target position: " + nextId);
         }
         if (previousId != null && nextId != null) {
             if (previousIndex + 1 != nextIndex) {
-                throw new BadRequestException("Previous and next " + itemName + " must be adjacent");
+                throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Previous and next " + itemName + " must be adjacent");
             }
             return nextIndex;
         }

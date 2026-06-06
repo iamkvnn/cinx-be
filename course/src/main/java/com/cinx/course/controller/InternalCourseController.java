@@ -51,6 +51,22 @@ public class InternalCourseController {
         return new ApiResponse<>(true, "Course fetched successfully", lessonService.getEnrolledLessonIdsByCourseId(id));
     }
 
+    @GetMapping("/courses/enrolled/{courseId}/lessons/{lessonId}")
+    public ApiResponse<LessonResponse> getEnrolledLessonById(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
+        return new ApiResponse<>(true, "Lesson fetched successfully", lessonService.getEnrolledLessonByCourseIdAndLessonId(courseId, lessonId));
+    }
+
+    @GetMapping("/lessons/{lessonId}/instructor-access")
+    public ApiResponse<Boolean> isLessonInstructor(
+            @PathVariable String lessonId,
+            @RequestParam String userId
+    ) {
+        return new ApiResponse<>(true, "Instructor access checked successfully", lessonService.isLessonInstructor(lessonId, userId));
+    }
+
     @GetMapping("/courses/{id}/curriculum")
     public ApiResponse<CourseCurriculumResponse> getCourseCurriculum(@PathVariable String id) {
         return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getPublishedCurriculum(id));

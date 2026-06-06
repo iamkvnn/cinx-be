@@ -1,10 +1,13 @@
 package com.cinx.learning.messaging;
 
+import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.messaging.event.ScoringModeChangedEvent;
 import com.cinx.learning.model.QuizSessionSubmission;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
+import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
+import com.cinx.learning.service.learningProgress.LearningItemProgressUpdateResult;
 import com.cinx.learning.service.quiz.QuizScoreAggregator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -20,9 +23,12 @@ import java.util.stream.Collectors;
 @Component
 @RequiredArgsConstructor
 public class QuizScoringModeChangedListener {
+    private static final double PASSING_SCORE = 5.0;
+
     private final QuizSessionSubmissionRepository quizSessionSubmissionRepository;
     private final ILearningProgressService learningProgressService;
     private final QuizScoreAggregator quizScoreAggregator;
+    private final IDailyGoalService dailyGoalService;
 
     @Transactional
     @RabbitListener(queues = "learning.quiz.scoring-mode-change.queue", containerFactory = "rabbitListenerContainerFactory")
@@ -45,11 +51,14 @@ public class QuizScoringModeChangedListener {
 
             double newAggregatedScore = quizScoreAggregator.aggregateScore(scores, event.scoringMode());
 
-            learningProgressService.updateLearningItemProgress(
+            LearningItemProgressUpdateResult result = learningProgressService.updateLearningItemProgress(
                     userId,
                      event.quizLessonId(),
-                    new UpdateLearningItemRequest(true, newAggregatedScore >= 5.0, newAggregatedScore)
+                    new UpdateLearningItemRequest(true, newAggregatedScore >= PASSING_SCORE, newAggregatedScore)
             );
+            if (result.passedTransition()) {
+                dailyGoalService.recordProgress(userId, DailyGoalType.QUIZZES_PASSED, 1);
+            }
         }
     }
 }

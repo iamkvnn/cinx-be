@@ -7,6 +7,7 @@ import com.cinx.cart.model.CartItem;
 import com.cinx.cart.repository.CartItemRepository;
 import com.cinx.cart.service.course.CourseService;
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.utils.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -51,7 +52,7 @@ public class CartService implements ICartService {
         String userId = AuthenticationUtil.extractUserId();
         courseService.getCourseById(request.courseId());
         if (cartItemRepository.existsByUserIdAndCourseId(userId, request.courseId())) {
-            throw new AlreadyExistException("Course already in cart");
+            throw new AlreadyExistException(ErrorCode.CART_ITEM_ALREADY_EXISTS, "Course already in cart");
         }
         cartItemRepository.save(
                 CartItem.builder()

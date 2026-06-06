@@ -1,6 +1,7 @@
 package com.cinx.course.service.lesson;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.consts.LessonType;
@@ -30,6 +31,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -74,6 +76,14 @@ public class LessonService implements ILessonService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public LessonResponse getEnrolledLessonByCourseIdAndLessonId(String courseId, String lessonId) {
+        return findEnrolledReadableLesson(courseId, lessonId)
+                .map(lessonMapper::toResponse)
+                .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
+    }
+
+    @Override
     @Transactional
     public Lesson getForUpdate(String courseId, String sectionId, String lessonId, LessonType lessonType) {
         Section section = sectionService.editableSection(courseId, sectionId);
@@ -97,6 +107,19 @@ public class LessonService implements ILessonService {
             throw new NotFoundException("Lesson not found with id: " + lessonId);
         }
     }
+
+    private Optional<Lesson> findEnrolledReadableLesson(String courseId, String lessonId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
+            throw new NotFoundException("Course not found with id: " + courseId);
+        }
+        return lessonRepository.findEnrolledReadableByCourse(courseId)
+                .stream()
+                .filter(lesson -> Objects.equals(lesson.getStableId(), lessonId))
+                .findFirst();
+    }
+
 
     @Override
     @Transactional
@@ -136,7 +159,7 @@ public class LessonService implements ILessonService {
                 .collect(Collectors.toMap(Section::getStableId, Function.identity()));
         Section targetSection = sectionsByStableId.get(request.targetSectionId());
         if (targetSection == null) {
-            throw new BadRequestException("Target section does not belong to this course draft: " + request.targetSectionId());
+            throw new BadRequestException(ErrorCode.LESSON_ORDER_INVALID, "Target section does not belong to this course draft: " + request.targetSectionId());
         }
         Lesson movedLesson = lessonRepository.findDraftLessonForUpdate(draft.getId(), lessonId)
                 .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
@@ -224,14 +247,14 @@ public class LessonService implements ILessonService {
                         .distinct()
                         .toList();
         if (normalized.contains(targetStableId)) {
-            throw new BadRequestException("Lesson cannot be a prerequisite of itself");
+            throw new BadRequestException(ErrorCode.LESSON_PREREQUISITE_INVALID, "Lesson cannot be a prerequisite of itself");
         }
 
         Map<String, Lesson> lessonsByStableId = lessonRepository.findByDraft(draftId).stream()
                 .collect(Collectors.toMap(Lesson::getStableId, Function.identity(), (first, ignored) -> first));
         for (String prerequisiteId : normalized) {
             if (!lessonsByStableId.containsKey(prerequisiteId)) {
-                throw new BadRequestException("Prerequisite lesson not found: " + prerequisiteId);
+                throw new BadRequestException(ErrorCode.LESSON_PREREQUISITE_INVALID, "Prerequisite lesson not found: " + prerequisiteId);
             }
         }
 
@@ -244,7 +267,7 @@ public class LessonService implements ILessonService {
 
         for (String prerequisiteId : normalized) {
             if (canReach(prerequisiteId, targetStableId, prerequisiteGraph, new HashSet<>())) {
-                throw new BadRequestException("Circular lesson prerequisite is not allowed");
+                throw new BadRequestException(ErrorCode.LESSON_PREREQUISITE_CYCLE, "Circular lesson prerequisite is not allowed");
             }
         }
         return normalized;

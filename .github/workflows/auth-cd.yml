@@ -3,6 +3,7 @@ name: Auth Service CD
 on:
   workflow_run:
     workflows: ["Auth Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

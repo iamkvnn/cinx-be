@@ -3,6 +3,7 @@ name: Cart Service CD
 on:
   workflow_run:
     workflows: ["Cart Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

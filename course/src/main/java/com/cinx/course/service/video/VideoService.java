@@ -1,6 +1,7 @@
 package com.cinx.course.service.video;
 
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateVideoLessonRequest;
@@ -35,7 +36,7 @@ public class VideoService implements IVideoService {
     public void createVideo(String courseId, String lessonId, CreateVideoLessonRequest request) {
         lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
         videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
-            throw new AlreadyExistException("Video already exists for lessonId: " + lessonId);
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Video already exists for lessonId: " + lessonId);
         },() -> {
             var videoLesson = videoLessonMapper.toModel(request);
             videoLesson.setLessonId(lessonId);

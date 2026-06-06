@@ -1,6 +1,7 @@
 package com.cinx.course.service.article;
 
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateArticleLessonRequest;
@@ -31,7 +32,7 @@ public class ArticleService implements IArticleService {
     public void createArticle(String courseId, String lessonId, CreateArticleLessonRequest request) {
         lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
-            throw new AlreadyExistException("Article already exists for lessonId: " + lessonId);
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Article already exists for lessonId: " + lessonId);
         },() -> {
             var articleLesson = articleLessonMapper.toModel(request);
             articleLesson.setLessonId(lessonId);

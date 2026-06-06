@@ -1,5 +1,7 @@
 package com.cinx.enrollment.config;
 
+import com.cinx.common.logging.RabbitCorrelationAdvice;
+import com.cinx.common.logging.RabbitCorrelationReceivePostProcessor;
 import lombok.RequiredArgsConstructor;
 import org.springframework.amqp.core.AcknowledgeMode;
 import org.springframework.amqp.rabbit.config.SimpleRabbitListenerContainerFactory;
@@ -15,7 +17,9 @@ public class ConsumerConfig {
 
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory) {
+            ConnectionFactory connectionFactory,
+            RabbitCorrelationReceivePostProcessor correlationReceivePostProcessor,
+            RabbitCorrelationAdvice correlationAdvice) {
 
         SimpleRabbitListenerContainerFactory factory =
                 new SimpleRabbitListenerContainerFactory();
@@ -34,6 +38,8 @@ public class ConsumerConfig {
         // Retry with backoff on listener errors
         factory.setDefaultRequeueRejected(false); // send failed messages to DLX
         factory.setMessageConverter(jackson2JsonMessageConverter);
+        factory.setAfterReceivePostProcessors(correlationReceivePostProcessor);
+        factory.setAdviceChain(correlationAdvice);
 
         return factory;
     }

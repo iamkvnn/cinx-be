@@ -1,5 +1,6 @@
 package com.cinx.course.service.curriculum;
 
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.utils.AuthenticationUtil;
@@ -121,7 +122,7 @@ public class CurriculumService implements ICurriculumService {
 
     private void ensureCurrentUserOwns(Course course) {
         if (!Objects.equals(course.getInstructorId(), AuthenticationUtil.extractUserId())) {
-            throw new ForbiddenException("You are not allowed to access this course");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not allowed to access this course");
         }
     }
 

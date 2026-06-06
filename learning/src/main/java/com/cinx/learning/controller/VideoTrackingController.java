@@ -8,11 +8,14 @@ import com.cinx.learning.dto.request.SubmitVideoQuestionRequest;
 import com.cinx.learning.dto.request.TrackingVideoLessonRequest;
 import com.cinx.learning.dto.response.InVideoAssessmentSubmissionResponse;
 import com.cinx.learning.dto.response.VideoLessonTrackingHistoryResponse;
+import com.cinx.learning.service.authorization.LearningAuthorizationService;
 import com.cinx.learning.service.video.IVideoService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -22,9 +25,11 @@ import java.util.List;
 @RequestMapping("/api/v1/learning")
 public class VideoTrackingController {
     private final IVideoService videoService;
+    private final LearningAuthorizationService authorizationService;
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
     public ResponseEntity<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> getVideoLessonTrackingHistories(
             @PathVariable String courseId,
             @PathVariable String lessonId,
@@ -32,6 +37,7 @@ public class VideoTrackingController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort) {
+        authorizationService.requireLessonInstructorOrAdmin(lessonId);
         return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(courseId, lessonId, page, size)));
     }
 
@@ -59,7 +65,7 @@ public class VideoTrackingController {
     public ResponseEntity<ApiResponse<?>> trackVideoProgress(
             @PathVariable String courseId,
             @PathVariable String lessonId,
-            @RequestBody TrackingVideoLessonRequest request) {
+            @Valid @RequestBody TrackingVideoLessonRequest request) {
         String userId = AuthenticationUtil.extractUserId();
         videoService.trackVideoProgress(courseId, lessonId, userId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Video progress tracked successfully", null));
@@ -70,7 +76,7 @@ public class VideoTrackingController {
     public ResponseEntity<ApiResponse<?>> submitVideoQuestionAnswer(
             @PathVariable String courseId,
             @PathVariable String lessonId,
-            @RequestBody SubmitVideoQuestionRequest request) {
+            @Valid @RequestBody SubmitVideoQuestionRequest request) {
         String userId = AuthenticationUtil.extractUserId();
         videoService.submitVideoQuestionAnswer(courseId, lessonId, userId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Answer submitted successfully", null));

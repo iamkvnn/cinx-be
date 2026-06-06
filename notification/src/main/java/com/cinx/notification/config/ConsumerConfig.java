@@ -1,5 +1,7 @@
 package com.cinx.notification.config;
 
+import com.cinx.common.logging.RabbitCorrelationAdvice;
+import com.cinx.common.logging.RabbitCorrelationReceivePostProcessor;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
@@ -20,7 +22,10 @@ import org.springframework.retry.interceptor.RetryOperationsInterceptor;
 public class ConsumerConfig {
     @Bean
     public SimpleRabbitListenerContainerFactory rabbitListenerContainerFactory(
-            ConnectionFactory connectionFactory, AmqpTemplate amqpTemplate) {
+            ConnectionFactory connectionFactory,
+            AmqpTemplate amqpTemplate,
+            RabbitCorrelationReceivePostProcessor correlationReceivePostProcessor,
+            RabbitCorrelationAdvice correlationAdvice) {
 
         SimpleRabbitListenerContainerFactory factory =
                 new SimpleRabbitListenerContainerFactory();
@@ -37,7 +42,8 @@ public class ConsumerConfig {
         factory.setMaxConcurrentConsumers(10);
 
         factory.setMessageConverter(jackson2JsonMessageConverter());
-        factory.setAdviceChain(retryInterceptor(amqpTemplate));
+        factory.setAfterReceivePostProcessors(correlationReceivePostProcessor);
+        factory.setAdviceChain(correlationAdvice, retryInterceptor(amqpTemplate));
 
         return factory;
     }

@@ -1,6 +1,7 @@
 package com.cinx.learning.service.dailyGoal;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.SetDailyGoalRequest;
 import com.cinx.learning.model.LearningItemProgress;
@@ -83,7 +84,7 @@ public class DailyGoalService implements IDailyGoalService {
             return;
         }
         if (goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED) {
-            throw new BadRequestException("Use recordLessonCompleted for specific lesson goals");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Use recordLessonCompleted for specific lesson goals");
         }
 
         LocalDate today = LocalDate.now();
@@ -126,7 +127,8 @@ public class DailyGoalService implements IDailyGoalService {
         if (Boolean.TRUE.equals(goal.getIsCompleted())) {
             return;
         }
-        goal.setCurrentValue(goal.getCurrentValue() + amount);
+        int currentValue = goal.getCurrentValue() != null ? goal.getCurrentValue() : 0;
+        goal.setCurrentValue(currentValue + amount);
         if (goal.getCurrentValue() >= goal.getTargetValue()) {
             goal.setCurrentValue(goal.getTargetValue());
             goal.setIsCompleted(true);
@@ -146,11 +148,11 @@ public class DailyGoalService implements IDailyGoalService {
 
     private String buildGoalKey(DailyGoalType goalType, String targetItemId) {
         if (goalType == null) {
-            throw new BadRequestException("goalType is required");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "goalType is required");
         }
         if (goalType == DailyGoalType.SPECIFIC_LESSON_COMPLETED) {
             if (targetItemId == null || targetItemId.isBlank()) {
-                throw new BadRequestException("targetItemId is required for specific lesson goals");
+                throw new BadRequestException(ErrorCode.BAD_REQUEST, "targetItemId is required for specific lesson goals");
             }
             return goalType.name() + ":" + targetItemId;
         }
@@ -162,7 +164,7 @@ public class DailyGoalService implements IDailyGoalService {
             return 1;
         }
         if (requestedTargetValue == null || requestedTargetValue < 1) {
-            throw new BadRequestException("targetValue must be at least 1");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "targetValue must be at least 1");
         }
         return requestedTargetValue;
     }

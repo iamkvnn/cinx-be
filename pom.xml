@@ -40,7 +40,16 @@
         <org.mapstruct.version>1.6.3</org.mapstruct.version>
         <org.lombok.version>1.18.36</org.lombok.version>
         <org.lombok-mapstruct-binding.version>0.2.0</org.lombok-mapstruct-binding.version>
+        <net.logstash.logback.version>8.0</net.logstash.logback.version>
     </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>net.logstash.logback</groupId>
+            <artifactId>logstash-logback-encoder</artifactId>
+            <version>${net.logstash.logback.version}</version>
+        </dependency>
+    </dependencies>
 
     <dependencyManagement>
         <dependencies>
