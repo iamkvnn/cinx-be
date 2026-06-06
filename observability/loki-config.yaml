@@ -31,11 +31,12 @@ limits_config:
   retention_period: 168h
   reject_old_samples: true
   reject_old_samples_max_age: 168h
+  allow_structured_metadata: false
 
 compactor:
   working_directory: /loki/compactor
-  shared_store: filesystem
   retention_enabled: true
+  delete_request_store: filesystem
 
 analytics:
   reporting_enabled: false
