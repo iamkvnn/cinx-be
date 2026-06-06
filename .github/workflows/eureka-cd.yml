@@ -3,6 +3,7 @@ name: Eureka Service CD
 on:
   workflow_run:
     workflows: ["Eureka Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

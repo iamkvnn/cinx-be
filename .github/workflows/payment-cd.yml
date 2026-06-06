@@ -3,6 +3,7 @@ name: Payment Service CD
 on:
   workflow_run:
     workflows: ["Payment Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

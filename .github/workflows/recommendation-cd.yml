@@ -3,6 +3,7 @@ name: Recommendation Service CD
 on:
   workflow_run:
     workflows: ["Recommendation Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

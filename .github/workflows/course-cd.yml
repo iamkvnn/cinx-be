@@ -3,6 +3,7 @@ name: Course Service CD
 on:
   workflow_run:
     workflows: ["Course Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 

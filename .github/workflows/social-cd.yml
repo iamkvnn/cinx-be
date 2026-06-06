@@ -3,6 +3,7 @@ name: Social Service CD
 on:
   workflow_run:
     workflows: ["Social Service CI"]
+    branches: [ "main" ]
     types:
       - completed
 
