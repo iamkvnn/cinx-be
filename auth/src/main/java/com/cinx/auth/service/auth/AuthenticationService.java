@@ -100,6 +100,9 @@ public class AuthenticationService implements IAuthenticationService {
                     }
                     return userService.createUserByGoogleProfile(profileResponse, request.role());
                 });
+        if (user.getRole() != request.role()) {
+            throw new BadRequestException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
+        }
         
         userService.checkAndUnbanIfNeeded(user);
         if (user.getStatus().equals(UserStatus.BANNED)) {
