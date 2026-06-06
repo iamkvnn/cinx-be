@@ -1,5 +1,6 @@
 package com.cinx.learning.service.authorization;
 
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
@@ -39,14 +40,14 @@ public class LearningAuthorizationService {
         if (isAdmin() || isCourseInstructor(courseId, currentUserId())) {
             return;
         }
-        throw new ForbiddenException("Only the course instructor or admin can access this resource");
+        throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the course instructor or admin can access this resource");
     }
 
     public void requireLessonInstructorOrAdmin(String lessonId) {
         if (isAdmin() || isLessonInstructor(lessonId, currentUserId())) {
             return;
         }
-        throw new ForbiddenException("Only the lesson instructor or admin can access this resource");
+        throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the lesson instructor or admin can access this resource");
     }
 
     public QuizSession requireQuizSessionOwner(String sessionId) {
@@ -54,7 +55,7 @@ public class LearningAuthorizationService {
         if (Objects.equals(session.getUserId(), currentUserId())) {
             return session;
         }
-        throw new ForbiddenException("Only the quiz session owner can access this resource");
+        throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Only the quiz session owner can access this resource");
     }
 
     public QuizSession requireQuizSessionOwnerOrInstructorOrAdmin(String sessionId) {
@@ -62,7 +63,7 @@ public class LearningAuthorizationService {
         if (Objects.equals(session.getUserId(), currentUserId()) || isAdmin() || isLessonInstructor(session.getQuizLessonId(), currentUserId())) {
             return session;
         }
-        throw new ForbiddenException("Only the quiz session owner, lesson instructor, or admin can access this resource");
+        throw new ForbiddenException(ErrorCode.FORBIDDEN, "Only the quiz session owner, lesson instructor, or admin can access this resource");
     }
 
     public QuizSession requireQuizSessionInstructorOrAdmin(String sessionId) {
@@ -70,7 +71,7 @@ public class LearningAuthorizationService {
         if (isAdmin() || isLessonInstructor(session.getQuizLessonId(), currentUserId())) {
             return session;
         }
-        throw new ForbiddenException("Only the lesson instructor or admin can access this resource");
+        throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the lesson instructor or admin can access this resource");
     }
 
     public AssignmentSubmission requireAssignmentSubmissionInstructorOrAdmin(String submissionId) {
@@ -78,7 +79,7 @@ public class LearningAuthorizationService {
         if (isAdmin() || isLessonInstructor(submission.getAssignmentId(), currentUserId())) {
             return submission;
         }
-        throw new ForbiddenException("Only the assignment instructor or admin can access this resource");
+        throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the assignment instructor or admin can access this resource");
     }
 
     public AssignmentSubmission requireAssignmentSubmissionDeleteAllowed(String submissionId) {
@@ -89,7 +90,7 @@ public class LearningAuthorizationService {
         if (Objects.equals(submission.getUserId(), currentUserId()) && submission.getScore() == null) {
             return submission;
         }
-        throw new ForbiddenException("Only the submission owner before grading, assignment instructor, or admin can delete this submission");
+        throw new ForbiddenException(ErrorCode.FORBIDDEN, "Only the submission owner before grading, assignment instructor, or admin can delete this submission");
     }
 
     public boolean isCourseInstructor(String courseId, String userId) {

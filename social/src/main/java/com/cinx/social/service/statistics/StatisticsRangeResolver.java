@@ -1,6 +1,7 @@
 package com.cinx.social.service.statistics;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 
 import java.time.LocalDate;
 import java.time.YearMonth;
@@ -21,10 +22,10 @@ public class StatisticsRangeResolver {
                     : monthlyRange(YearMonth.now().minusMonths(MAX_MONTH_BUCKETS - 1L), YearMonth.now());
         }
         if (startDate == null || endDate == null) {
-            throw new BadRequestException("startDate and endDate must be provided together");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "startDate and endDate must be provided together");
         }
         if (endDate.isBefore(startDate)) {
-            throw new BadRequestException("endDate must not be before startDate");
+            throw new BadRequestException(ErrorCode.DATE_RANGE_INVALID, "endDate must not be before startDate");
         }
         validateLookback(startDate);
         return normalizedGroupBy == StatisticsGroupBy.DAY
@@ -35,7 +36,7 @@ public class StatisticsRangeResolver {
     private StatisticsDateRange monthlyRange(YearMonth startMonth, YearMonth endMonth) {
         long bucketCount = ChronoUnit.MONTHS.between(startMonth, endMonth) + 1;
         if (bucketCount > MAX_MONTH_BUCKETS) {
-            throw new BadRequestException("Monthly statistics cannot exceed 12 months");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Monthly statistics cannot exceed 12 months");
         }
         List<String> labels = new ArrayList<>();
         YearMonth current = startMonth;
@@ -54,7 +55,7 @@ public class StatisticsRangeResolver {
     private StatisticsDateRange dailyRange(LocalDate startDate, LocalDate endDate) {
         long bucketCount = ChronoUnit.DAYS.between(startDate, endDate) + 1;
         if (bucketCount > MAX_DAY_BUCKETS) {
-            throw new BadRequestException("Daily statistics cannot exceed 30 days");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Daily statistics cannot exceed 30 days");
         }
         List<String> labels = new ArrayList<>();
         LocalDate current = startDate;
@@ -73,7 +74,7 @@ public class StatisticsRangeResolver {
     private void validateLookback(LocalDate startDate) {
         LocalDate earliest = LocalDate.now().minusMonths(MAX_LOOKBACK_MONTHS);
         if (startDate.isBefore(earliest)) {
-            throw new BadRequestException("Statistics cannot look back more than 12 months");
+            throw new BadRequestException(ErrorCode.STATISTICS_RANGE_TOO_LARGE, "Statistics cannot look back more than 12 months");
         }
     }
 }

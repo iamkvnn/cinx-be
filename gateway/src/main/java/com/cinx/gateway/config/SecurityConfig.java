@@ -3,14 +3,11 @@ package com.cinx.gateway.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.security.config.Customizer;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
-import org.springframework.security.oauth2.jwt.NimbusJwtDecoder;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
-import org.springframework.security.oauth2.jwt.ReactiveJwtDecoders;
 import org.springframework.security.web.server.SecurityWebFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
@@ -41,6 +38,18 @@ public class SecurityConfig {
             )
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder()))
+                .authenticationEntryPoint((exchange, ex) -> GatewayProblemDetailWriter.write(
+                        exchange,
+                        org.springframework.http.HttpStatus.UNAUTHORIZED,
+                        "UNAUTHORIZED",
+                        "Unauthorized",
+                        "Please login and try again"))
+                .accessDeniedHandler((exchange, ex) -> GatewayProblemDetailWriter.write(
+                        exchange,
+                        org.springframework.http.HttpStatus.FORBIDDEN,
+                        "FORBIDDEN",
+                        "Forbidden",
+                        "Access denied"))
             ).cors(cors -> cors.configurationSource(corsConfigurationSource()));
         return http.build();
     }

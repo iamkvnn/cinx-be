@@ -2,6 +2,7 @@ package com.cinx.learning.service.video;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.SubmitVideoQuestionRequest;
@@ -68,7 +69,7 @@ public class VideoService implements IVideoService {
     public void trackVideoProgress(String courseId, String lessonId, String userId, TrackingVideoLessonRequest request) {
         VideoLessonResponse videoLessonResponse = getVideoLesson(courseId, lessonId);
         if (request.currentPosition() == null || request.currentPosition() < 0) {
-            throw new BadRequestException("Current position must be a non-negative integer.");
+            throw new BadRequestException(ErrorCode.VIDEO_POSITION_INVALID, "Current position must be a non-negative integer.");
         }
         Integer duration = videoLessonResponse != null ? videoLessonResponse.duration() : null;
         int currentPosition = clampPosition(request.currentPosition(), duration);
@@ -127,7 +128,7 @@ public class VideoService implements IVideoService {
                 request.userAnswer()
         );
         if (checkResult == null || !Boolean.TRUE.equals(checkResult.data())) {
-            throw new BadRequestException("Incorrect answer. Please try again.");
+            throw new BadRequestException(ErrorCode.VIDEO_QUESTION_ANSWER_INCORRECT, "Incorrect answer. Please try again.");
         }
 
         InVideoAssessmentSubmission submission = inVideoAssessmentSubmissionRepository
@@ -217,10 +218,10 @@ public class VideoService implements IVideoService {
 
     private void validatePageRequest(int page, int size) {
         if (page < 1) {
-            throw new BadRequestException("page must be greater than or equal to 1");
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "page must be greater than or equal to 1");
         }
         if (size < 1) {
-            throw new BadRequestException("size must be greater than or equal to 1");
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "size must be greater than or equal to 1");
         }
     }
 }

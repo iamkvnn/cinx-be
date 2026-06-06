@@ -1,6 +1,7 @@
 package com.cinx.course.service.course;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
@@ -218,7 +219,7 @@ public class CourseService implements ICourseService {
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         ensureCurrentUserOwns(course);
         if (course.getStatus() == CourseStatus.ARCHIVED) {
-            throw new BadRequestException("Archived courses cannot be updated");
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be updated");
         }
         Category category = category(request.categoryId());
         Long discountRate = calculateDiscountRate(request.price(), request.discountedPrice());
@@ -243,14 +244,14 @@ public class CourseService implements ICourseService {
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         ensureCurrentUserOwns(course);
         if (course.getStatus() == CourseStatus.ARCHIVED) {
-            throw new BadRequestException("Archived courses cannot be submitted");
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be submitted");
         }
         if (course.getPublishStatus() == CoursePublishStatus.WAITING_APPROVAL) {
-            throw new BadRequestException("Course is already waiting for approval");
+            throw new BadRequestException(ErrorCode.COURSE_WAITING_APPROVAL, "Course is already waiting for approval");
         }
         Optional<CourseDraft> draft = courseDraftService.findDraft(course);
         if (draft.isEmpty() && course.getStatus() == CourseStatus.PUBLISHED) {
-            throw new BadRequestException("Course draft not found for course id: " + courseId);
+            throw new BadRequestException(ErrorCode.COURSE_DRAFT_MISSING, "Course draft not found for course id: " + courseId);
         }
         course.setPublishStatus(CoursePublishStatus.WAITING_APPROVAL);
         return toResponse(courseRepository.save(course), draft.orElse(null));
@@ -263,7 +264,7 @@ public class CourseService implements ICourseService {
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         ensureCurrentUserOwns(course);
         if (course.getStatus() != CourseStatus.PUBLISHED) {
-            throw new BadRequestException("Only published, non-archived courses can be archived");
+            throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only published, non-archived courses can be archived");
         }
         course.setStatus(CourseStatus.ARCHIVED);
         course.setPublishStatus(null);
@@ -287,10 +288,10 @@ public class CourseService implements ICourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         if (course.getStatus() == CourseStatus.ARCHIVED) {
-            throw new BadRequestException("Archived courses cannot be approved");
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be approved");
         }
         if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
-            throw new BadRequestException("Only courses waiting for approval can be approved");
+            throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only courses waiting for approval can be approved");
         }
         var lessonChangedEvents = courseDraftService.approveDraft(course);
         course.setStatus(CourseStatus.PUBLISHED);
@@ -312,10 +313,10 @@ public class CourseService implements ICourseService {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
         if (course.getStatus() == CourseStatus.ARCHIVED) {
-            throw new BadRequestException("Archived courses cannot be rejected");
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be rejected");
         }
         if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
-            throw new BadRequestException("Only courses waiting for approval can be rejected");
+            throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only courses waiting for approval can be rejected");
         }
         CourseDraft draft = courseDraftService.findDraft(course).orElse(null);
         course.setPublishStatus(CoursePublishStatus.REJECTED);
@@ -395,7 +396,7 @@ public class CourseService implements ICourseService {
 
     private CourseResponse unarchive(Course course) {
         if (course.getStatus() != CourseStatus.ARCHIVED) {
-            throw new BadRequestException("Only archived courses can be unarchived");
+            throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only archived courses can be unarchived");
         }
         course.setStatus(CourseStatus.PUBLISHED);
         course.setPublishStatus(null);
@@ -452,7 +453,7 @@ public class CourseService implements ICourseService {
 
     private void ensureCurrentUserOwns(Course course) {
         if (!Objects.equals(course.getInstructorId(), AuthenticationUtil.extractUserId())) {
-            throw new ForbiddenException("You are not allowed to access this course");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not allowed to access this course");
         }
     }
 
@@ -460,7 +461,7 @@ public class CourseService implements ICourseService {
         boolean enrolled = enrollmentClient.checkEnrollmentStatus(List.of(courseId)).data().stream()
                 .anyMatch(status -> courseId.equals(status.courseId()) && Boolean.TRUE.equals(status.enrolled()));
         if (!enrolled) {
-            throw new ForbiddenException("You are not enrolled in this course");
+            throw new ForbiddenException(ErrorCode.NOT_ENROLLED_IN_COURSE, "You are not enrolled in this course");
         }
     }
 

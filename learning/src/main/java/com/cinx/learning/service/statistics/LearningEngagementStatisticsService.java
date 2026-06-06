@@ -1,6 +1,7 @@
 package com.cinx.learning.service.statistics;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.response.CourseResponse;
 import com.cinx.learning.dto.response.CourseEngagementOverviewResponse;
@@ -35,7 +36,7 @@ public class LearningEngagementStatisticsService implements ILearningEngagementS
         CourseResponse course = courseService.getCourseById(courseId).data();
         String currentUserId = AuthenticationUtil.extractUserId();
         if (course.instructor() == null || !currentUserId.equals(course.instructor().id())) {
-            throw new BadRequestException("Only the course instructor can view this engagement overview");
+            throw new BadRequestException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the course instructor can view this engagement overview");
         }
         return buildCourseEngagement(courseId, groupBy, startDate, endDate);
     }

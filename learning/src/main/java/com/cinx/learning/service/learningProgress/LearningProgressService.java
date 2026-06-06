@@ -1,6 +1,7 @@
 package com.cinx.learning.service.learningProgress;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.consts.LessonType;
@@ -169,7 +170,7 @@ public class LearningProgressService implements ILearningProgressService {
         String courseId = progress.getCourseProgress().getCourseId();
         LessonResponse lesson = courseService.getEnrolledLessonById(courseId, itemId).data();
         if (lesson == null || lesson.lessonType() != LessonType.ARTICLE) {
-            throw new BadRequestException("Only article lessons can be manually marked complete");
+            throw new BadRequestException(ErrorCode.LESSON_TYPE_INVALID, "Only article lessons can be manually marked complete");
         }
         updateLearningItemProgress(userId, itemId, new UpdateLearningItemRequest(true, true, 10.0));
     }

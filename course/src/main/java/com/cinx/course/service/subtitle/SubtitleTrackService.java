@@ -3,6 +3,7 @@ package com.cinx.course.service.subtitle;
 import com.cinx.common.dto.PresignedUrlResponse;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.utils.AuthenticationUtil;
@@ -80,7 +81,7 @@ public class SubtitleTrackService implements ISubtitleTrackService {
         String languageCode = subtitleFileProcessor.normalizeLanguageCode(request.languageCode());
         subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode(lessonId, languageCode)
                 .ifPresent(existing -> {
-                    throw new AlreadyExistException("Subtitle already exists for language: " + languageCode);
+                    throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Subtitle already exists for language: " + languageCode);
                 });
 
         SubtitleTrack subtitleTrack = new SubtitleTrack();
@@ -105,11 +106,11 @@ public class SubtitleTrackService implements ISubtitleTrackService {
 
         subtitleTrackMapper.partialUpdate(subtitleTrack, request);
         if (request.displayName() != null && request.displayName().isBlank()) {
-            throw new BadRequestException("Subtitle display name must not be blank");
+            throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Subtitle display name must not be blank");
         }
         if (hasNewFile(request)) {
             if (request.fileKey() == null || request.fileName() == null || request.fileType() == null || request.fileSize() == null) {
-                throw new BadRequestException("fileKey, fileName, fileType and fileSize are required when replacing subtitle file");
+                throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "fileKey, fileName, fileType and fileSize are required when replacing subtitle file");
             }
             applyUploadedFile(
                     subtitleTrack,
@@ -184,7 +185,7 @@ public class SubtitleTrackService implements ISubtitleTrackService {
         VideoLesson videoLesson = ensureVideoLessonExists(lessonId);
         String currentUserId = AuthenticationUtil.extractUserId();
         if (!lessonService.isLessonInstructor(lessonId, currentUserId)) {
-            throw new ForbiddenException("You do not have permission to manage subtitles for this lesson");
+            throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "You do not have permission to manage subtitles for this lesson");
         }
         return videoLesson;
     }
@@ -240,7 +241,7 @@ public class SubtitleTrackService implements ISubtitleTrackService {
 
     private String sanitizeFileName(String fileName) {
         if (fileName == null || fileName.isBlank()) {
-            throw new BadRequestException("Subtitle file name is required");
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "Subtitle file name is required");
         }
         return fileName.trim().replaceAll("[\\\\/]+", "-");
     }

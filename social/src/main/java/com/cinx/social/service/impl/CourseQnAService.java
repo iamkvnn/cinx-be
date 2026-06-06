@@ -1,6 +1,7 @@
 package com.cinx.social.service.impl;
 
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.dto.ApiResponse;
@@ -59,7 +60,7 @@ public class CourseQnAService implements ICourseQnAService {
     private void verifyEnrollment(String userId, String courseId) {
         ApiResponse<List<CheckEnrollmentStatus>> response = enrollmentClient.checkEnrollmentStatus(List.of(courseId));
         if (response == null || !response.success() || response.data().isEmpty() || !response.data().get(0).isEnrolled()) {
-            throw new ForbiddenException("Not enrolled in this course");
+            throw new ForbiddenException(ErrorCode.NOT_ENROLLED_IN_COURSE, "Not enrolled in this course");
         }
     }
 
@@ -151,7 +152,7 @@ public class CourseQnAService implements ICourseQnAService {
         CourseQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new NotFoundException("Question not found"));
         if (!question.getUserId().equals(userId)) {
-            throw new ForbiddenException("Not the owner");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner");
         }
         mapper.partialUpdate(question, request);
         question = questionRepository.save(question);
@@ -164,7 +165,7 @@ public class CourseQnAService implements ICourseQnAService {
         CourseQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new NotFoundException("Question not found"));
         if (!question.getUserId().equals(userId)) {
-            throw new ForbiddenException("Not the owner");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner");
         }
         questionRepository.delete(question);
     }
@@ -178,7 +179,7 @@ public class CourseQnAService implements ICourseQnAService {
         verifyEnrollment(userId, question.getCourseId());
 
         if (questionUpvoteRepository.existsByQuestionIdAndUserId(questionId, userId)) {
-            throw new AlreadyExistException("Already upvoted");
+            throw new AlreadyExistException(ErrorCode.ALREADY_UPVOTED, "Already upvoted");
         }
 
         QuestionUpvote upvote = QuestionUpvote.builder()
@@ -257,7 +258,7 @@ public class CourseQnAService implements ICourseQnAService {
         CourseAnswer answer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new NotFoundException("Answer not found"));
         if (!answer.getUserId().equals(userId)) {
-            throw new ForbiddenException("Not the owner");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner");
         }
         mapper.partialUpdate(answer, request);
         answer = answerRepository.save(answer);
@@ -270,7 +271,7 @@ public class CourseQnAService implements ICourseQnAService {
         CourseAnswer answer = answerRepository.findById(answerId)
                 .orElseThrow(() -> new NotFoundException("Answer not found"));
         if (!answer.getUserId().equals(userId)) {
-            throw new ForbiddenException("Not the owner");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner");
         }
         answerRepository.delete(answer);
     }
@@ -287,7 +288,7 @@ public class CourseQnAService implements ICourseQnAService {
         verifyEnrollment(userId, question.getCourseId());
 
         if (answerUpvoteRepository.existsByAnswerIdAndUserId(answerId, userId)) {
-            throw new AlreadyExistException("Already upvoted");
+            throw new AlreadyExistException(ErrorCode.ALREADY_UPVOTED, "Already upvoted");
         }
 
         AnswerUpvote upvote = AnswerUpvote.builder()

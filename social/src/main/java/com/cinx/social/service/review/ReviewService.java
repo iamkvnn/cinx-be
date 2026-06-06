@@ -1,6 +1,7 @@
 package com.cinx.social.service.review;
 
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.social.dto.request.CreateReportReviewRequest;
@@ -172,11 +173,11 @@ public class ReviewService implements IReviewService {
         
         String instructorId = courseRes.data().instructor().id();
         if (!userId.equals(instructorId)) {
-            throw new ForbiddenException("Only the instructor of the course can reply to this review");
+            throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the instructor of the course can reply to this review");
         }
 
         if (reviewReplyRepository.findByReviewId(reviewId).isPresent()) {
-            throw new com.cinx.common.exception.AlreadyExistException("Reply already exists for this review");
+            throw new com.cinx.common.exception.AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Reply already exists for this review");
         }
 
         ReviewReply reply = new ReviewReply();
@@ -193,7 +194,7 @@ public class ReviewService implements IReviewService {
                 .orElseThrow(() -> new NotFoundException("Reply not found"));
         
         if (!reply.getInstructorId().equals(userId)) {
-            throw new ForbiddenException("Not the owner of this reply");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner of this reply");
         }
 
         reply.setContent(request.getContent());
@@ -207,7 +208,7 @@ public class ReviewService implements IReviewService {
                 .orElseThrow(() -> new NotFoundException("Reply not found"));
         
         if (!reply.getInstructorId().equals(userId)) {
-            throw new ForbiddenException("Not the owner of this reply");
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner of this reply");
         }
 
         reviewReplyRepository.delete(reply);

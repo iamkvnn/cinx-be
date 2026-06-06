@@ -1,6 +1,7 @@
 package com.cinx.learning.service.assignment;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
@@ -54,7 +55,7 @@ public class AssignmentService implements IAssignmentService {
     @Override
     public void submitAssignment(String userId, String assignmentId, CreateAssignmentSubmissionRequest request) {
         if (assignmentSubmissionRepository.findByUserIdAndAssignmentId(userId, assignmentId).isPresent()) {
-            throw new BadRequestException("You have already submitted this assignment");
+            throw new BadRequestException(ErrorCode.ASSIGNMENT_ALREADY_SUBMITTED, "You have already submitted this assignment");
         }
         AssignmentSubmission assignmentSubmission = assignmentSubmissionRepository.save(
                 AssignmentSubmission.builder()
@@ -86,7 +87,7 @@ public class AssignmentService implements IAssignmentService {
     public void scoreAssignmentSubmission(String submissionId, Double score) {
         AssignmentSubmission submission = authorizationService.requireAssignmentSubmissionInstructorOrAdmin(submissionId);
         if (score == null || score < 0.0 || score > 10.0) {
-            throw new BadRequestException("Score must be between 0 and 10");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Score must be between 0 and 10");
         }
         submission.setScore(score);
         assignmentSubmissionRepository.save(submission);
@@ -105,10 +106,10 @@ public class AssignmentService implements IAssignmentService {
 
     private void validatePageRequest(int page, int size) {
         if (page < 1) {
-            throw new BadRequestException("page must be greater than or equal to 1");
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "page must be greater than or equal to 1");
         }
         if (size < 1) {
-            throw new BadRequestException("size must be greater than or equal to 1");
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "size must be greater than or equal to 1");
         }
     }
 }

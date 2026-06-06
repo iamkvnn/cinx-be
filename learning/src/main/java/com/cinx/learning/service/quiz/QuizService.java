@@ -1,6 +1,7 @@
 package com.cinx.learning.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.consts.QuizQuestionType;
@@ -75,7 +76,7 @@ public class QuizService implements IQuizService {
 
         if (isReviewStatus(quizSession.getStatus())) {
             if (Boolean.FALSE.equals(quizSession.getIsReviewAllowed())) {
-                throw new BadRequestException("Review is not allowed for this quiz session");
+                throw new BadRequestException(ErrorCode.QUIZ_REVIEW_NOT_ALLOWED, "Review is not allowed for this quiz session");
             }
         }
 
@@ -109,12 +110,12 @@ public class QuizService implements IQuizService {
         QuizLessonResponse quizLessonResponse = courseService.getQuizLessonById(courseId, lessonId).data();
 
         if (quizSessionRepository.existsByQuizLessonIdAndUserIdAndStatus(lessonId, userId, QuizSessionStatus.IN_PROGRESS)) {
-            throw new BadRequestException("You already have an in-progress quiz session for this lesson");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_ALREADY_IN_PROGRESS, "You already have an in-progress quiz session for this lesson");
         }
 
         Integer maxAttempt = quizLessonResponse.maxAttempt();
         if (maxAttempt != null && maxAttempt <= quizSessionRepository.countByQuizLessonIdAndUserId(lessonId, userId)) {
-            throw new BadRequestException("You have reached the maximum number of attempts for this quiz lesson");
+            throw new BadRequestException(ErrorCode.QUIZ_ATTEMPT_LIMIT_REACHED, "You have reached the maximum number of attempts for this quiz lesson");
         }
 
         QuizSession quizSession = quizSessionRepository.save(
@@ -177,11 +178,11 @@ public class QuizService implements IQuizService {
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
         if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
-            throw new BadRequestException("Quiz session is not in progress");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_NOT_IN_PROGRESS, "Quiz session is not in progress");
         }
         if (quizSession.getEndTime().isBefore(LocalDateTime.now())) {
             submitQuizSession(quizSessionId, new SubmitQuizSessionRequest(Collections.emptyList()));
-            throw new BadRequestException("Quiz session has expired and was automatically submitted");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_EXPIRED, "Quiz session has expired and was automatically submitted");
         }
 
         quizSessionQuestionRepository.findByQuizSessionIdAndQuestionId(quizSessionId, request.questionId())
@@ -202,7 +203,7 @@ public class QuizService implements IQuizService {
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
 
         if (quizSession.getStatus() != QuizSessionStatus.IN_PROGRESS) {
-            throw new BadRequestException("Quiz session is not in progress");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_NOT_IN_PROGRESS, "Quiz session is not in progress");
         }
         
         boolean isExpired = quizSession.getEndTime().isBefore(LocalDateTime.now());
@@ -284,7 +285,7 @@ public class QuizService implements IQuizService {
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
 
         if (session.getStatus() != QuizSessionStatus.PENDING_GRADE) {
-            throw new BadRequestException("Quiz session is not pending essay grading");
+            throw new BadRequestException(ErrorCode.QUIZ_SESSION_NOT_PENDING_GRADING, "Quiz session is not pending essay grading");
         }
 
         Map<String, Double> scoreMap = buildEssayScoreMap(request);
@@ -295,7 +296,7 @@ public class QuizService implements IQuizService {
                 .forEach(q -> {
                     Double assignedScore = scoreMap.get(q.getQuestionId());
                     if (assignedScore == null) {
-                        throw new BadRequestException("Missing score for essay question: " + q.getQuestionId());
+                        throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Missing score for essay question: " + q.getQuestionId());
                     }
                     q.setScore(assignedScore / 10.0);
                 });
@@ -384,10 +385,10 @@ public class QuizService implements IQuizService {
         Map<String, ChooseQuizAnswerRequest> answerMap = new HashMap<>();
         for (ChooseQuizAnswerRequest answer : request.answers()) {
             if (answer == null) {
-                throw new BadRequestException("answers must not contain null items");
+                throw new BadRequestException(ErrorCode.QUIZ_ANSWER_INVALID, "answers must not contain null items");
             }
             if (answerMap.putIfAbsent(answer.questionId(), answer) != null) {
-                throw new BadRequestException("Duplicate answer for questionId: " + answer.questionId());
+                throw new BadRequestException(ErrorCode.QUIZ_ANSWER_INVALID, "Duplicate answer for questionId: " + answer.questionId());
             }
         }
         return answerMap;
@@ -395,15 +396,15 @@ public class QuizService implements IQuizService {
 
     private Map<String, Double> buildEssayScoreMap(GradeEssayRequest request) {
         if (request == null || request.scores() == null || request.scores().isEmpty()) {
-            throw new BadRequestException("Essay scores are required");
+            throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Essay scores are required");
         }
         Map<String, Double> scoreMap = new HashMap<>();
         for (GradeEssayRequest.EssayQuestionScore score : request.scores()) {
             if (score == null) {
-                throw new BadRequestException("Essay scores must not contain null items");
+                throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Essay scores must not contain null items");
             }
             if (scoreMap.putIfAbsent(score.questionId(), score.score()) != null) {
-                throw new BadRequestException("Duplicate score for essay question: " + score.questionId());
+                throw new BadRequestException(ErrorCode.QUIZ_ESSAY_SCORE_INVALID, "Duplicate score for essay question: " + score.questionId());
             }
         }
         return scoreMap;
@@ -411,10 +412,10 @@ public class QuizService implements IQuizService {
 
     private void validatePageRequest(int page, int size) {
         if (page < 1) {
-            throw new BadRequestException("page must be greater than or equal to 1");
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "page must be greater than or equal to 1");
         }
         if (size < 1) {
-            throw new BadRequestException("size must be greater than or equal to 1");
+            throw new BadRequestException(ErrorCode.INVALID_PAGINATION, "size must be greater than or equal to 1");
         }
     }
 }

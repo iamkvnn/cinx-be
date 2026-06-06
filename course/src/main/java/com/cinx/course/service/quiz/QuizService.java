@@ -2,6 +2,7 @@ package com.cinx.course.service.quiz;
 
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.*;
@@ -51,12 +52,12 @@ public class QuizService implements IQuizService {
     public void createQuiz(String courseId, String lessonId, CreateQuizLessonRequest request) {
         lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
         if (request.getQuestions().size() < request.getNumberOfQuestionPerQuizSession()) {
-            throw new BadRequestException(
+            throw new BadRequestException(ErrorCode.QUIZ_CONFIGURATION_INVALID,
                     "Number of questions must be >= numberOfQuestionPerQuizSession");
         }
 
         quizLessonRepository.findByLessonId(lessonId).ifPresent(existing -> {
-            throw new AlreadyExistException("Quiz already exists for lessonId: " + lessonId);
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Quiz already exists for lessonId: " + lessonId);
         });
 
         QuizLesson quizLesson = quizMapper.toModel(request);
@@ -78,7 +79,7 @@ public class QuizService implements IQuizService {
         if (request.getNumberOfQuestionPerQuizSession() != null) {
             int questionCount = quizQuestionRepository.countByQuizLessonId(existing.getLessonId());
             if (request.getNumberOfQuestionPerQuizSession() > questionCount) {
-                throw new BadRequestException(
+                throw new BadRequestException(ErrorCode.QUIZ_CONFIGURATION_INVALID,
                         "numberOfQuestionPerQuizSession (" + request.getNumberOfQuestionPerQuizSession()
                                 + ") cannot exceed current question count (" + questionCount + ")");
             }

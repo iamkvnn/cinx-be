@@ -10,6 +10,7 @@ import com.cinx.auth.dto.response.TokenResponseDto;
 import com.cinx.auth.service.user.IUserService;
 import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.auth.model.User;
 import com.cinx.auth.messaging.AuthNotificationPublisher;
 import com.cinx.common.exception.NotFoundException;
@@ -64,24 +65,24 @@ public class AuthenticationService implements IAuthenticationService {
     public TokenResponseDto authenticate(AuthRequestDto request) {
         User user = userService.findByEmail(request.email());
         if (user.getRole() != request.role()) {
-            throw new BadRequestException("Invalid email or password");
+            throw new BadRequestException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
         if (user.getPassword() == null) {
-            throw new BadRequestException("User registered with Google. Please login with Google");
+            throw new BadRequestException(ErrorCode.GOOGLE_ACCOUNT_LOGIN_REQUIRED, "User registered with Google. Please login with Google");
         }
         if (!passwordEncoder.matches(request.password(), user.getPassword())) {
-            throw new BadRequestException("Invalid email or password");
+            throw new BadRequestException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
         if (user.getStatus().equals(UserStatus.UNVERIFIED)) {
-            throw new BadRequestException("User email is not verified");
+            throw new BadRequestException(ErrorCode.EMAIL_NOT_VERIFIED, "User email is not verified");
         }
         
         userService.checkAndUnbanIfNeeded(user);
         if (user.getStatus().equals(UserStatus.BANNED)) {
-            throw new BadRequestException("User account is banned");
+            throw new BadRequestException(ErrorCode.USER_ACCOUNT_BANNED, "User account is banned");
         }
         if (user.getRole() == Role.INSTRUCTOR && !userProfileService.checkInstructorVerified(user.getId()).data()) {
-            throw new BadRequestException("Instructor account is not verified by admin");
+            throw new BadRequestException(ErrorCode.INSTRUCTOR_NOT_VERIFIED, "Instructor account is not verified by admin");
         }
         JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());
         recordLastAccess(user.getId());
@@ -102,7 +103,7 @@ public class AuthenticationService implements IAuthenticationService {
         
         userService.checkAndUnbanIfNeeded(user);
         if (user.getStatus().equals(UserStatus.BANNED)) {
-            throw new BadRequestException("User account is banned");
+            throw new BadRequestException(ErrorCode.USER_ACCOUNT_BANNED, "User account is banned");
         }
         recordLastAccess(user.getId());
         return generateTokens(new JWTPayload(user.getId(), user.getRole().name()));
@@ -152,14 +153,14 @@ public class AuthenticationService implements IAuthenticationService {
             Date expirationDate = signedJWT.getJWTClaimsSet().getExpirationTime();
             boolean verified = signedJWT.verify(verifier);
             if (!verified || expirationDate.before(new Date())) {
-                throw new BadRequestException("Invalid or expired refresh token");
+                throw new BadRequestException(ErrorCode.REFRESH_TOKEN_INVALID, "Invalid or expired refresh token");
             }
             String userId = signedJWT.getJWTClaimsSet().getSubject();
             User user = userService.findById(userId);
             
             userService.checkAndUnbanIfNeeded(user);
             if (user.getStatus().equals(UserStatus.BANNED)) {
-                throw new BadRequestException("User account is banned");
+                throw new BadRequestException(ErrorCode.USER_ACCOUNT_BANNED, "User account is banned");
             }
             recordLastAccess(user.getId());
             JWTPayload payload = new JWTPayload(user.getId(), user.getRole().name());

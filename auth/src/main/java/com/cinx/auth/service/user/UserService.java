@@ -11,6 +11,7 @@ import com.cinx.auth.service.userProfile.IUserProfileService;
 import com.cinx.auth.utils.OtpGenerator;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -42,7 +43,7 @@ public class UserService implements IUserService {
     @Override
     public void createUser(RegisterRequest dto) {
         if (userRepository.existsByEmail(dto.email())) {
-            throw new AlreadyExistException("User already exists with email: " + dto.email());
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "User already exists with email: " + dto.email());
         }
 
         String otp = OtpGenerator.generateOtp();
@@ -125,10 +126,10 @@ public class UserService implements IUserService {
 
         if (maxDuration != null) {
             if (duration == null) {
-                throw new BadRequestException("Duration is required for reason type " + request.reasonType());
+                throw new BadRequestException(ErrorCode.BAN_DURATION_REQUIRED, "Duration is required for reason type " + request.reasonType());
             }
             if (duration > maxDuration) {
-                throw new BadRequestException("Duration exceeds the maximum allowed (" + maxDuration + " days) for reason type " + request.reasonType());
+                throw new BadRequestException(ErrorCode.BAN_DURATION_EXCEEDED, "Duration exceeds the maximum allowed (" + maxDuration + " days) for reason type " + request.reasonType());
             }
         }
         return duration;
@@ -189,7 +190,7 @@ public class UserService implements IUserService {
     public void changePassword(ChangePasswordRequest request) {
         User user = findByEmail(request.email());
         if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {
-            throw new BadRequestException("Invalid old password");
+            throw new BadRequestException(ErrorCode.INVALID_OLD_PASSWORD, "Invalid old password");
         }
         user.setPassword(passwordEncoder.encode(request.newPassword()));
         user.setOtp(null);
@@ -199,10 +200,10 @@ public class UserService implements IUserService {
 
     private void verifyOtp(User user, String otp) {
         if (Objects.isNull(user.getOtp()) || !user.getOtp().equals(otp)) {
-            throw new BadRequestException("Invalid OTP");
+            throw new BadRequestException(ErrorCode.INVALID_OTP, "Invalid OTP");
         }
         if (user.getOtpExpireAt().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("OTP has expired");
+            throw new BadRequestException(ErrorCode.OTP_EXPIRED, "OTP has expired");
         }
     }
 }

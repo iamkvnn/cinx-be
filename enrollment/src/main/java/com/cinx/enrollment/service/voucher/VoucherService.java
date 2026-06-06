@@ -1,6 +1,7 @@
 package com.cinx.enrollment.service.voucher;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.enrollment.dto.request.CreateVoucherRequest;
@@ -69,19 +70,19 @@ public class VoucherService implements IVoucherService{
     public VoucherResponse validateVoucher(String code, Long amount) {
         VoucherResponse voucher = getVoucherByCode(code);
         if (voucher == null) {
-            throw new BadRequestException("Invalid voucher code");
+            throw new BadRequestException(ErrorCode.VOUCHER_INVALID, "Invalid voucher code");
         }
         if (voucher.validTo().isBefore(LocalDateTime.now())) {
-            throw new BadRequestException("Voucher has expired");
+            throw new BadRequestException(ErrorCode.VOUCHER_EXPIRED, "Voucher has expired");
         }
         if (voucher.validFrom().isAfter(LocalDateTime.now())) {
-            throw new BadRequestException("Voucher is not valid yet");
+            throw new BadRequestException(ErrorCode.VOUCHER_NOT_ACTIVE, "Voucher is not valid yet");
         }
         if (voucher.minPurchaseAmount() != null && amount < voucher.minPurchaseAmount()) {
-            throw new BadRequestException("Minimum purchase amount for this voucher is " + voucher.minPurchaseAmount());
+            throw new BadRequestException(ErrorCode.VOUCHER_MIN_PURCHASE_NOT_MET, "Minimum purchase amount for this voucher is " + voucher.minPurchaseAmount());
         }
         if (voucher.quantity() != null && voucher.quantity() <= 0) {
-            throw new BadRequestException("Voucher is out of stock");
+            throw new BadRequestException(ErrorCode.VOUCHER_OUT_OF_STOCK, "Voucher is out of stock");
         }
         return voucher;
     }

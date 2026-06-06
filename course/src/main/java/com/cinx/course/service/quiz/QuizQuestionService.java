@@ -1,6 +1,7 @@
 package com.cinx.course.service.quiz;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.dto.request.CreateQuizQuestionRequest;
 import com.cinx.course.dto.request.UpdateQuizOptionRequest;
@@ -127,7 +128,7 @@ public class QuizQuestionService implements IQuizQuestionService {
         int currentCount = quizQuestionRepository.countByQuizLessonId(lessonId);
         Integer minRequired = quiz.getNumberOfQuestionPerQuizSession();
         if (minRequired != null && currentCount <= minRequired) {
-            throw new BadRequestException("Quiz must have at least " + minRequired + " question(s)");
+            throw new BadRequestException(ErrorCode.QUIZ_CONFIGURATION_INVALID, "Quiz must have at least " + minRequired + " question(s)");
         }
 
         quizOptionRepository.deleteAllByQuizQuestionId(questionId);

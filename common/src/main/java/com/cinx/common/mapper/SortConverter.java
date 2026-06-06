@@ -1,6 +1,7 @@
 package com.cinx.common.mapper;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -23,7 +24,7 @@ public class SortConverter {
             try {
                 sortMap = mapper.readValue(sort, new TypeReference<>() {});
             } catch (JsonProcessingException e) {
-                throw new BadRequestException("Invalid sort parameter format");
+                throw new BadRequestException(ErrorCode.INVALID_SORT, "Invalid sort parameter format");
             }
             s = sortMap.entrySet().stream()
                     .map(e -> new Sort.Order(Sort.Direction.fromString(e.getValue()), e.getKey()))

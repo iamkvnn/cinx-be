@@ -1,6 +1,7 @@
 package com.cinx.learning.service.certificate;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.learning.consts.CertificateStatus;
 import com.cinx.learning.dto.response.CertificateRequestResponse;
@@ -40,17 +41,17 @@ public class CertificateServiceImpl implements ICertificateService {
     @Transactional
     public CertificateRequestResponse applyForCertificate(String userId, String courseId) {
         if (certificateRequestRepository.findByUserIdAndCourseId(userId, courseId).isPresent()) {
-            throw new BadRequestException("You have already applied for a certificate for this course");
+            throw new BadRequestException(ErrorCode.CERTIFICATE_ALREADY_APPLIED, "You have already applied for a certificate for this course");
         }
 
         CourseResponse course = courseService.getCourseById(courseId).data();
         if (Boolean.FALSE.equals(course.hasCertificate())) {
-            throw new BadRequestException("This course does not offer a certificate");
+            throw new BadRequestException(ErrorCode.CERTIFICATE_NOT_AVAILABLE, "This course does not offer a certificate");
         }
 
         CourseProgressResponse progress = learningProgressService.getCourseProgress(userId, courseId);
         if (progress == null || !progress.isCompleted() || !Boolean.TRUE.equals(progress.isPassed())) {
-            throw new BadRequestException("You have not completed this course yet");
+            throw new BadRequestException(ErrorCode.COURSE_NOT_COMPLETED, "You have not completed this course yet");
         }
 
         CertificateRequest request = CertificateRequest.builder()
@@ -89,7 +90,7 @@ public class CertificateServiceImpl implements ICertificateService {
                 .orElseThrow(() -> new NotFoundException("Certificate request not found"));
 
         if (request.getStatus() != CertificateStatus.PENDING) {
-            throw new BadRequestException("Request is not in PENDING state");
+            throw new BadRequestException(ErrorCode.CERTIFICATE_REQUEST_NOT_PENDING, "Request is not in PENDING state");
         }
 
         CourseResponse courseDto = courseService.getCourseById(request.getCourseId()).data();
@@ -120,7 +121,7 @@ public class CertificateServiceImpl implements ICertificateService {
                 .orElseThrow(() -> new NotFoundException("Certificate request not found"));
 
         if (request.getStatus() != CertificateStatus.PENDING) {
-            throw new BadRequestException("Request is not in PENDING state");
+            throw new BadRequestException(ErrorCode.CERTIFICATE_REQUEST_NOT_PENDING, "Request is not in PENDING state");
         }
 
         request.setStatus(CertificateStatus.REJECTED);

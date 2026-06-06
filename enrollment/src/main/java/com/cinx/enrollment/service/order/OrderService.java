@@ -1,6 +1,7 @@
 package com.cinx.enrollment.service.order;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.common.utils.AuthenticationUtil;
@@ -140,7 +141,7 @@ public class OrderService implements IOrderService {
 
     private void validateCreateOrderRequest(CreateOrderRequest request) {
         if (request.cartItems() == null || request.cartItems().isEmpty()) {
-            throw new BadRequestException("Order must contain at least one item");
+            throw new BadRequestException(ErrorCode.ORDER_ITEMS_REQUIRED, "Order must contain at least one item");
         }
     }
 
@@ -152,7 +153,7 @@ public class OrderService implements IOrderService {
         Map<String, CourseResponse> coursesById = courseService.getCoursesByIds(courseIds).data().stream()
                 .collect(Collectors.toMap(CourseResponse::id, course -> course));
         if (coursesById.size() != courseIds.size()) {
-            throw new BadRequestException("Some courses are no longer available for purchase");
+            throw new BadRequestException(ErrorCode.COURSE_UNAVAILABLE_FOR_PURCHASE, "Some courses are no longer available for purchase");
         }
         return courseIds.stream()
                 .map(courseId -> {

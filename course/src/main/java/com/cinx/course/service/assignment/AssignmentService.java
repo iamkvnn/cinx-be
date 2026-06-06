@@ -1,6 +1,7 @@
 package com.cinx.course.service.assignment;
 
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateAssignmentLessonRequest;
@@ -37,7 +38,7 @@ public class AssignmentService implements IAssignmentService {
     public void createAssignment(String courseId, String lessonId, CreateAssignmentLessonRequest request) {
         lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
         assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
-            throw new AlreadyExistException("Assignment already exists for lessonId: " + lessonId);
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Assignment already exists for lessonId: " + lessonId);
         },() -> {
             var assignmentLesson = assignmentMapper.toModel(request);
             assignmentLesson.setLessonId(lessonId);

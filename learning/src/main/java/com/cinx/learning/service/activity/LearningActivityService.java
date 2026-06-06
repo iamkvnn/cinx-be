@@ -1,6 +1,7 @@
 package com.cinx.learning.service.activity;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.learning.dto.request.LearningActivityRequest;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.CourseProgressSummaryResponse;
@@ -43,13 +44,13 @@ public class LearningActivityService implements ILearningActivityService {
     @Transactional
     public void recordActivity(String userId, String courseId, Integer activeSeconds) {
         if (userId == null || userId.isBlank()) {
-            throw new BadRequestException("userId must not be blank");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "userId must not be blank");
         }
         if (courseId == null || courseId.isBlank()) {
-            throw new BadRequestException("courseId must not be blank");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "courseId must not be blank");
         }
         if (activeSeconds == null) {
-            throw new BadRequestException("activeSeconds must not be null");
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "activeSeconds must not be null");
         }
 
         int cappedSeconds = Math.min(MAX_HEARTBEAT_SECONDS, Math.max(1, activeSeconds));
