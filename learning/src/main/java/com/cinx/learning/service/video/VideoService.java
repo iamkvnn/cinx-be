@@ -19,18 +19,25 @@ import com.cinx.learning.service.course.CourseService;
 import com.cinx.learning.service.activity.ILearningActivityService;
 import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
+import com.cinx.learning.service.learningProgress.LearningItemProgressUpdateResult;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
 @Service
+@Slf4j
 @RequiredArgsConstructor
 public class VideoService implements IVideoService {
+    private static final int MAX_CREDITED_HEARTBEAT_SECONDS = 300;
+    private static final double COMPLETION_WATCH_THRESHOLD = 0.80;
+
     private final VideoLessonTrackingHistoryMapper videoLessonTrackingHistoryMapper;
     private final VideoLessonTrackingHistoryRepository videoLessonTrackingHistoryRepository;
     private final CourseService courseService;
@@ -38,9 +45,11 @@ public class VideoService implements IVideoService {
     private final ILearningProgressService learningProgressService;
     private final IDailyGoalService dailyGoalService;
     private final InVideoAssessmentSubmissionRepository inVideoAssessmentSubmissionRepository;
+    private final WatchedRangeTracker watchedRangeTracker;
 
     @Override
     public Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String courseId, String lessonId, int page, int size) {
+        validatePageRequest(page, size);
         getVideoLesson(courseId, lessonId);
         return videoLessonTrackingHistoryRepository.findByVideoLessonId(lessonId, PageRequest.of(page - 1, size))
                 .map(videoLessonTrackingHistoryMapper::toDto);
@@ -55,41 +64,55 @@ public class VideoService implements IVideoService {
     }
 
     @Override
+    @Transactional
     public void trackVideoProgress(String courseId, String lessonId, String userId, TrackingVideoLessonRequest request) {
         VideoLessonResponse videoLessonResponse = getVideoLesson(courseId, lessonId);
         if (request.currentPosition() == null || request.currentPosition() < 0) {
             throw new BadRequestException("Current position must be a non-negative integer.");
         }
-        Integer previousPosition = videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, lessonId)
-                .map(VideoLessonTrackingHistory::getCurrentPosition)
-                .orElse(0);
-        VideoLessonTrackingHistory trackingHistory = videoLessonTrackingHistoryRepository.findByUserIdAndVideoLessonId(userId, lessonId)
-                .map(existing -> {
-                    if (request.currentPosition() < existing.getCurrentPosition()) {
-                        return existing; // Do not update if the new position is less than the existing position
-                    }
-                    videoLessonTrackingHistoryMapper.partialUpdate(existing, request);
-                    existing.setLastTrackingTime(LocalDateTime.now());
-                    return existing;
-                })
-                .orElseGet(() -> {
-                    VideoLessonTrackingHistory newTrackingHistory = videoLessonTrackingHistoryMapper.toModel(request);
-                    newTrackingHistory.setUserId(userId);
-                    newTrackingHistory.setVideoLessonId(lessonId);
-                    newTrackingHistory.setLastTrackingTime(LocalDateTime.now());
-                    return newTrackingHistory;
-                });
+        Integer duration = videoLessonResponse != null ? videoLessonResponse.duration() : null;
+        int currentPosition = clampPosition(request.currentPosition(), duration);
+        LocalDateTime now = LocalDateTime.now();
+        VideoLessonTrackingHistory trackingHistory = videoLessonTrackingHistoryRepository
+                .findForUpdateByUserIdAndVideoLessonId(userId, lessonId)
+                .orElse(null);
+        int previousPosition = trackingHistory != null && trackingHistory.getCurrentPosition() != null
+                ? trackingHistory.getCurrentPosition()
+                : 0;
+        LocalDateTime previousTrackingTime = trackingHistory != null ? trackingHistory.getLastTrackingTime() : null;
+        int creditedSeconds = creditedWatchedSeconds(previousPosition, currentPosition, previousTrackingTime, now);
+
+        if (trackingHistory == null) {
+            trackingHistory = VideoLessonTrackingHistory.builder()
+                    .userId(userId)
+                    .videoLessonId(lessonId)
+                    .currentPosition(currentPosition)
+                    .lastTrackingTime(now)
+                    .build();
+        } else if (currentPosition >= previousPosition) {
+            trackingHistory.setCurrentPosition(currentPosition);
+            trackingHistory.setLastTrackingTime(now);
+        }
+
+        if (creditedSeconds > 0) {
+            trackingHistory.setWatchedRanges(watchedRangeTracker.merge(
+                    trackingHistory.getWatchedRanges(),
+                    previousPosition,
+                    previousPosition + creditedSeconds,
+                    duration
+            ));
+        }
+
         videoLessonTrackingHistoryRepository.save(trackingHistory);
-        recordVideoActivity(userId, courseId, previousPosition, request.currentPosition());
+        recordVideoActivity(userId, courseId, creditedSeconds);
         
         if (videoLessonResponse != null) {
             checkAndMarkVideoCompletion(userId, lessonId, videoLessonResponse);
         }
     }
 
-    private void recordVideoActivity(String userId, String courseId, Integer previousPosition, Integer currentPosition) {
-        int activeSeconds = currentPosition - (previousPosition != null ? previousPosition : 0);
-        if (activeSeconds <= 0) {
+    private void recordVideoActivity(String userId, String courseId, Integer activeSeconds) {
+        if (activeSeconds == null || activeSeconds <= 0) {
             return;
         }
         learningActivityService.recordActivity(userId, courseId, activeSeconds);
@@ -108,7 +131,7 @@ public class VideoService implements IVideoService {
         }
 
         InVideoAssessmentSubmission submission = inVideoAssessmentSubmissionRepository
-                .findByUserIdAndVideoAssessmentId(userId, request.videoAssessmentId())
+                .findForUpdateByUserIdAndVideoAssessmentId(userId, request.videoAssessmentId())
                 .orElseGet(() -> InVideoAssessmentSubmission.builder()
                         .userId(userId)
                         .videoLessonId(lessonId)
@@ -126,15 +149,15 @@ public class VideoService implements IVideoService {
 
     private void checkAndMarkVideoCompletion(String userId, String videoLessonId, VideoLessonResponse videoLessonResponse) {
         VideoLessonTrackingHistory trackingHistory = videoLessonTrackingHistoryRepository
-                .findByUserIdAndVideoLessonId(userId, videoLessonId)
+                .findForUpdateByUserIdAndVideoLessonId(userId, videoLessonId)
                 .orElse(null);
                 
         double progress = 0.0;
         if (trackingHistory != null && videoLessonResponse.duration() != null && videoLessonResponse.duration() > 0) {
-            progress = (double) trackingHistory.getCurrentPosition() / videoLessonResponse.duration();
+            progress = (double) watchedRangeTracker.watchedSeconds(trackingHistory.getWatchedRanges()) / videoLessonResponse.duration();
         }
 
-        boolean watchedEnough = progress >= 0.95;
+        boolean watchedEnough = progress >= COMPLETION_WATCH_THRESHOLD;
         boolean questionsCompleted = true;
         
         if (Boolean.TRUE.equals(videoLessonResponse.hasQuestions()) && videoLessonResponse.questionCount() != null && videoLessonResponse.questionCount() > 0) {
@@ -143,9 +166,11 @@ public class VideoService implements IVideoService {
         }
 
         if (watchedEnough && questionsCompleted) {
-            boolean wasCompleted = learningProgressService.isLearningItemCompleted(userId, videoLessonId);
-            learningProgressService.updateLearningItemProgress(userId, videoLessonId, new UpdateLearningItemRequest(true, true, 10.0));
-            if (!wasCompleted) {
+            LearningItemProgressUpdateResult result = learningProgressService.updateLearningItemProgress(
+                    userId,
+                    videoLessonId,
+                    new UpdateLearningItemRequest(true, true, 10.0));
+            if (result.completedTransition()) {
                 dailyGoalService.recordProgress(userId, DailyGoalType.VIDEOS_COMPLETED, 1);
             }
         }
@@ -169,4 +194,33 @@ public class VideoService implements IVideoService {
         return courseService.getVideoLessonById(courseId, lessonId).data();
     }
 
+    private int clampPosition(Integer position, Integer duration) {
+        if (duration != null && duration > 0) {
+            return Math.min(position, duration);
+        }
+        return position;
+    }
+
+    private int creditedWatchedSeconds(int previousPosition, int currentPosition, LocalDateTime previousTrackingTime, LocalDateTime now) {
+        int positionDelta = currentPosition - previousPosition;
+        if (positionDelta <= 0) {
+            return 0;
+        }
+        if (previousTrackingTime == null) {
+            return 0;
+        }
+        long elapsedCap = previousTrackingTime == null
+                ? 0
+                : Math.min(Math.max(Duration.between(previousTrackingTime, now).getSeconds(), 0), MAX_CREDITED_HEARTBEAT_SECONDS);
+        return (int) Math.min(positionDelta, elapsedCap);
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 1) {
+            throw new BadRequestException("page must be greater than or equal to 1");
+        }
+        if (size < 1) {
+            throw new BadRequestException("size must be greater than or equal to 1");
+        }
+    }
 }

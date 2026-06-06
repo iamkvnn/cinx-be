@@ -13,6 +13,7 @@ public interface ILearningProgressService {
     List<CourseProgressResponse> getCourseProgressByCourseId(String courseId);
     void createCourseProgress(String userId, String courseId);
     boolean isLearningItemCompleted(String userId, String itemId);
-    void updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request);
+    LearningItemProgressUpdateResult updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request);
+    void completeArticleItem(String userId, String itemId);
     void recomputeCourseProgress(String courseId);
 }

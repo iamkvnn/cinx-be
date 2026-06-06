@@ -17,6 +17,10 @@ public interface QuizSessionSubmissionRepository extends JpaRepository<QuizSessi
             JOIN s.quizSession qs
             WHERE qs.userId = :userId
               AND qs.quizLessonId = :quizLessonId
+              AND qs.status IN (
+                com.cinx.learning.consts.QuizSessionStatus.SUBMITTED,
+                com.cinx.learning.consts.QuizSessionStatus.GRADED
+              )
             ORDER BY s.submissionTime ASC
             """)
     List<QuizSessionSubmission> findAllByUserIdAndQuizLessonId(
@@ -25,9 +29,30 @@ public interface QuizSessionSubmissionRepository extends JpaRepository<QuizSessi
     );
 
     @Query("""
+            SELECT s.score FROM QuizSessionSubmission s
+            JOIN s.quizSession qs
+            WHERE qs.userId = :userId
+              AND qs.quizLessonId = :quizLessonId
+              AND qs.status IN (
+                com.cinx.learning.consts.QuizSessionStatus.SUBMITTED,
+                com.cinx.learning.consts.QuizSessionStatus.GRADED
+              )
+              AND s.score IS NOT NULL
+            ORDER BY s.submissionTime ASC
+            """)
+    List<Double> findScoresByUserIdAndQuizLessonId(
+            @Param("userId") String userId,
+            @Param("quizLessonId") String quizLessonId
+    );
+
+    @Query("""
             SELECT s FROM QuizSessionSubmission s
             JOIN FETCH s.quizSession qs
             WHERE qs.quizLessonId = :quizLessonId
+              AND qs.status IN (
+                com.cinx.learning.consts.QuizSessionStatus.SUBMITTED,
+                com.cinx.learning.consts.QuizSessionStatus.GRADED
+              )
             ORDER BY s.submissionTime ASC
             """)
     List<QuizSessionSubmission> findAllByQuizLessonId(String quizLessonId);

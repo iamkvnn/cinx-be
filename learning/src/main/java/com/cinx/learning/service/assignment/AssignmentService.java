@@ -11,6 +11,7 @@ import com.cinx.learning.model.AssignmentSubmission;
 import com.cinx.learning.model.AssignmentSubmissionAttachment;
 import com.cinx.learning.repository.AssignmentSubmissionRepository;
 import com.cinx.learning.repository.AssignmentSubmissionAttachmentRepository;
+import com.cinx.learning.service.authorization.LearningAuthorizationService;
 import com.cinx.learning.service.dailyGoal.IDailyGoalService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import lombok.RequiredArgsConstructor;
@@ -30,12 +31,14 @@ public class AssignmentService implements IAssignmentService {
     private final AssignmentSubmissionMapper assignmentSubmissionMapper;
     private final ILearningProgressService learningProgressService;
     private final IDailyGoalService dailyGoalService;
+    private final LearningAuthorizationService authorizationService;
 
     @Value("${aws.s3.cdn-url}")
     private String cdnUrl;
 
     @Override
     public Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size) {
+        validatePageRequest(page, size);
         return assignmentSubmissionRepository.findAllByAssignmentId(assignmentId, PageRequest.of(page - 1, size))
                 .map(assignmentSubmissionMapper::toDto);
     }
@@ -81,8 +84,10 @@ public class AssignmentService implements IAssignmentService {
     @Transactional
     @Override
     public void scoreAssignmentSubmission(String submissionId, Double score) {
-        AssignmentSubmission submission = assignmentSubmissionRepository.findById(submissionId)
-                .orElseThrow(() -> new NotFoundException("Submission not found"));
+        AssignmentSubmission submission = authorizationService.requireAssignmentSubmissionInstructorOrAdmin(submissionId);
+        if (score == null || score < 0.0 || score > 10.0) {
+            throw new BadRequestException("Score must be between 0 and 10");
+        }
         submission.setScore(score);
         assignmentSubmissionRepository.save(submission);
         learningProgressService.updateLearningItemProgress(
@@ -94,9 +99,16 @@ public class AssignmentService implements IAssignmentService {
 
     @Override
     public void deleteAssignmentSubmission(String submissionId) {
-        if (!assignmentSubmissionRepository.existsById(submissionId)) {
-            throw new NotFoundException("Submission not found");
-        }
+        authorizationService.requireAssignmentSubmissionDeleteAllowed(submissionId);
         assignmentSubmissionRepository.deleteById(submissionId);
+    }
+
+    private void validatePageRequest(int page, int size) {
+        if (page < 1) {
+            throw new BadRequestException("page must be greater than or equal to 1");
+        }
+        if (size < 1) {
+            throw new BadRequestException("size must be greater than or equal to 1");
+        }
     }
 }

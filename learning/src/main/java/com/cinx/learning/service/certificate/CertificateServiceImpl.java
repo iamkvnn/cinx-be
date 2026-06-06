@@ -49,7 +49,7 @@ public class CertificateServiceImpl implements ICertificateService {
         }
 
         CourseProgressResponse progress = learningProgressService.getCourseProgress(userId, courseId);
-        if (progress == null || !progress.isCompleted()) {
+        if (progress == null || !progress.isCompleted() || !Boolean.TRUE.equals(progress.isPassed())) {
             throw new BadRequestException("You have not completed this course yet");
         }
 

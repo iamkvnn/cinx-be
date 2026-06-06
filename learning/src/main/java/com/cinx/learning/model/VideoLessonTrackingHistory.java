@@ -3,6 +3,8 @@ package com.cinx.learning.model;
 import com.cinx.common.model.BaseEntity;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 import lombok.*;
 import lombok.experimental.SuperBuilder;
 
@@ -14,11 +16,16 @@ import java.time.LocalDateTime;
 @SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"user_id", "video_lesson_id"}))
 public class VideoLessonTrackingHistory extends BaseEntity {
+    @Column(nullable = false)
     private String userId;
+    @Column(nullable = false)
     private String videoLessonId;
     @Column(nullable = false)
     private Integer currentPosition;
+    @Column(columnDefinition = "TEXT")
+    private String watchedRanges;
     @Column(nullable = false)
     private LocalDateTime lastTrackingTime;
 }

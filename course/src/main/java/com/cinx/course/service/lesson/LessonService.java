@@ -30,6 +30,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
@@ -74,6 +75,14 @@ public class LessonService implements ILessonService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public LessonResponse getEnrolledLessonByCourseIdAndLessonId(String courseId, String lessonId) {
+        return findEnrolledReadableLesson(courseId, lessonId)
+                .map(lessonMapper::toResponse)
+                .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
+    }
+
+    @Override
     @Transactional
     public Lesson getForUpdate(String courseId, String sectionId, String lessonId, LessonType lessonType) {
         Section section = sectionService.editableSection(courseId, sectionId);
@@ -97,6 +106,19 @@ public class LessonService implements ILessonService {
             throw new NotFoundException("Lesson not found with id: " + lessonId);
         }
     }
+
+    private Optional<Lesson> findEnrolledReadableLesson(String courseId, String lessonId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
+            throw new NotFoundException("Course not found with id: " + courseId);
+        }
+        return lessonRepository.findEnrolledReadableByCourse(courseId)
+                .stream()
+                .filter(lesson -> Objects.equals(lesson.getStableId(), lessonId))
+                .findFirst();
+    }
+
 
     @Override
     @Transactional

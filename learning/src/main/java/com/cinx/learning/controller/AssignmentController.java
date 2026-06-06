@@ -6,11 +6,14 @@ import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
 import com.cinx.learning.dto.response.AssignmentSubmissionResponse;
+import com.cinx.learning.service.authorization.LearningAuthorizationService;
 import com.cinx.learning.service.assignment.IAssignmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -18,9 +21,11 @@ import org.springframework.web.bind.annotation.*;
 @RequestMapping("/api/v1/learning/assignment-submissions")
 public class AssignmentController {
     private final IAssignmentService assignmentService;
+    private final LearningAuthorizationService authorizationService;
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/list")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
     public ResponseEntity<PaginatedApiResponse<AssignmentSubmissionResponse>> getAssignmentSubmissions(
             @RequestParam String assignmentId,
             @RequestParam(defaultValue = "1") int page,
@@ -28,6 +33,7 @@ public class AssignmentController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
+        authorizationService.requireLessonInstructorOrAdmin(assignmentId);
         return ResponseEntity.ok(PaginationWrapper.wrap(assignmentService.getAssignmentSubmissions(assignmentId, page, size)));
     }
 
@@ -42,7 +48,7 @@ public class AssignmentController {
     @PostMapping
     public ResponseEntity<ApiResponse<?>> submitAssignment(
             @RequestParam String assignmentId,
-            @RequestBody CreateAssignmentSubmissionRequest request) {
+            @Valid @RequestBody CreateAssignmentSubmissionRequest request) {
         String userId = AuthenticationUtil.extractUserId();
         assignmentService.submitAssignment(userId, assignmentId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submitted successfully", null));
@@ -50,6 +56,7 @@ public class AssignmentController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{submissionId}/score")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
     public ResponseEntity<ApiResponse<?>> scoreAssignmentSubmission(
             @PathVariable String submissionId,
             @RequestParam Double score

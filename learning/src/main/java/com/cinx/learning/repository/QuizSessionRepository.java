@@ -22,6 +22,8 @@ public interface QuizSessionRepository extends JpaRepository<QuizSession, String
 
     Integer countByQuizLessonIdAndUserId(String quizLessonId, String userId);
 
+    boolean existsByQuizLessonIdAndUserIdAndStatus(String quizLessonId, String userId, QuizSessionStatus status);
+
     @Query("""
         SELECT qs FROM QuizSession qs
         WHERE qs.status = :status

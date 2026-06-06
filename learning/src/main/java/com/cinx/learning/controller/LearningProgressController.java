@@ -2,14 +2,15 @@ package com.cinx.learning.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.utils.AuthenticationUtil;
-import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.LearningItemProgressResponse;
+import com.cinx.learning.service.authorization.LearningAuthorizationService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -19,6 +20,7 @@ import java.util.List;
 @RequestMapping("/api/v1/learning/course-progress")
 public class LearningProgressController {
     private final ILearningProgressService learningProgressService;
+    private final LearningAuthorizationService authorizationService;
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
@@ -45,21 +47,25 @@ public class LearningProgressController {
     @PostMapping("/items/{itemId}/complete")
     public ResponseEntity<ApiResponse<?>> markItemAsComplete(@PathVariable String itemId) {
         String userId = AuthenticationUtil.extractUserId();
-        learningProgressService.updateLearningItemProgress(userId, itemId, new UpdateLearningItemRequest(true, true, 10.0));
+        learningProgressService.completeArticleItem(userId, itemId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Marked complete", null));
     }
 
     @Operation(summary = "Get overview progress of students in a course", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/progress")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
     public ResponseEntity<ApiResponse<List<CourseProgressResponse>>> getCourseProgress(@PathVariable String courseId) {
+        authorizationService.requireCourseInstructorOrAdmin(courseId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", learningProgressService.getCourseProgressByCourseId(courseId)));
     }
 
     @Operation(summary = "Get detailed progress of a student in a course", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/students/{studentId}/progress")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
     public ResponseEntity<ApiResponse<List<LearningItemProgressResponse>>> getStudentProgress(
             @PathVariable String courseId,
             @PathVariable String studentId) {
+        authorizationService.requireCourseInstructorOrAdmin(courseId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", learningProgressService.getLearningItemProgressByCourseId(studentId, courseId)));
     }
 }

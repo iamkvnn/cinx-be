@@ -2,6 +2,7 @@ package com.cinx.learning.service.course;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.learning.dto.response.CourseResponse;
+import com.cinx.learning.dto.response.LessonResponse;
 import com.cinx.learning.dto.response.QuizLessonResponse;
 import com.cinx.learning.dto.response.VideoLessonResponse;
 import org.springframework.cloud.openfeign.FeignClient;
@@ -18,6 +19,12 @@ public interface CourseService {
 
     @GetMapping("/courses/enrolled/{id}/lessons")
     ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id);
+
+    @GetMapping("/courses/enrolled/{courseId}/lessons/{lessonId}")
+    ApiResponse<LessonResponse> getEnrolledLessonById(@PathVariable String courseId, @PathVariable String lessonId);
+
+    @GetMapping("/lessons/{lessonId}/instructor-access")
+    ApiResponse<Boolean> isLessonInstructor(@PathVariable String lessonId, @RequestParam String userId);
 
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/quizzes")
     ApiResponse<QuizLessonResponse> getQuizLessonById(@PathVariable String courseId, @PathVariable String lessonId);

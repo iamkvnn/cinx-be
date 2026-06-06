@@ -126,7 +126,8 @@ public class DailyGoalService implements IDailyGoalService {
         if (Boolean.TRUE.equals(goal.getIsCompleted())) {
             return;
         }
-        goal.setCurrentValue(goal.getCurrentValue() + amount);
+        int currentValue = goal.getCurrentValue() != null ? goal.getCurrentValue() : 0;
+        goal.setCurrentValue(currentValue + amount);
         if (goal.getCurrentValue() >= goal.getTargetValue()) {
             goal.setCurrentValue(goal.getTargetValue());
             goal.setIsCompleted(true);

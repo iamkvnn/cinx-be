@@ -4,6 +4,8 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.response.UserStreakResponse;
 import com.cinx.learning.service.streak.IStreakService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -17,6 +19,7 @@ public class StreakController {
 
     private final IStreakService streakService;
 
+    @Operation(summary = "Get current user's streak", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserStreakResponse>> getMyStreak() {
         String userId = AuthenticationUtil.extractUserId();

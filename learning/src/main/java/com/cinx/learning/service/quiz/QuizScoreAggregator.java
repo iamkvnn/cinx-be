@@ -1,7 +1,6 @@
 package com.cinx.learning.service.quiz;
 
 import com.cinx.learning.consts.ScoringMode;
-import com.cinx.learning.model.QuizSessionSubmission;
 import com.cinx.learning.repository.QuizSessionSubmissionRepository;
 import com.cinx.learning.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
@@ -33,23 +32,23 @@ public class QuizScoreAggregator {
     }
 
     public double aggregateScore(String userId, String quizLessonId, ScoringMode scoringMode) {
-        List<QuizSessionSubmission> allSubmissions = quizSessionSubmissionRepository
-                .findAllByUserIdAndQuizLessonId(userId, quizLessonId);
-
-        List<Double> scores = allSubmissions.stream()
-                .map(QuizSessionSubmission::getScore)
-                .filter(Objects::nonNull)
-                .toList();
-
-        return aggregateScore(scores, scoringMode);
+        return aggregateScore(
+                quizSessionSubmissionRepository.findScoresByUserIdAndQuizLessonId(userId, quizLessonId),
+                scoringMode);
     }
 
     public double aggregateScore(List<Double> scores, ScoringMode scoringMode) {
+        List<Double> validScores = scores == null
+                ? List.of()
+                : scores.stream().filter(Objects::nonNull).toList();
+        if (validScores.isEmpty()) {
+            return 0.0;
+        }
         return switch (scoringMode) {
-            case HIGHEST -> scores.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
-            case LATEST -> scores.getLast();
-            case FIRST -> scores.getFirst();
-            case AVERAGE -> scores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
+            case HIGHEST -> validScores.stream().mapToDouble(Double::doubleValue).max().orElse(0.0);
+            case LATEST -> validScores.getLast();
+            case FIRST -> validScores.getFirst();
+            case AVERAGE -> validScores.stream().mapToDouble(Double::doubleValue).average().orElse(0.0);
         };
     }
 }

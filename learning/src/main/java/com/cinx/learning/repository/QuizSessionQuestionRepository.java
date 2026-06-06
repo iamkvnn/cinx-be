@@ -15,10 +15,11 @@ public interface QuizSessionQuestionRepository extends JpaRepository<QuizSession
     Optional<QuizSessionQuestion> findByQuizSessionIdAndQuestionId(String quizSessionId, String questionId);
 
     @Query("SELECT q.questionId as questionId, COUNT(q) as totalAttempts, " +
-           "SUM(CASE WHEN q.score > 0 THEN 1 ELSE 0 END) as correctAttempts " +
+           "SUM(CASE WHEN q.score >= 1.0 THEN 1 ELSE 0 END) as correctAttempts " +
            "FROM QuizSessionQuestion q " +
            "JOIN q.quizSession s " +
-           "WHERE s.quizLessonId = :quizId AND s.status = com.cinx.learning.consts.QuizSessionStatus.SUBMITTED " +
+           "WHERE s.quizLessonId = :quizId " +
+           "AND s.status IN (com.cinx.learning.consts.QuizSessionStatus.SUBMITTED, com.cinx.learning.consts.QuizSessionStatus.GRADED) " +
            "GROUP BY q.questionId")
     List<Object[]> getQuizAnalyticsByQuizId(String quizId);
 
