@@ -49,4 +49,4 @@ jobs:
           script: |
             cd /root/cinx-deployment
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/cinx-discovery:latest
-            docker compose up -d --no-deps iscovery-service
+            docker compose up -d --no-deps discovery
