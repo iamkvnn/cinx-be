@@ -1,5 +1,6 @@
 package com.cinx.auth.service.auth;
 
+import com.cinx.auth.consts.DeviceType;
 import com.cinx.auth.dto.request.OAuthRequest;
 import com.cinx.auth.dto.response.GoogleProfileResponse;
 import com.cinx.auth.dto.response.GoogleTokenResponse;
@@ -23,6 +24,10 @@ public class GoogleAuthenticationService implements IGoogleAuthenticationService
     private String userInfoUri;
     @Value("${google.token-uri}")
     private String tokenUri;
+    @Value("${google.mobile-redirect-uri}")
+    private String mobileRedirectUri;
+    @Value("${google.web-redirect-uri}")
+    private String webRedirectUri;
 
     @Override
     public GoogleTokenResponse exchangeCodeForToken(OAuthRequest request) {
@@ -31,7 +36,7 @@ public class GoogleAuthenticationService implements IGoogleAuthenticationService
                 "code_verifier", request.codeVerifier(),
                 "client_id", clientId,
                 "client_secret", clientSecret,
-                "redirect_uri", request.redirectUri(),
+                "redirect_uri", request.device().equals(DeviceType.MOBILE) ? mobileRedirectUri : webRedirectUri,
                 "grant_type", "authorization_code"
         );
         return webClient.post()
