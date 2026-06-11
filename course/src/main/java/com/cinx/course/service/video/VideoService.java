@@ -40,6 +40,7 @@ public class VideoService implements IVideoService {
         },() -> {
             var videoLesson = videoLessonMapper.toModel(request);
             videoLesson.setLessonId(lessonId);
+            videoLesson.setVideoUrl(cdnUrl + "/" + request.getFileKey());
             videoLessonRepository.save(videoLesson);
         });
     }

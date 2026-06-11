@@ -11,8 +11,14 @@ import com.cinx.course.consts.SubtitleFormat;
 import com.cinx.course.consts.SubtitleSource;
 import com.cinx.course.consts.SubtitleStatus;
 import com.cinx.course.dto.request.CreateSubtitleTrackRequest;
+import com.cinx.course.dto.request.UpdateSubtitleContentRequest;
 import com.cinx.course.dto.request.UpdateSubtitleTrackRequest;
+import com.cinx.course.dto.response.SubtitleContentResponse;
 import com.cinx.course.dto.response.SubtitleTrackResponse;
+import com.cinx.course.dto.response.SubtitleWordConfidenceResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cinx.course.mapper.SubtitleTrackMapper;
 import com.cinx.course.model.SubtitleTrack;
 import com.cinx.course.model.VideoLesson;
@@ -40,6 +46,7 @@ public class SubtitleTrackService implements ISubtitleTrackService {
     private final SubtitleFileProcessor subtitleFileProcessor;
     private final S3Service s3Service;
     private final ILessonService lessonService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
@@ -122,6 +129,9 @@ public class SubtitleTrackService implements ISubtitleTrackService {
                     request.fileSize()
             );
             subtitleTrack.setStatus(SubtitleStatus.READY);
+            subtitleTrack.setSource(SubtitleSource.MANUAL);
+            subtitleTrack.setWordConfidenceFileKey(null);
+            subtitleTrack.setWordConfidenceFileUrl(null);
         }
         if (request.isDefault() != null) {
             subtitleTrack.setIsDefault(request.isDefault());
@@ -136,6 +146,69 @@ public class SubtitleTrackService implements ISubtitleTrackService {
         }
 
         return subtitleTrackMapper.toDto(subtitleTrackRepository.save(subtitleTrack));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SubtitleContentResponse getSubtitleContent(String lessonId, String subtitleId) {
+        ensureInstructor(lessonId);
+        SubtitleTrack subtitleTrack = findSubtitle(lessonId, subtitleId);
+        return new SubtitleContentResponse(subtitleTrack.getId(), s3Service.readTextObject(subtitleTrack.getFileKey()));
+    }
+
+    @Override
+    @Transactional
+    public SubtitleTrackResponse updateSubtitleContent(String lessonId, String subtitleId, UpdateSubtitleContentRequest request) {
+        ensureInstructor(lessonId);
+        SubtitleTrack subtitleTrack = findSubtitle(lessonId, subtitleId);
+        String normalized = subtitleFileProcessor.normalizeToWebVtt(SubtitleFormat.VTT, request.content());
+        String editedFileKey = SUBTITLE_STORAGE_PREFIX
+                + lessonId + "/"
+                + subtitleTrack.getLanguageCode() + "/"
+                + UUID.randomUUID() + "-edited.vtt";
+
+        s3Service.uploadTextFile(editedFileKey, normalized, SubtitleFileProcessor.NORMALIZED_CONTENT_TYPE);
+        subtitleTrack.setOriginalFileKey(subtitleTrack.getFileKey());
+        subtitleTrack.setFileKey(editedFileKey);
+        subtitleTrack.setFileUrl(s3Service.publicUrl(editedFileKey));
+        subtitleTrack.setFileName(subtitleTrack.getId() + "-edited.vtt");
+        subtitleTrack.setFileType(SubtitleFileProcessor.NORMALIZED_CONTENT_TYPE);
+        subtitleTrack.setFileSize((long) normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+        subtitleTrack.setFormat(SubtitleFormat.VTT);
+        subtitleTrack.setSource(SubtitleSource.MANUAL);
+        subtitleTrack.setWordConfidenceFileKey(null);
+        subtitleTrack.setWordConfidenceFileUrl(null);
+        subtitleTrack.setStatus(SubtitleStatus.READY);
+        if (request.displayName() != null) {
+            if (request.displayName().isBlank()) {
+                throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Subtitle display name must not be blank");
+            }
+            subtitleTrack.setDisplayName(request.displayName().trim());
+        }
+        return subtitleTrackMapper.toDto(subtitleTrackRepository.save(subtitleTrack));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SubtitleWordConfidenceResponse getSubtitleWordConfidence(String lessonId, String subtitleId) {
+        ensureInstructor(lessonId);
+        SubtitleTrack subtitleTrack = findSubtitle(lessonId, subtitleId);
+        String confidenceFileKey = subtitleTrack.getWordConfidenceFileKey();
+        if (confidenceFileKey == null || confidenceFileKey.isBlank()) {
+            throw new NotFoundException("AI word confidence file not found for subtitle: " + subtitleId);
+        }
+        try {
+            String content = s3Service.readTextObject(confidenceFileKey);
+            List<SubtitleWordConfidenceResponse.SubtitleWordConfidenceItem> words = objectMapper.readValue(
+                    content,
+                    new TypeReference<>() {}
+            );
+            return new SubtitleWordConfidenceResponse(subtitleTrack.getId(), words);
+        } catch (JsonProcessingException ex) {
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "AI word confidence file is invalid");
+        } catch (RuntimeException ex) {
+            throw new NotFoundException("AI word confidence file not found for subtitle: " + subtitleId);
+        }
     }
 
     private void promoteAnotherDefaultIfNeeded(String lessonId, SubtitleTrack selectedSubtitle) {
@@ -179,6 +252,11 @@ public class SubtitleTrackService implements ISubtitleTrackService {
     private VideoLesson ensureVideoLessonExists(String lessonId) {
         return videoLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Video lesson not found for lessonId: " + lessonId));
+    }
+
+    private SubtitleTrack findSubtitle(String lessonId, String subtitleId) {
+        return subtitleTrackRepository.findByIdAndVideoLessonLessonId(subtitleId, lessonId)
+                .orElseThrow(() -> new NotFoundException("Subtitle not found with id: " + subtitleId));
     }
 
     private VideoLesson ensureInstructor(String lessonId) {

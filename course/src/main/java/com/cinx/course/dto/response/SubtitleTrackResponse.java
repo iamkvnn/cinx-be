@@ -16,6 +16,10 @@ public record SubtitleTrackResponse(
         String fileUrl,
         @Schema(example = "courses/subtitles/lesson-1/vi/sub_123.vtt")
         String fileKey,
+        @Schema(example = "courses/subtitles/ai/lesson-1/vi/job-123.words.json")
+        String wordConfidenceFileKey,
+        @Schema(example = "https://cdn.example.com/courses/subtitles/ai/lesson-1/vi/job-123.words.json")
+        String wordConfidenceFileUrl,
         @Schema(example = "intro.vi.srt")
         String fileName,
         @Schema(example = "text/vtt")

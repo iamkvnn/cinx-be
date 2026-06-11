@@ -134,6 +134,8 @@ class SubtitleTrackServiceTest {
                 track.getDisplayName(),
                 track.getFileUrl(),
                 track.getFileKey(),
+                track.getWordConfidenceFileKey(),
+                track.getWordConfidenceFileUrl(),
                 track.getFileName(),
                 track.getFileType(),
                 track.getFileSize(),
