@@ -7,8 +7,7 @@ pydantic-settings
 scikit-learn
 numpy
 aio-pika
-httpx
+openai
 cryptography
 sentence-transformers
-google-genai
 faiss-cpu

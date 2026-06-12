@@ -12,7 +12,7 @@ services:
       - mysql-data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
     healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-proot"]
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -300,6 +300,10 @@ services:
       DB_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       RABBITMQ_USER: ${RABBITMQ_USERNAME}
       RABBITMQ_PASSWORD: ${RABBITMQ_PASSWORD}
+      DIGITALOCEAN_MODEL_ACCESS_KEY: ${DIGITALOCEAN_MODEL_ACCESS_KEY}
+      DIGITALOCEAN_INFERENCE_BASE_URL: ${DIGITALOCEAN_INFERENCE_BASE_URL}
+      DIGITALOCEAN_LLM_MODEL: ${DIGITALOCEAN_LLM_MODEL}
+      DIGITALOCEAN_LLM_TIMEOUT_SECONDS: ${DIGITALOCEAN_LLM_TIMEOUT_SECONDS}
     networks:
     - cinx-network
     depends_on:

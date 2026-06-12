@@ -36,9 +36,14 @@ class Settings(BaseSettings):
 
     RECONCILE_BATCH_SIZE: int = 100
     INTERACTION_THRESHOLD_FOR_CONTENT_BASED: int = 3
-    GEMINI_API_KEY: str
 
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8")
+    DIGITALOCEAN_MODEL_ACCESS_KEY: str
+    DIGITALOCEAN_INFERENCE_BASE_URL: str
+    DIGITALOCEAN_LLM_MODEL: str
+    DIGITALOCEAN_LLM_TIMEOUT_SECONDS: float
+    DIGITALOCEAN_LLM_MAX_COMPLETION_TOKENS: int = 12000
+
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
 
 settings = Settings()

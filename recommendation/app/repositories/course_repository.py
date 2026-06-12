@@ -45,24 +45,46 @@ class CourseRepository:
         # Delete old chunks
         stmt = delete(CourseChunk).where(CourseChunk.course_id == course_id)
         self.db.execute(stmt)
-        
-        curriculum_lines = []
+
+        chunks = [
+            CourseChunk(
+                id=str(uuid.uuid4()),
+                course_id=course_id,
+                section_title=None,
+                lesson_ids=[],
+                content=f"Course: {course_title}. Description: {course_description}.",
+                embedding=[],
+            )
+        ]
+
         for section in curriculum:
-            curriculum_lines.append(f"Section: {section.get('title', '')}.")
-            for lesson in section.get("lessons", []):
-                curriculum_lines.append(
-                    f"Lesson: {lesson.get('title', '')}. Type: {lesson.get('lessonType', '')}."
+            lessons = section.get("lessons", [])
+            lesson_ids = [lesson.get("id") for lesson in lessons if lesson.get("id")]
+            lesson_lines = [
+                f"Lesson ID: {lesson.get('id', '')}. Title: {lesson.get('title', '')}. Type: {lesson.get('lessonType', '')}."
+                for lesson in lessons
+            ]
+            content = (
+                f"Course: {course_title}. Description: {course_description}. "
+                f"Section: {section.get('title', '')}. Description: {section.get('description', '')}. "
+                + " ".join(lesson_lines)
+            )
+            chunks.append(
+                CourseChunk(
+                    id=str(uuid.uuid4()),
+                    course_id=course_id,
+                    section_title=section.get("title"),
+                    lesson_ids=lesson_ids,
+                    content=content,
+                    embedding=[],
                 )
-        content = f"Course: {course_title}. Description: {course_description}. " + " ".join(curriculum_lines)
-                
-        chunk = CourseChunk(
-            id=str(uuid.uuid4()),
-            course_id=course_id,
-            content=content,
-            embedding=embed_model.encode([content])[0].tolist()
-        )
-                
-        self.db.add(chunk)
+            )
+
+        embeddings = embed_model.encode([chunk.content for chunk in chunks])
+        for chunk, embedding in zip(chunks, embeddings):
+            chunk.embedding = embedding.tolist()
+            self.db.add(chunk)
+
         self.db.commit()
 
     def get_published_courses(self):

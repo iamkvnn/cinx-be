@@ -3,6 +3,7 @@ import logging
 from app.core.database import SessionLocal
 from app.models.events import CourseEvent, EnrolledCourseEvent, UserPreferenceEvent, WishlistEvent
 from app.services.sync_service import SyncService
+from app.services.rag_index import rebuild_rag_index
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,7 @@ async def process_message(message_body: bytes, routing_key: str):
         if routing_key.startswith("course."):
             event = CourseEvent(**raw)
             sync_service.handle_course_upsert(event.course)
+            rebuild_rag_index(db)
             logger.info("Processed course event - routing_key=%s course_id=%s", routing_key, event.course.id)
         
         elif routing_key == "enrollment.enrollment.created":
