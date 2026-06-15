@@ -1,6 +1,5 @@
 package com.cinx.enrollment.service.enrollment;
 
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.enrollment.dto.response.CheckEnrollmentStatus;
@@ -36,19 +35,17 @@ public class EnrollmentService implements IEnrollmentService {
     private final EnrolledCourseEventProducer enrolledCourseEventProducer;
 
     @Override
-    public Page<CourseResponse> getEnrolledCourses(int page, int size) {
-        String userId = AuthenticationUtil.extractUserId();
+    public Page<CourseResponse> getEnrolledCourses(String userId, int page, int size) {
         Page<EnrolledCourse> enrolledCourses = enrolledCourseRepository.findAllByUserId(userId, PageRequest.of(page - 1, size));
         List<String> courseIds = enrolledCourses.getContent().stream()
             .map(EnrolledCourse::getCourseId)
             .toList();
-        List<CourseResponse> courses = courseService.getEnrolledCoursesByIds(courseIds).data();
+        List<CourseResponse> courses = courseService.getCoursesByIds(courseIds).data();
         return new PageImpl<>(courses, enrolledCourses.getPageable(), courses.size());
     }
 
     @Override
-    public List<CheckEnrollmentStatus> checkEnrollmentStatus(List<String> courseIds) {
-        String userId = AuthenticationUtil.extractUserId();
+    public List<CheckEnrollmentStatus> checkEnrollmentStatus(String userId, List<String> courseIds) {
         Map<String, EnrolledCourse> enrolledCourseMap = enrolledCourseRepository.findAllByUserIdAndCourseIdIn(userId, courseIds).stream()
             .collect(Collectors.toMap(EnrolledCourse::getCourseId, Function.identity()));
         return courseIds.stream()

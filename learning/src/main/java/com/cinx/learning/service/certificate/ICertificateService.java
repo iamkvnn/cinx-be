@@ -7,10 +7,10 @@ import java.util.List;
 
 public interface ICertificateService {
     CertificateRequestResponse applyForCertificate(String userId, String courseId);
-    Page<CertificateRequestResponse> getRequestsByCourse(String courseId, CertificateStatus status, int page, int size);
+    Page<CertificateRequestResponse> getRequestsByCourse(String currentUserId, String courseId, CertificateStatus status, int page, int size);
     Page<CertificateRequestResponse> getAllRequests(CertificateStatus status, int page, int size);
-    CertificateRequestResponse approveCertificate(String requestId);
-    CertificateRequestResponse rejectCertificate(String requestId);
+    CertificateRequestResponse approveCertificate(String currentUserId, String requestId);
+    CertificateRequestResponse rejectCertificate(String currentUserId, String requestId);
     CertificateRequestResponse getCertificate(String userId, String courseId);
     List<CertificateRequestResponse> getMyCertificates(String userId);
 }

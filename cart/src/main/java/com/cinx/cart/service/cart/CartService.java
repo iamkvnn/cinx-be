@@ -8,7 +8,6 @@ import com.cinx.cart.repository.CartItemRepository;
 import com.cinx.cart.service.course.CourseService;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.ErrorCode;
-import com.cinx.common.utils.AuthenticationUtil;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -24,8 +23,7 @@ public class CartService implements ICartService {
     private final CourseService courseService;
 
     @Override
-    public List<CartItemResponse> getCart() {
-        String userId = AuthenticationUtil.extractUserId();
+    public List<CartItemResponse> getCart(String userId) {
         List<CartItem> cartItems = cartItemRepository.findAllByUserId(userId);
         if (cartItems.isEmpty()) {
             return List.of();
@@ -48,8 +46,7 @@ public class CartService implements ICartService {
     }
 
     @Override
-    public void addToCart(AddToCartRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void addToCart(String userId, AddToCartRequest request) {
         courseService.getCourseById(request.courseId());
         if (cartItemRepository.existsByUserIdAndCourseId(userId, request.courseId())) {
             throw new AlreadyExistException(ErrorCode.CART_ITEM_ALREADY_EXISTS, "Course already in cart");
@@ -64,22 +61,19 @@ public class CartService implements ICartService {
 
     @Transactional
     @Override
-    public void removeFromCart(String itemId) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void removeFromCart(String userId, String itemId) {
         cartItemRepository.deleteByIdAndUserId(itemId, userId);
     }
 
     @Transactional
     @Override
-    public void removeAllFromCartByIds(List<String> itemIds) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void removeAllFromCartByIds(String userId, List<String> itemIds) {
         cartItemRepository.deleteAllByUserIdAndIdIn(userId, itemIds);
     }
 
     @Transactional
     @Override
-    public void clearCart() {
-        String userId = AuthenticationUtil.extractUserId();
+    public void clearCart(String userId) {
         cartItemRepository.deleteAllByUserId(userId);
     }
 }

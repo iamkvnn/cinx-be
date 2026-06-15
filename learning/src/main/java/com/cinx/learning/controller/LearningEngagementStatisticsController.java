@@ -1,6 +1,7 @@
 package com.cinx.learning.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.response.CourseEngagementOverviewResponse;
 import com.cinx.learning.service.activity.LearningActivityGroupBy;
 import com.cinx.learning.service.statistics.ILearningEngagementStatisticsService;
@@ -32,10 +33,11 @@ public class LearningEngagementStatisticsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course engagement overview fetched successfully",
-                statisticsService.getInstructorCourseEngagement(courseId, groupBy, startDate, endDate)
+                statisticsService.getInstructorCourseEngagement(currentUserId, courseId, groupBy, startDate, endDate)
         ));
     }
 

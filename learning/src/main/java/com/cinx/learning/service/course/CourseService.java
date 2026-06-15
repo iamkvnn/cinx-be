@@ -14,13 +14,13 @@ import java.util.List;
 
 @FeignClient(name = "course", path = "/internal")
 public interface CourseService {
-    @GetMapping("/courses/enrolled/{id}")
+    @GetMapping("/courses/{id}")
     ApiResponse<CourseResponse> getCourseById(@PathVariable String id);
 
-    @GetMapping("/courses/enrolled/{id}/lessons")
+    @GetMapping("/courses/{id}/lessons")
     ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id);
 
-    @GetMapping("/courses/enrolled/{courseId}/lessons/{lessonId}")
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}")
     ApiResponse<LessonResponse> getEnrolledLessonById(@PathVariable String courseId, @PathVariable String lessonId);
 
     @GetMapping("/lessons/{lessonId}/instructor-access")

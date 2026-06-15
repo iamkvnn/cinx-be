@@ -7,15 +7,15 @@ import com.cinx.course.dto.response.VideoQuestionResponse;
 import java.util.List;
 
 public interface IVideoQuestionService {
-    List<VideoQuestionResponse> getQuestionsByLessonId(String lessonId);
+    List<VideoQuestionResponse> getQuestionsByLessonId(String currentUserId, String courseId, String lessonId);
     
-    VideoQuestionResponse getQuestionById(String lessonId, String id);
+    VideoQuestionResponse getQuestionById(String currentUserId, String courseId, String lessonId, String id);
     
-    VideoQuestionResponse createQuestion(String lessonId, CreateVideoQuestionRequest request);
+    VideoQuestionResponse createQuestion(String currentUserId, String courseId, String lessonId, CreateVideoQuestionRequest request);
     
-    VideoQuestionResponse updateQuestion(String lessonId, String id, UpdateVideoQuestionRequest request);
+    VideoQuestionResponse updateQuestion(String currentUserId, String courseId, String lessonId, String id, UpdateVideoQuestionRequest request);
     
-    void deleteQuestion(String lessonId, String id);
+    void deleteQuestion(String currentUserId, String courseId, String lessonId, String id);
     
     boolean checkAnswer(String questionId, String userAnswer);
 }

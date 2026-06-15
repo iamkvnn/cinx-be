@@ -41,13 +41,13 @@ public class QuizSessionController {
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
         if (userId == null) {
-            if (!authorizationService.isAdmin() && !authorizationService.isInstructor()) {
-                userId = currentUserId;
+            if (authorizationService.isInstructor()) {
+                authorizationService.requireLessonInstructor(currentUserId, lessonId);
             } else {
-                authorizationService.requireLessonInstructorOrAdmin(lessonId);
+                userId = currentUserId;
             }
         } else if (!userId.equals(currentUserId)) {
-            authorizationService.requireLessonInstructorOrAdmin(lessonId);
+            authorizationService.requireLessonInstructor(currentUserId, lessonId);
         }
         return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessions(userId, lessonId, page, size)));
     }
@@ -55,7 +55,8 @@ public class QuizSessionController {
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/quiz-sessions/{quizSessionId}")
     public ResponseEntity<ApiResponse<QuizSessionResponse>> getQuizSession(@PathVariable String quizSessionId) {
-        authorizationService.requireQuizSessionOwnerOrInstructorOrAdmin(quizSessionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireQuizSessionOwnerOrInstructor(currentUserId, quizSessionId);
         return ResponseEntity.ok(new ApiResponse<>(true, "", quizService.getQuizSession(quizSessionId)));
     }
 
@@ -68,7 +69,8 @@ public class QuizSessionController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        authorizationService.requireQuizSessionOwnerOrInstructorOrAdmin(quizSessionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireQuizSessionOwnerOrInstructor(currentUserId, quizSessionId);
         return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessionQuestions(quizSessionId, page, size)));
     }
 
@@ -88,7 +90,8 @@ public class QuizSessionController {
             @PathVariable String quizSessionId,
             @Valid @RequestBody ChooseQuizAnswerRequest request
     ) {
-        authorizationService.requireQuizSessionOwner(quizSessionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireQuizSessionOwner(currentUserId, quizSessionId);
         quizService.chooseQuizSessionQuestion(quizSessionId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Answer chosen successfully", null));
     }
@@ -99,29 +102,32 @@ public class QuizSessionController {
             @PathVariable String quizSessionId,
             @Valid @RequestBody SubmitQuizSessionRequest request
     ) {
-        authorizationService.requireQuizSessionOwner(quizSessionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireQuizSessionOwner(currentUserId, quizSessionId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Quiz session submitted successfully", quizService.submitQuizSession(quizSessionId, request)));
     }
 
     @Operation(summary = "Get analytical statistics for a quiz", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/quiz-sessions/analytics")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<List<QuizQuestionAnalyticsResponse>>> getQuizAnalytics(
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
-        authorizationService.requireLessonInstructorOrAdmin(lessonId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireLessonInstructor(currentUserId, lessonId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizService.getQuizAnalytics(courseId, lessonId)));
     }
 
     @Operation(summary = "Grade essay questions in a PENDING_GRADE quiz session", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/quiz-sessions/{sessionId}/grade-essay")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<QuizSessionResponse>> gradeEssay(
             @PathVariable String sessionId,
             @Valid @RequestBody GradeEssayRequest request
     ) {
-        authorizationService.requireQuizSessionInstructorOrAdmin(sessionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireQuizSessionInstructor(currentUserId, sessionId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Essay graded successfully", quizService.gradeEssay(sessionId, request)));
     }
 }

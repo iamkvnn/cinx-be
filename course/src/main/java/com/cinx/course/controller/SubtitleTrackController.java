@@ -2,11 +2,17 @@ package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PresignedUrlResponse;
-import com.cinx.course.consts.LessonType;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateSubtitleTrackRequest;
+import com.cinx.course.dto.request.GenerateDefaultSubtitleJobRequest;
+import com.cinx.course.dto.request.TranslateSubtitleJobRequest;
+import com.cinx.course.dto.request.UpdateSubtitleContentRequest;
 import com.cinx.course.dto.request.UpdateSubtitleTrackRequest;
+import com.cinx.course.dto.response.SubtitleContentResponse;
+import com.cinx.course.dto.response.SubtitleJobResponse;
 import com.cinx.course.dto.response.SubtitleTrackResponse;
-import com.cinx.course.service.lesson.ILessonService;
+import com.cinx.course.dto.response.SubtitleWordConfidenceResponse;
+import com.cinx.course.service.subtitle.ISubtitleJobService;
 import com.cinx.course.service.subtitle.ISubtitleTrackService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -30,6 +36,7 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SubtitleTrackController {
     private final ISubtitleTrackService subtitleTrackService;
+    private final ISubtitleJobService subtitleJobService;
 
     @GetMapping
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
@@ -37,9 +44,10 @@ public class SubtitleTrackController {
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(ApiResponse.success(
                 "Subtitles fetched successfully",
-                subtitleTrackService.getSubtitlesByLessonId(lessonId)
+                subtitleTrackService.getSubtitlesByLessonId(currentUserId, courseId, lessonId)
         ));
     }
 
@@ -52,9 +60,10 @@ public class SubtitleTrackController {
             @RequestParam String contentType,
             @RequestParam String languageCode
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(ApiResponse.success(
                 "Subtitle upload URL generated successfully",
-                subtitleTrackService.getSubtitlePresignedUrl(lessonId, fileName, contentType, languageCode)
+                subtitleTrackService.getSubtitlePresignedUrl(currentUserId, courseId, lessonId, fileName, contentType, languageCode)
         ));
     }
 
@@ -65,9 +74,65 @@ public class SubtitleTrackController {
             @PathVariable String lessonId,
             @RequestBody @Valid CreateSubtitleTrackRequest request
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(ApiResponse.success(
                 "Subtitle created successfully",
-                subtitleTrackService.createSubtitle(lessonId, request)
+                subtitleTrackService.createSubtitle(currentUserId, courseId, lessonId, request)
+        ));
+    }
+
+    @PostMapping("/ai/default")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<SubtitleJobResponse>> createDefaultSubtitleJob(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @RequestBody @Valid GenerateDefaultSubtitleJobRequest request
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Default subtitle generation job created successfully",
+                subtitleJobService.createDefaultSubtitleJob(currentUserId, courseId, lessonId, request)
+        ));
+    }
+
+    @PostMapping("/ai/translations")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<List<SubtitleJobResponse>>> createTranslationJobs(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @RequestBody @Valid TranslateSubtitleJobRequest request
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Subtitle translation jobs created successfully",
+                subtitleJobService.createTranslationJobs(currentUserId, courseId, lessonId, request)
+        ));
+    }
+
+    @GetMapping("/jobs")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<List<SubtitleJobResponse>>> getSubtitleJobs(
+            @PathVariable String courseId,
+            @PathVariable String lessonId
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Subtitle jobs fetched successfully",
+                subtitleJobService.getJobsByLessonId(currentUserId, courseId, lessonId)
+        ));
+    }
+
+    @GetMapping("/jobs/{jobId}")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<SubtitleJobResponse>> getSubtitleJob(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @PathVariable String jobId
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Subtitle job fetched successfully",
+                subtitleJobService.getJobById(currentUserId, courseId, lessonId, jobId)
         ));
     }
 
@@ -79,9 +144,53 @@ public class SubtitleTrackController {
             @PathVariable String subtitleId,
             @RequestBody @Valid UpdateSubtitleTrackRequest request
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(ApiResponse.success(
                 "Subtitle updated successfully",
-                subtitleTrackService.updateSubtitle(lessonId, subtitleId, request)
+                subtitleTrackService.updateSubtitle(currentUserId, courseId, lessonId, subtitleId, request)
+        ));
+    }
+
+    @GetMapping("/{subtitleId}/content")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<SubtitleContentResponse>> getSubtitleContent(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @PathVariable String subtitleId
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Subtitle content fetched successfully",
+                subtitleTrackService.getSubtitleContent(currentUserId, courseId, lessonId, subtitleId)
+        ));
+    }
+
+    @PutMapping("/{subtitleId}/content")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<SubtitleTrackResponse>> updateSubtitleContent(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @PathVariable String subtitleId,
+            @RequestBody @Valid UpdateSubtitleContentRequest request
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Subtitle content updated successfully",
+                subtitleTrackService.updateSubtitleContent(currentUserId, courseId, lessonId, subtitleId, request)
+        ));
+    }
+
+    @GetMapping("/{subtitleId}/word-confidence")
+    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
+    public ResponseEntity<ApiResponse<SubtitleWordConfidenceResponse>> getSubtitleWordConfidence(
+            @PathVariable String courseId,
+            @PathVariable String lessonId,
+            @PathVariable String subtitleId
+    ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success(
+                "Subtitle word confidence fetched successfully",
+                subtitleTrackService.getSubtitleWordConfidence(currentUserId, courseId, lessonId, subtitleId)
         ));
     }
 
@@ -92,7 +201,8 @@ public class SubtitleTrackController {
             @PathVariable String lessonId,
             @PathVariable String subtitleId
     ) {
-        subtitleTrackService.deleteSubtitle(lessonId, subtitleId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        subtitleTrackService.deleteSubtitle(currentUserId, courseId, lessonId, subtitleId);
         return ResponseEntity.ok(ApiResponse.success("Subtitle deleted successfully", null));
     }
 }

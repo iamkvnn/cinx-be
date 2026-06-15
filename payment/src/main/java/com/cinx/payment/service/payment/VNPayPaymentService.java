@@ -69,7 +69,7 @@ public class VNPayPaymentService extends PaymentTemplate {
         return vnPayPaymentRepository.save(payment);
     }
 
-    public String getPaymentUrl(String orderId) {
+    public String getPaymentUrl(String userId, String orderId) {
         String vnp_TxnRef = vnPayConfig.getRandomNumber(8);
         long vnp_Amount = 100000 * 100;
         Calendar cld = Calendar.getInstance(TimeZone.getTimeZone("Etc/GMT+7"));
@@ -165,7 +165,7 @@ public class VNPayPaymentService extends PaymentTemplate {
     }
 
     @Override
-    public PaymentResponse cancelPayment(String orderId) {
+    public PaymentResponse cancelPayment(String userId, String orderId) {
             VNPayPayment payment = vnPayPaymentRepository.findByOrderId(orderId)
                     .orElseThrow(() -> new RuntimeException("Payment not found for orderId: " + orderId));
             payment.setStatus(PaymentStatus.CANCELLED);

@@ -15,13 +15,13 @@ import com.cinx.social.dto.request.UpdateReviewReplyRequest;
 public interface IReviewService {
     Page<ReviewResponse> getReviewsByCourseId(String courseId, int page, int size, String sort);
     ReviewResponse getReviewById(String reviewId);
-    void createReview(CreateReviewRequest request);
-    void updateReview(String reviewId, UpdateReviewRequest request);
-    void deleteReview(String reviewId);
-    void reportReview(String reviewId, CreateReportReviewRequest request);
-    void reactReview(String reviewId, CreateReviewReactionRequest request);
+    void createReview(String userId, CreateReviewRequest request);
+    void updateReview(String userId, String reviewId, UpdateReviewRequest request);
+    void deleteReview(String userId, String reviewId);
+    void reportReview(String userId, String reviewId, CreateReportReviewRequest request);
+    void reactReview(String userId, String reviewId, CreateReviewReactionRequest request);
     
-    void createReviewReply(String reviewId, CreateReviewReplyRequest request);
-    void updateReviewReply(String replyId, UpdateReviewReplyRequest request);
-    void deleteReviewReply(String replyId);
+    void createReviewReply(String userId, String reviewId, CreateReviewReplyRequest request);
+    void updateReviewReply(String userId, String replyId, UpdateReviewReplyRequest request);
+    void deleteReviewReply(String userId, String replyId);
 }

@@ -33,26 +33,30 @@ public class NotificationController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(notificationService.getNotifications(query, page, size, sort)));
+        String userId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(PaginationWrapper.wrap(notificationService.getNotifications(userId, query, page, size, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/unread-count")
     public ResponseEntity<ApiResponse<Long>> countUnreadNotifications() {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Unread notifications count retrieved successfully", notificationService.countUnreadNotifications()));
+        String userId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Unread notifications count retrieved successfully", notificationService.countUnreadNotifications(userId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{notificationId}/toggle-read")
     public ResponseEntity<ApiResponse<Void>> toggleRead(@PathVariable String notificationId) {
-        notificationService.toggleRead(notificationId);
+        String userId = AuthenticationUtil.extractUserId();
+        notificationService.toggleRead(userId, notificationId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Notification read status toggled successfully", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable String notificationId) {
-        notificationService.deleteNotification(notificationId);
+        String userId = AuthenticationUtil.extractUserId();
+        notificationService.deleteNotification(userId, notificationId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Notification deleted successfully", null));
     }
 

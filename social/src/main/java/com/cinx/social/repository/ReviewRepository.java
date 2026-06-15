@@ -6,12 +6,17 @@ import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 
 import java.util.List;
+import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 public interface ReviewRepository extends JpaRepository<Review, String> {
     Page<Review> findByCourseId(String courseId, Pageable pageable);
+
+    boolean existsByUserIdAndCourseId(String userId, String courseId);
+
+    Optional<Review> findByUserIdAndCourseId(String userId, String courseId);
 
     Long countByCourseId(String courseId);
 

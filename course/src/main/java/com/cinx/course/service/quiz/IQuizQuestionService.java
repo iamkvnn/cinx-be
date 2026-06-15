@@ -9,9 +9,9 @@ import com.cinx.course.model.QuizOption;
 import java.util.List;
 
 public interface IQuizQuestionService {
-    List<QuizQuestionResponse> getQuestions(String lessonId);
-    QuizQuestionResponse addQuestion(String lessonId, CreateQuizQuestionRequest request);
+    List<QuizQuestionResponse> getQuestions(String currentUserId, String courseId, String lessonId);
+    QuizQuestionResponse addQuestion(String currentUserId, String courseId, String lessonId, CreateQuizQuestionRequest request);
     List<QuizQuestionResponse> addQuestions(String lessonId, List<CreateQuizQuestionRequest> requests);
-    QuizQuestionResponse updateQuestion(String lessonId, String questionId, UpdateQuizQuestionRequest request);
-    void deleteQuestion(String lessonId, String questionId);
+    QuizQuestionResponse updateQuestion(String currentUserId, String courseId, String lessonId, String questionId, UpdateQuizQuestionRequest request);
+    void deleteQuestion(String currentUserId, String courseId, String lessonId, String questionId);
 }

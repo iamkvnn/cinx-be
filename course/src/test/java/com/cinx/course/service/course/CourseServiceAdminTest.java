@@ -19,7 +19,6 @@ import com.cinx.course.repository.CategoryRepository;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.RejectCourseReasonRepository;
 import com.cinx.course.service.curriculum.ICurriculumService;
-import com.cinx.course.service.enrollment.EnrollmentClient;
 import com.cinx.course.service.user.UserService;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
@@ -27,6 +26,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -54,7 +55,7 @@ class CourseServiceAdminTest {
     @Mock
     private ICourseDraftService courseDraftService;
     @Mock
-    private EnrollmentClient enrollmentClient;
+    private ICourseAccessService courseAccessService;
     @Mock
     private ICurriculumService curriculumService;
     @Mock
@@ -85,23 +86,66 @@ class CourseServiceAdminTest {
     }
 
     @Test
-    void getPublishedCourseByIdRejectsArchivedCourse() {
-        Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
+    void getReadableCourseByIdRejectsArchivedCourseForAnonymousUser() {
+        when(courseAccessService.ensureReadableCourse(null, "course-1"))
+                .thenThrow(new NotFoundException("Course not found with id: course-1"));
 
-        assertThatThrownBy(() -> courseService.getPublishedCourseById("course-1"))
+        assertThatThrownBy(() -> courseService.getReadableCourseById(null, "course-1"))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void adminCourseDetailCanReadArchivedCourse() {
+    void getReadableCourseByIdAllowsArchivedCourseForOwner() {
+        authenticate("inst-1");
         Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
         CourseResponse response = response(archivedCourse);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
+        when(courseAccessService.ensureReadableCourse("inst-1", "course-1")).thenReturn(archivedCourse);
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(archivedCourse), any(UserDto.class))).thenReturn(response);
 
-        CourseResponse result = courseService.getCourseById("course-1");
+        CourseResponse result = courseService.getReadableCourseById("inst-1", "course-1");
+
+        assertThat(result.status()).isEqualTo(CourseStatus.ARCHIVED);
+    }
+
+    @Test
+    void getReadableCourseByIdAllowsArchivedCourseForAdmin() {
+        authenticateAdmin("admin-1");
+        Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
+        CourseResponse response = response(archivedCourse);
+        when(courseAccessService.ensureReadableCourse("admin-1", "course-1")).thenReturn(archivedCourse);
+        when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
+        when(courseMapper.toResponse(eq(archivedCourse), any(UserDto.class))).thenReturn(response);
+
+        CourseResponse result = courseService.getReadableCourseById("admin-1", "course-1");
+
+        assertThat(result.status()).isEqualTo(CourseStatus.ARCHIVED);
+    }
+
+    @Test
+    void getReadableCourseByIdAllowsArchivedCourseForEnrolledUser() {
+        authenticate("student-1");
+        Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
+        CourseResponse response = response(archivedCourse);
+        when(courseAccessService.ensureReadableCourse("student-1", "course-1")).thenReturn(archivedCourse);
+        when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
+        when(courseMapper.toResponse(eq(archivedCourse), any(UserDto.class))).thenReturn(response);
+
+        CourseResponse result = courseService.getReadableCourseById("student-1", "course-1");
+
+        assertThat(result.status()).isEqualTo(CourseStatus.ARCHIVED);
+    }
+
+    @Test
+    void adminCourseDetailCanReadArchivedCourse() {
+        authenticateAdmin("admin-1");
+        Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
+        CourseResponse response = response(archivedCourse);
+        when(courseAccessService.ensureReadableCourse("admin-1", "course-1")).thenReturn(archivedCourse);
+        when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
+        when(courseMapper.toResponse(eq(archivedCourse), any(UserDto.class))).thenReturn(response);
+
+        CourseResponse result = courseService.getReadableCourseById("admin-1", "course-1");
 
         assertThat(result.status()).isEqualTo(CourseStatus.ARCHIVED);
         verify(courseDraftService, never()).findDraft(archivedCourse);
@@ -120,7 +164,7 @@ class CourseServiceAdminTest {
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(archivedCourse), eq(draft), any(UserDto.class))).thenReturn(response);
 
-        CourseResponse result = courseService.getOwnedDraftCourseById("course-1");
+        CourseResponse result = courseService.getEditableDraftCourseById("inst-1", "course-1");
 
         assertThat(result.status()).isEqualTo(CourseStatus.ARCHIVED);
     }
@@ -132,7 +176,7 @@ class CourseServiceAdminTest {
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
         when(courseDraftService.findDraft(archivedCourse)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> courseService.getOwnedDraftCourseById("course-1"))
+        assertThatThrownBy(() -> courseService.getEditableDraftCourseById("inst-1", "course-1"))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -141,8 +185,10 @@ class CourseServiceAdminTest {
         authenticate("inst-2");
         Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
+        doThrow(new ForbiddenException("You are not allowed to access this course"))
+                .when(courseAccessService).ensureCurrentUserOwns("inst-2", archivedCourse);
 
-        assertThatThrownBy(() -> courseService.getOwnedDraftCourseById("course-1"))
+        assertThatThrownBy(() -> courseService.getEditableDraftCourseById("inst-2", "course-1"))
                 .isInstanceOf(ForbiddenException.class);
     }
 
@@ -183,34 +229,35 @@ class CourseServiceAdminTest {
     }
 
     @Test
-    void getPublishedSnapshotIgnoresDraftWhenDraftExists() {
+    void getReadableCourseByIdIgnoresDraftWhenCourseIsPublished() {
         Course course = course("course-1", "inst-1", CourseStatus.PUBLISHED);
         CourseDraft draft = new CourseDraft();
         draft.setId("draft-1");
         draft.setCourse(course);
         CourseResponse publishedResponse = response(course);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureReadableCourse(null, "course-1")).thenReturn(course);
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(course), any(UserDto.class))).thenReturn(publishedResponse);
 
-        CourseResponse result = courseService.getPublishedSnapshotCourseById("course-1");
+        CourseResponse result = courseService.getReadableCourseById(null, "course-1");
 
         assertThat(result).isSameAs(publishedResponse);
         verify(courseDraftService, never()).findDraft(course);
     }
 
     @Test
-    void adminCourseDetailDoesNotReturnDraftWhenDraftExists() {
+    void adminReadableCourseDetailDoesNotReturnDraftWhenDraftExists() {
+        authenticateAdmin("admin-1");
         Course course = course("course-1", "inst-1", CourseStatus.PUBLISHED);
         CourseDraft draft = new CourseDraft();
         draft.setId("draft-1");
         draft.setCourse(course);
         CourseResponse publishedResponse = response(course);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureReadableCourse("admin-1", "course-1")).thenReturn(course);
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(course), any(UserDto.class))).thenReturn(publishedResponse);
 
-        CourseResponse result = courseService.getCourseById("course-1");
+        CourseResponse result = courseService.getReadableCourseById("admin-1", "course-1");
 
         assertThat(result).isSameAs(publishedResponse);
         verify(courseDraftService, never()).findDraft(course);
@@ -218,6 +265,7 @@ class CourseServiceAdminTest {
 
     @Test
     void getDraftCourseReturnsCourseRowForFirstTimeDraft() {
+        authenticate("inst-1");
         Course course = course("course-1", "inst-1", CourseStatus.DRAFT);
         CourseResponse response = response(course);
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
@@ -225,13 +273,14 @@ class CourseServiceAdminTest {
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(course), any(UserDto.class))).thenReturn(response);
 
-        CourseResponse result = courseService.getDraftCourseById("course-1");
+        CourseResponse result = courseService.getEditableDraftCourseById("inst-1", "course-1");
 
         assertThat(result).isSameAs(response);
     }
 
     @Test
     void getDraftCourseReturnsCourseDraftWhenDraftExists() {
+        authenticate("inst-1");
         Course course = course("course-1", "inst-1", CourseStatus.PUBLISHED);
         CourseDraft draft = new CourseDraft();
         draft.setId("draft-1");
@@ -242,27 +291,28 @@ class CourseServiceAdminTest {
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(course), eq(draft), any(UserDto.class))).thenReturn(draftResponse);
 
-        CourseResponse result = courseService.getDraftCourseById("course-1");
+        CourseResponse result = courseService.getEditableDraftCourseById("inst-1", "course-1");
 
         assertThat(result).isSameAs(draftResponse);
     }
 
     @Test
     void getDraftCourseRejectsPublishedCourseWithoutDraft() {
+        authenticate("inst-1");
         Course course = course("course-1", "inst-1", CourseStatus.PUBLISHED);
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> courseService.getDraftCourseById("course-1"))
+        assertThatThrownBy(() -> courseService.getEditableDraftCourseById("inst-1", "course-1"))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void getPublishedSnapshotRejectsFirstTimeDraft() {
-        Course course = course("course-1", "inst-1", CourseStatus.DRAFT);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+    void getReadableCourseByIdRejectsFirstTimeDraft() {
+        when(courseAccessService.ensureReadableCourse(null, "course-1"))
+                .thenThrow(new NotFoundException("Course not found with id: course-1"));
 
-        assertThatThrownBy(() -> courseService.getPublishedSnapshotCourseById("course-1"))
+        assertThatThrownBy(() -> courseService.getReadableCourseById(null, "course-1"))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -278,7 +328,7 @@ class CourseServiceAdminTest {
         when(courseMapper.toResponse(eq(archivedCourse), any(UserDto.class))).thenReturn(response);
         when(curriculumService.getEnrolledCurriculum("course-1")).thenReturn(new CourseCurriculumResponse("course-1", List.of()));
 
-        CourseResponse result = courseService.unarchiveCourse("course-1");
+        CourseResponse result = courseService.unarchiveCourse("inst-1", "course-1");
 
         assertThat(archivedCourse.getStatus()).isEqualTo(CourseStatus.PUBLISHED);
         assertThat(archivedCourse.getPublishStatus()).isNull();
@@ -292,7 +342,7 @@ class CourseServiceAdminTest {
         Course course = course("course-1", "inst-1", CourseStatus.PUBLISHED);
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
 
-        assertThatThrownBy(() -> courseService.unarchiveCourse("course-1"))
+        assertThatThrownBy(() -> courseService.unarchiveCourse("inst-1", "course-1"))
                 .isInstanceOf(BadRequestException.class);
     }
 
@@ -317,7 +367,17 @@ class CourseServiceAdminTest {
     }
 
     private void authenticate(String userId) {
-        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(userId, null));
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
+        authentication.setAuthenticated(true);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private void authenticateAdmin(String userId) {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+                userId,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        ));
     }
 
     private Course course(String courseId, String instructorId, CourseStatus status) {

@@ -23,6 +23,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public TopicExchange aiSubtitleExchange() {
+        return ExchangeBuilder.topicExchange("ai.subtitle.events.exchange").durable(true).build();
+    }
+
+    @Bean
     public DirectExchange deadLetterExchange() {
         return ExchangeBuilder.directExchange("dlx.exchange").durable(true).build();
     }
@@ -41,6 +46,19 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue subtitleAiQueue() {
+        return QueueBuilder.durable("course.subtitle.ai.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "course.subtitle.ai.dead")
+                .build();
+    }
+
+    @Bean
+    public Queue subtitleAiDeadLetterQueue() {
+        return QueueBuilder.durable("course.subtitle.ai.dead.queue").build();
+    }
+
+    @Bean
     public Binding enrollmentBinding() {
         return BindingBuilder.bind(enrollmentQueue())
                 .to(enrollmentExchange())
@@ -52,5 +70,33 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(enrollmentDeadLetterQueue())
                 .to(deadLetterExchange())
                 .with("course.enrollment.dead");
+    }
+
+    @Bean
+    public Binding subtitleAiProgressBinding() {
+        return BindingBuilder.bind(subtitleAiQueue())
+                .to(aiSubtitleExchange())
+                .with("ai.subtitle.job.progress");
+    }
+
+    @Bean
+    public Binding subtitleAiCompletedBinding() {
+        return BindingBuilder.bind(subtitleAiQueue())
+                .to(aiSubtitleExchange())
+                .with("ai.subtitle.job.completed");
+    }
+
+    @Bean
+    public Binding subtitleAiFailedBinding() {
+        return BindingBuilder.bind(subtitleAiQueue())
+                .to(aiSubtitleExchange())
+                .with("ai.subtitle.job.failed");
+    }
+
+    @Bean
+    public Binding subtitleAiDeadLetterBinding() {
+        return BindingBuilder.bind(subtitleAiDeadLetterQueue())
+                .to(deadLetterExchange())
+                .with("course.subtitle.ai.dead");
     }
 }

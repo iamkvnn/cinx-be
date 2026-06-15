@@ -1,6 +1,7 @@
 package com.cinx.enrollment.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.dto.response.AdminOverviewResponse;
 import com.cinx.enrollment.dto.response.DashboardMetricsResponse;
 import com.cinx.enrollment.dto.response.InstructorRevenueResponse;
@@ -48,7 +49,7 @@ public class StatisticsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Instructor statistics fetched successfully", statisticsService.getInstructorOverview(groupBy, startDate, endDate))
+                new ApiResponse<>(true, "Instructor statistics fetched successfully", statisticsService.getInstructorOverview(AuthenticationUtil.extractUserId(), groupBy, startDate, endDate))
         );
     }
 
@@ -61,7 +62,7 @@ public class StatisticsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Course statistics fetched successfully", statisticsService.getCourseStatistics(courseId, groupBy, startDate, endDate))
+                new ApiResponse<>(true, "Course statistics fetched successfully", statisticsService.getCourseStatistics(AuthenticationUtil.extractUserId(), courseId, groupBy, startDate, endDate))
         );
     }
 

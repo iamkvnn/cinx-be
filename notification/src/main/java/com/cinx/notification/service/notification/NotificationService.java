@@ -1,7 +1,6 @@
 package com.cinx.notification.service.notification;
 
 import com.cinx.common.mapper.SortConverter;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.notification.dto.request.CreateNotificationRequest;
 import com.cinx.notification.dto.response.UserNotificationResponse;
 import com.cinx.notification.repository.NotificationRepository;
@@ -23,15 +22,13 @@ public class NotificationService implements INotificationService{
     private final UserNotificationMapper userNotificationMapper;
 
     @Override
-    public Page<UserNotificationResponse> getNotifications(String query, int page, int size, String sort) {
-        String userId = AuthenticationUtil.extractUserId();
+    public Page<UserNotificationResponse> getNotifications(String userId, String query, int page, int size, String sort) {
         return userNotificationRepository.findByUserId(query, userId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(userNotificationMapper::toDto);
     }
 
     @Override
-    public Long countUnreadNotifications() {
-        String userId = AuthenticationUtil.extractUserId();
+    public Long countUnreadNotifications(String userId) {
         return userNotificationRepository.countByUserIdAndReadFalse(userId);
     }
 
@@ -52,7 +49,7 @@ public class NotificationService implements INotificationService{
     }
 
     @Override
-    public void toggleRead(String notificationId) {
+    public void toggleRead(String userId, String notificationId) {
         userNotificationRepository.findById(notificationId).ifPresent(userNotification -> {
             userNotification.setIsRead(!userNotification.getIsRead());
             userNotificationRepository.save(userNotification);
@@ -61,7 +58,7 @@ public class NotificationService implements INotificationService{
 
     @Transactional
     @Override
-    public void deleteNotification(String notificationId) {
+    public void deleteNotification(String userId, String notificationId) {
         userNotificationRepository.deleteById(notificationId);
     }
 }

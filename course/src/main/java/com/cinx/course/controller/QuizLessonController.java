@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateQuizLessonRequest;
 import com.cinx.course.dto.request.SyncQuizRequest;
 import com.cinx.course.dto.request.UpdateQuizLessonRequest;
@@ -24,7 +25,8 @@ public class QuizLessonController {
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizService.getQuizByLessonId(courseId, lessonId)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizService.getReadableQuizByLessonId(currentUserId, courseId, lessonId)));
     }
 
     @Operation(summary = "Create quiz with initial questions", security = @SecurityRequirement(name = "bearer-jwt"))
@@ -34,7 +36,8 @@ public class QuizLessonController {
             @PathVariable String lessonId,
             @Valid @RequestBody CreateQuizLessonRequest request
     ) {
-        quizService.createQuiz(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        quizService.createQuiz(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Quiz created successfully", null));
     }
 
@@ -45,7 +48,8 @@ public class QuizLessonController {
             @PathVariable String lessonId,
             @Valid @RequestBody UpdateQuizLessonRequest request
     ) {
-        quizService.updateQuiz(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        quizService.updateQuiz(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Quiz updated successfully", null));
     }
 
@@ -57,7 +61,8 @@ public class QuizLessonController {
             @PathVariable String lessonId,
             @Valid @RequestBody SyncQuizRequest request
     ) {
-        quizService.syncQuiz(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        quizService.syncQuiz(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(new ApiResponse<>(true,
                 Boolean.TRUE.equals(request.triggerRegrade())
                         ? "Quiz synced and regrade triggered"

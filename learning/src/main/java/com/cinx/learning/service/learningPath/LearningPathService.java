@@ -103,7 +103,7 @@ public class LearningPathService implements ILearningPathService {
 
         if (initialStatus == LearningPathStatus.PENDING_PAYMENT) {
             for (String cId : unenrolledCourseIds) {
-                cartClient.addToCart(new AddToCartRequest(cId));
+                cartClient.addToCart(userId, new AddToCartRequest(cId));
             }
         }
 

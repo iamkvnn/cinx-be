@@ -29,7 +29,7 @@ public class OrderQueueConsumer {
         try {
             IPaymentStrategyService paymentService = paymentServiceFactory.getPaymentService(orderEvent.getPaymentMethod());
             if (orderEvent.getStatus() == OrderStatus.CANCELLED) {
-                paymentService.cancelPayment(orderEvent.getId());
+                paymentService.cancelPayment(null, orderEvent.getId());
             } else {
                 ensurePaymentExists(orderEvent, paymentService);
             }
@@ -50,10 +50,13 @@ public class OrderQueueConsumer {
         } catch (Exception ignored) {
             paymentService.createPayment(new OrderResponse(
                     orderEvent.getId(),
+                    orderEvent.getUserId(),
                     List.of(),
                     orderEvent.getTotalPrice(),
                     orderEvent.getDiscounted(),
-                    orderEvent.getOrderDate()
+                    orderEvent.getOrderDate(),
+                    orderEvent.getStatus(),
+                    orderEvent.getPaymentMethod()
             ));
         }
     }

@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateQuizQuestionRequest;
 import com.cinx.course.dto.request.UpdateQuizQuestionRequest;
 import com.cinx.course.dto.response.QuizQuestionResponse;
@@ -26,7 +27,8 @@ public class QuizQuestionController {
     public ResponseEntity<ApiResponse<List<QuizQuestionResponse>>> getQuestions(
             @PathVariable String lessonId,
             @PathVariable String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizQuestionService.getQuestions(lessonId)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Success", quizQuestionService.getQuestions(currentUserId, courseId, lessonId)));
     }
 
     @Operation(summary = "Add a question to a quiz", security = @SecurityRequirement(name = "bearer-jwt"))
@@ -35,7 +37,8 @@ public class QuizQuestionController {
             @PathVariable String lessonId,
             @Valid @RequestBody CreateQuizQuestionRequest request,
             @PathVariable String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Question added successfully", quizQuestionService.addQuestion(lessonId, request)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Question added successfully", quizQuestionService.addQuestion(currentUserId, courseId, lessonId, request)));
     }
 
     @Operation(summary = "Update a question (options use merge strategy: id→update, no id→create, missing→delete)",
@@ -46,7 +49,8 @@ public class QuizQuestionController {
             @PathVariable String questionId,
             @Valid @RequestBody UpdateQuizQuestionRequest request,
             @PathVariable String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Question updated successfully", quizQuestionService.updateQuestion(lessonId, questionId, request)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Question updated successfully", quizQuestionService.updateQuestion(currentUserId, courseId, lessonId, questionId, request)));
     }
 
     @Operation(summary = "Delete a question (blocked if it would violate numberOfQuestionPerQuizSession)",
@@ -56,7 +60,8 @@ public class QuizQuestionController {
             @PathVariable String lessonId,
             @PathVariable String questionId,
             @PathVariable String courseId) {
-        quizQuestionService.deleteQuestion(lessonId, questionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        quizQuestionService.deleteQuestion(currentUserId, courseId, lessonId, questionId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Question deleted successfully", null));
     }
 }

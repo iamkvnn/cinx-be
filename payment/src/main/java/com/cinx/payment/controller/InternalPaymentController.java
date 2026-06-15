@@ -41,6 +41,6 @@ public class InternalPaymentController {
             @RequestParam String orderId,
             @RequestParam PaymentMethod paymentMethod) {
         return new ApiResponse<>(true, "Payment cancelled successfully",
-                factory.getPaymentService(paymentMethod).cancelPayment(orderId));
+                factory.getPaymentService(paymentMethod).cancelPayment(null, orderId));
     }
 }

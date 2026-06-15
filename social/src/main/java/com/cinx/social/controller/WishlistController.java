@@ -1,6 +1,7 @@
 package com.cinx.social.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.social.dto.request.AddToWishlistRequest;
 import com.cinx.social.dto.response.WishlistItemResponse;
 import com.cinx.social.service.wishlist.IWishlistService;
@@ -21,20 +22,23 @@ public class WishlistController {
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
     public ResponseEntity<ApiResponse<List<WishlistItemResponse>>> getWishlist() {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Wishlist retrieved successfully", wishlistService.getWishlistByUserId()));
+        String userId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Wishlist retrieved successfully", wishlistService.getWishlistByUserId(userId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     public ResponseEntity<ApiResponse<?>> addToWishlist(@RequestBody AddToWishlistRequest request) {
-        wishlistService.addToWishlist(request);
+        String userId = AuthenticationUtil.extractUserId();
+        wishlistService.addToWishlist(userId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Course added to wishlist successfully", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping
     public ResponseEntity<ApiResponse<?>> removeFromWishlist(@RequestParam String courseId) {
-        wishlistService.removeFromWishlist(courseId);
+        String userId = AuthenticationUtil.extractUserId();
+        wishlistService.removeFromWishlist(userId, courseId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Course removed from wishlist successfully", null));
     }
 }

@@ -3,12 +3,15 @@ package com.cinx.gateway.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.reactive.EnableWebFluxSecurity;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
 import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
+import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
+import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
@@ -32,8 +35,21 @@ public class SecurityConfig {
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/internal/**").denyAll()
-                .pathMatchers("/api/v1/**", "/ws/**", "/sockjs/**").permitAll()
                 .pathMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
+                .pathMatchers(HttpMethod.GET,
+                        "/api/v1/courses/mine",
+                        "/api/v1/courses/upload",
+                        "/api/v1/courses/mine").authenticated()
+                .pathMatchers(HttpMethod.GET,
+                        "/api/v1/courses",
+                        "/api/v1/courses/{courseId}",
+                        "/api/v1/courses/ids",
+                        "/api/v1/courses/*/curriculum",
+                        "/api/v1/courses/*/lessons/*/articles",
+                        "/api/v1/courses/*/lessons/*/videos",
+                        "/api/v1/categories/**",
+                        "/api/v1/reviews/**").permitAll()
+                .pathMatchers("/api/v1/auth/**", "/ws/**", "/sockjs/**").permitAll()
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2

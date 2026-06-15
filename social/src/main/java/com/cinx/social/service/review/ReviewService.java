@@ -1,14 +1,17 @@
 package com.cinx.social.service.review;
 
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.mapper.SortConverter;
-import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.social.client.EnrollmentClient;
 import com.cinx.social.dto.request.CreateReportReviewRequest;
 import com.cinx.social.dto.request.CreateReviewReactionRequest;
 import com.cinx.social.dto.request.CreateReviewRequest;
 import com.cinx.social.dto.request.UpdateReviewRequest;
 import com.cinx.social.dto.response.ReviewResponse;
+import com.cinx.social.dto.response.CheckEnrollmentStatus;
 import com.cinx.social.mapper.ReviewMapper;
 import com.cinx.social.model.Report;
 import com.cinx.social.model.ReportType;
@@ -43,6 +46,7 @@ public class ReviewService implements IReviewService {
     private final ReviewReplyRepository reviewReplyRepository;
     private final ReviewMapper reviewMapper;
     private final CourseService courseService;
+    private final EnrollmentClient enrollmentClient;
 
     @Override
     public Page<ReviewResponse> getReviewsByCourseId(String courseId, int page, int size, String sort) {
@@ -84,8 +88,12 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void createReview(CreateReviewRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void createReview(String userId, CreateReviewRequest request) {
+        validateRating(request.rating());
+        requireEnrolled(request.courseId());
+        if (reviewRepository.existsByUserIdAndCourseId(userId, request.courseId())) {
+            throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "You have already reviewed this course");
+        }
         reviewRepository.save(Review.builder()
                 .courseId(request.courseId())
                 .userId(userId)
@@ -107,8 +115,8 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void updateReview(String reviewId, UpdateReviewRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void updateReview(String userId, String reviewId, UpdateReviewRequest request) {
+        validateRating(request.rating());
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found"));
         if (!review.getUserId().equals(userId)) {
@@ -121,8 +129,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void deleteReview(String reviewId) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void deleteReview(String userId, String reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found"));
         if (!review.getUserId().equals(userId)) {
@@ -133,8 +140,10 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void reportReview(String reviewId, CreateReportReviewRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void reportReview(String userId, String reviewId, CreateReportReviewRequest request) {
+        if (!reviewRepository.existsById(reviewId)) {
+            throw new NotFoundException("Review not found");
+        }
         reportRepository.save(Report.builder()
                 .refId(reviewId)
                 .type(ReportType.REVIEW)
@@ -144,8 +153,10 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void reactReview(String reviewId, CreateReviewReactionRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void reactReview(String userId, String reviewId, CreateReviewReactionRequest request) {
+        if (!reviewRepository.existsById(reviewId)) {
+            throw new NotFoundException("Review not found");
+        }
         ReviewReaction existingReaction = reviewReactionRepository.findByUserIdAndReviewId(userId, reviewId)
                 .orElse(null);
         if (existingReaction != null) {
@@ -161,8 +172,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void createReviewReply(String reviewId, CreateReviewReplyRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void createReviewReply(String userId, String reviewId, CreateReviewReplyRequest request) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found"));
         
@@ -188,8 +198,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void updateReviewReply(String replyId, UpdateReviewReplyRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void updateReviewReply(String userId, String replyId, UpdateReviewReplyRequest request) {
         ReviewReply reply = reviewReplyRepository.findById(replyId)
                 .orElseThrow(() -> new NotFoundException("Reply not found"));
         
@@ -202,8 +211,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
-    public void deleteReviewReply(String replyId) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void deleteReviewReply(String userId, String replyId) {
         ReviewReply reply = reviewReplyRepository.findById(replyId)
                 .orElseThrow(() -> new NotFoundException("Reply not found"));
         
@@ -212,5 +220,21 @@ public class ReviewService implements IReviewService {
         }
 
         reviewReplyRepository.delete(reply);
+    }
+
+    private void validateRating(Double rating) {
+        if (rating == null || rating < 1.0 || rating > 5.0) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Rating must be between 1 and 5");
+        }
+    }
+
+    private void requireEnrolled(String courseId) {
+        ApiResponse<List<CheckEnrollmentStatus>> response = enrollmentClient.checkEnrollmentStatus(List.of(courseId));
+        boolean enrolled = response != null && response.success() && response.data() != null
+                && response.data().stream()
+                .anyMatch(status -> courseId.equals(status.courseId()) && status.isEnrolled());
+        if (!enrolled) {
+            throw new BadRequestException(ErrorCode.NOT_ENROLLED_IN_COURSE, "You must enroll in this course before reviewing it");
+        }
     }
 }

@@ -6,6 +6,7 @@ import lombok.*;
 import java.util.List;
 
 @Entity
+@Table(uniqueConstraints = @UniqueConstraint(columnNames = {"userId", "courseId"}))
 @Getter
 @Setter
 @Builder

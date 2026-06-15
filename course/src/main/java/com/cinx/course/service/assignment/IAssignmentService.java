@@ -5,7 +5,7 @@ import com.cinx.course.dto.request.UpdateAssignmentLessonRequest;
 import com.cinx.course.dto.response.AssignmentLessonResponse;
 
 public interface IAssignmentService {
-    AssignmentLessonResponse getAssignmentByLessonId(String courseId, String lessonId);
-    void createAssignment(String courseId, String lessonId, CreateAssignmentLessonRequest request);
-    void updateAssignment(String courseId, String lessonId, UpdateAssignmentLessonRequest request);
+    AssignmentLessonResponse getAssignmentByLessonId(String currentUserId, String courseId, String lessonId);
+    void createAssignment(String currentUserId, String courseId, String lessonId, CreateAssignmentLessonRequest request);
+    void updateAssignment(String currentUserId, String courseId, String lessonId, UpdateAssignmentLessonRequest request);
 }

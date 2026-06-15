@@ -29,6 +29,8 @@ public interface SubtitleTrackMapper extends
     @Mapping(target = "fileUrl", ignore = true)
     @Mapping(target = "fileKey", ignore = true)
     @Mapping(target = "originalFileKey", ignore = true)
+    @Mapping(target = "wordConfidenceFileKey", ignore = true)
+    @Mapping(target = "wordConfidenceFileUrl", ignore = true)
     @Mapping(target = "fileName", ignore = true)
     @Mapping(target = "fileType", ignore = true)
     @Mapping(target = "fileSize", ignore = true)

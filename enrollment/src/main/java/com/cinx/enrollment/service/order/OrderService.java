@@ -4,7 +4,6 @@ import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CartItemDto;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
@@ -15,6 +14,7 @@ import com.cinx.enrollment.model.Order;
 import com.cinx.enrollment.model.OrderItem;
 import com.cinx.enrollment.repository.OrderItemRepository;
 import com.cinx.enrollment.repository.OrderRepository;
+import com.cinx.enrollment.repository.EnrolledCourseRepository;
 import com.cinx.enrollment.service.cart.CartService;
 import com.cinx.enrollment.service.course.CourseService;
 import com.cinx.enrollment.service.payment.PaymentService;
@@ -30,6 +30,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -37,6 +38,7 @@ import java.util.stream.Collectors;
 public class OrderService implements IOrderService {
     private final OrderRepository orderRepository;
     private final OrderItemRepository orderItemRepository;
+    private final EnrolledCourseRepository enrolledCourseRepository;
     private final OrderMapper orderMapper;
     private final OrderIdGenerator orderIdGenerator;
     private final PaymentService paymentService;
@@ -46,9 +48,8 @@ public class OrderService implements IOrderService {
     private final IVoucherService voucherService;
 
     @Override
-    public Page<OrderDetailResponse> getOrdersByUserId(int page, int size, String query, String sort) {
+    public Page<OrderDetailResponse> getOrdersByUserId(String userId, int page, int size, String query, String sort) {
         Sort s = SortConverter.toSort(sort);
-        String userId = AuthenticationUtil.extractUserId();
         Page<Order> orders = orderRepository.findAllByUserIdAndQuery(userId, query, PageRequest.of(page - 1, size, s));
         List<String> orderIds = orders.stream().map(Order::getId).toList();
         Map<String, PaymentResponse> payments = paymentService.getPaymentByIds(orderIds).data().stream()
@@ -61,31 +62,49 @@ public class OrderService implements IOrderService {
     }
 
     @Override
-    public OrderDetailResponse getOrderById(String orderId) {
+    public OrderDetailResponse getOrderById(String userId, String orderId) {
+        Order order = getOrderEntity(orderId);
+        ensureCurrentUserOwns(userId, order);
+        return toDetailResponse(order);
+    }
+
+    @Override
+    public OrderDetailResponse getInternalOrderById(String orderId) {
+        return toDetailResponse(getOrderEntity(orderId));
+    }
+
+    private Order getOrderEntity(String orderId) {
         return orderRepository.findById(orderId)
                 .map(order -> {
                     order.setItems(orderItemRepository.findAllByOrderId(order.getId()));
                     return order;
                 })
-                .map(o ->{
-                    try {
-                        PaymentResponse payment = paymentService.getPaymentByOrderId(o.getId(), o.getPaymentMethod()).data();
-                        return orderMapper.toDetailDto(new OrderAggregate(o, payment));
-                    }
-                    catch (Exception e) {
-                        System.out.println("No payment found for order " + o.getId() + ": " + e.getMessage());
-                        return orderMapper.toDetailDto(new OrderAggregate(o, null));
-                    }
-                })
                 .orElseThrow(() -> new NotFoundException("Order not found"));
+    }
+
+    private OrderDetailResponse toDetailResponse(Order order) {
+        try {
+            PaymentResponse payment = paymentService.getPaymentByOrderId(order.getId(), order.getPaymentMethod()).data();
+            return orderMapper.toDetailDto(new OrderAggregate(order, payment));
+        }
+        catch (Exception e) {
+            System.out.println("No payment found for order " + order.getId() + ": " + e.getMessage());
+            return orderMapper.toDetailDto(new OrderAggregate(order, null));
+        }
     }
 
     @Transactional
     @Override
-    public OrderResponse createOrder(CreateOrderRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public OrderResponse createOrder(String userId, CreateOrderRequest request) {
         validateCreateOrderRequest(request);
         List<OrderItem> orderItems = createOrderItems(request);
+        List<String> alreadyEnrolledCourseIds = orderItems.stream()
+                .map(OrderItem::getCourseId)
+                .filter(courseId -> enrolledCourseRepository.existsByCourseIdAndUserId(courseId, userId))
+                .toList();
+        if (!alreadyEnrolledCourseIds.isEmpty()) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Cart contains course(s) already enrolled: " + String.join(", ", alreadyEnrolledCourseIds));
+        }
         Long totalPrice = orderItems.stream().mapToLong(OrderItem::getPrice).sum();
         long discounted = orderItems.stream().mapToLong(item -> item.getPrice() - item.getDiscountedPrice()).sum();
         VoucherResponse voucherResponse = null;
@@ -108,7 +127,7 @@ public class OrderService implements IOrderService {
         orderItems.forEach(item -> item.setOrderId(order.getId()));
         order.setItems(orderItems);
         orderItemRepository.saveAll(orderItems);
-        cartService.removeAllFromCartByIds(request.cartItems().stream().map(CartItemDto::id).toList());
+        cartService.removeAllFromCartByIds(userId, request.cartItems().stream().map(CartItemDto::id).toList());
         orderEventProducer.publishOrderCreatedEvent(orderMapper.toEvent(order));
         return orderMapper.toDto(order);
     }
@@ -139,6 +158,17 @@ public class OrderService implements IOrderService {
                 .orElseThrow(() -> new NotFoundException("Order not found"));
     }
 
+    @Transactional
+    @Override
+    public OrderDetailResponse cancelOrder(String userId, String orderId) {
+        Order order = getOrderEntity(orderId);
+        ensureCurrentUserOwns(userId, order);
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Only PENDING orders can be cancelled");
+        }
+        return updateOrderStatus(orderId, OrderStatus.CANCELLED);
+    }
+
     private void validateCreateOrderRequest(CreateOrderRequest request) {
         if (request.cartItems() == null || request.cartItems().isEmpty()) {
             throw new BadRequestException(ErrorCode.ORDER_ITEMS_REQUIRED, "Order must contain at least one item");
@@ -167,5 +197,11 @@ public class OrderService implements IOrderService {
                             .build();
                 })
                 .toList();
+    }
+
+    private void ensureCurrentUserOwns(String userId, Order order) {
+        if (!Objects.equals(order.getUserId(), userId)) {
+            throw new com.cinx.common.exception.ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not allowed to access this order");
+        }
     }
 }

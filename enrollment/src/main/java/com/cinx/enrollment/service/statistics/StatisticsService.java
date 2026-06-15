@@ -1,7 +1,6 @@
 package com.cinx.enrollment.service.statistics;
 
 import com.cinx.enrollment.consts.OrderStatus;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.dto.response.*;
 import com.cinx.enrollment.repository.EnrolledCourseRepository;
 import com.cinx.enrollment.repository.OrderItemRepository;
@@ -89,13 +88,11 @@ public class StatisticsService implements IStatisticsService {
     }
 
     @Override
-    public InstructorStatisticsResponse getInstructorOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
-        return buildInstructorStatistics(statisticsRangeResolver.resolve(groupBy, startDate, endDate));
+    public InstructorStatisticsResponse getInstructorOverview(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
+        return buildInstructorStatistics(instructorId, statisticsRangeResolver.resolve(groupBy, startDate, endDate));
     }
 
-    private InstructorStatisticsResponse buildInstructorStatistics(StatisticsDateRange range) {
-        String instructorId = AuthenticationUtil.extractUserId();
-
+    private InstructorStatisticsResponse buildInstructorStatistics(String instructorId, StatisticsDateRange range) {
         Long totalGross = orderItemRepository.sumGrossRevenueByInstructor(instructorId, range.start(), range.end());
         if (totalGross == null) totalGross = 0L;
         Long totalNet = calculateNetRevenue(totalGross);
@@ -137,8 +134,7 @@ public class StatisticsService implements IStatisticsService {
     }
 
     @Override
-    public CourseStatisticsResponse getCourseStatistics(String courseId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
-        String instructorId = AuthenticationUtil.extractUserId();
+    public CourseStatisticsResponse getCourseStatistics(String instructorId, String courseId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
         StatisticsDateRange range = statisticsRangeResolver.resolve(groupBy, startDate, endDate);
         return buildCourseStatistics(instructorId, courseId, range);
     }

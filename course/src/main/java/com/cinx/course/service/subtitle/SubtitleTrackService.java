@@ -4,15 +4,20 @@ import com.cinx.common.dto.PresignedUrlResponse;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
-import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.consts.SubtitleFormat;
 import com.cinx.course.consts.SubtitleSource;
 import com.cinx.course.consts.SubtitleStatus;
 import com.cinx.course.dto.request.CreateSubtitleTrackRequest;
+import com.cinx.course.dto.request.UpdateSubtitleContentRequest;
 import com.cinx.course.dto.request.UpdateSubtitleTrackRequest;
+import com.cinx.course.dto.response.SubtitleContentResponse;
 import com.cinx.course.dto.response.SubtitleTrackResponse;
+import com.cinx.course.dto.response.SubtitleWordConfidenceResponse;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.cinx.course.mapper.SubtitleTrackMapper;
 import com.cinx.course.model.SubtitleTrack;
 import com.cinx.course.model.VideoLesson;
@@ -40,10 +45,12 @@ public class SubtitleTrackService implements ISubtitleTrackService {
     private final SubtitleFileProcessor subtitleFileProcessor;
     private final S3Service s3Service;
     private final ILessonService lessonService;
+    private final ObjectMapper objectMapper;
 
     @Override
     @Transactional(readOnly = true)
-    public List<SubtitleTrackResponse> getSubtitlesByLessonId(String lessonId) {
+    public List<SubtitleTrackResponse> getSubtitlesByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
         ensureVideoLessonExists(lessonId);
         return subtitleTrackRepository.findByVideoLessonLessonIdOrderByIsDefaultDescLanguageCodeAsc(lessonId)
                 .stream()
@@ -54,12 +61,14 @@ public class SubtitleTrackService implements ISubtitleTrackService {
     @Override
     @Transactional(readOnly = true)
     public PresignedUrlResponse getSubtitlePresignedUrl(
+            String currentUserId,
+            String courseId,
             String lessonId,
             String fileName,
             String contentType,
             String languageCode
     ) {
-        ensureInstructor(lessonId);
+        ensureInstructor(currentUserId, courseId, lessonId);
         String normalizedLanguage = subtitleFileProcessor.normalizeLanguageCode(languageCode);
         subtitleFileProcessor.detectFormat(fileName, contentType);
 
@@ -76,8 +85,8 @@ public class SubtitleTrackService implements ISubtitleTrackService {
 
     @Override
     @Transactional
-    public SubtitleTrackResponse createSubtitle(String lessonId, CreateSubtitleTrackRequest request) {
-        VideoLesson videoLesson = ensureInstructor(lessonId);
+    public SubtitleTrackResponse createSubtitle(String currentUserId, String courseId, String lessonId, CreateSubtitleTrackRequest request) {
+        VideoLesson videoLesson = ensureInstructor(currentUserId, courseId, lessonId);
         String languageCode = subtitleFileProcessor.normalizeLanguageCode(request.languageCode());
         subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode(lessonId, languageCode)
                 .ifPresent(existing -> {
@@ -99,8 +108,8 @@ public class SubtitleTrackService implements ISubtitleTrackService {
 
     @Override
     @Transactional
-    public SubtitleTrackResponse updateSubtitle(String lessonId, String subtitleId, UpdateSubtitleTrackRequest request) {
-        ensureInstructor(lessonId);
+    public SubtitleTrackResponse updateSubtitle(String currentUserId, String courseId, String lessonId, String subtitleId, UpdateSubtitleTrackRequest request) {
+        ensureInstructor(currentUserId, courseId, lessonId);
         SubtitleTrack subtitleTrack = subtitleTrackRepository.findByIdAndVideoLessonLessonId(subtitleId, lessonId)
                 .orElseThrow(() -> new NotFoundException("Subtitle not found with id: " + subtitleId));
 
@@ -122,6 +131,9 @@ public class SubtitleTrackService implements ISubtitleTrackService {
                     request.fileSize()
             );
             subtitleTrack.setStatus(SubtitleStatus.READY);
+            subtitleTrack.setSource(SubtitleSource.MANUAL);
+            subtitleTrack.setWordConfidenceFileKey(null);
+            subtitleTrack.setWordConfidenceFileUrl(null);
         }
         if (request.isDefault() != null) {
             subtitleTrack.setIsDefault(request.isDefault());
@@ -136,6 +148,69 @@ public class SubtitleTrackService implements ISubtitleTrackService {
         }
 
         return subtitleTrackMapper.toDto(subtitleTrackRepository.save(subtitleTrack));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SubtitleContentResponse getSubtitleContent(String currentUserId, String courseId, String lessonId, String subtitleId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        SubtitleTrack subtitleTrack = findSubtitle(lessonId, subtitleId);
+        return new SubtitleContentResponse(subtitleTrack.getId(), s3Service.readTextObject(subtitleTrack.getFileKey()));
+    }
+
+    @Override
+    @Transactional
+    public SubtitleTrackResponse updateSubtitleContent(String currentUserId, String courseId, String lessonId, String subtitleId, UpdateSubtitleContentRequest request) {
+        ensureInstructor(currentUserId, courseId, lessonId);
+        SubtitleTrack subtitleTrack = findSubtitle(lessonId, subtitleId);
+        String normalized = subtitleFileProcessor.normalizeToWebVtt(SubtitleFormat.VTT, request.content());
+        String editedFileKey = SUBTITLE_STORAGE_PREFIX
+                + lessonId + "/"
+                + subtitleTrack.getLanguageCode() + "/"
+                + UUID.randomUUID() + "-edited.vtt";
+
+        s3Service.uploadTextFile(editedFileKey, normalized, SubtitleFileProcessor.NORMALIZED_CONTENT_TYPE);
+        subtitleTrack.setOriginalFileKey(subtitleTrack.getFileKey());
+        subtitleTrack.setFileKey(editedFileKey);
+        subtitleTrack.setFileUrl(s3Service.publicUrl(editedFileKey));
+        subtitleTrack.setFileName(subtitleTrack.getId() + "-edited.vtt");
+        subtitleTrack.setFileType(SubtitleFileProcessor.NORMALIZED_CONTENT_TYPE);
+        subtitleTrack.setFileSize((long) normalized.getBytes(java.nio.charset.StandardCharsets.UTF_8).length);
+        subtitleTrack.setFormat(SubtitleFormat.VTT);
+        subtitleTrack.setSource(SubtitleSource.MANUAL);
+        subtitleTrack.setWordConfidenceFileKey(null);
+        subtitleTrack.setWordConfidenceFileUrl(null);
+        subtitleTrack.setStatus(SubtitleStatus.READY);
+        if (request.displayName() != null) {
+            if (request.displayName().isBlank()) {
+                throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Subtitle display name must not be blank");
+            }
+            subtitleTrack.setDisplayName(request.displayName().trim());
+        }
+        return subtitleTrackMapper.toDto(subtitleTrackRepository.save(subtitleTrack));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public SubtitleWordConfidenceResponse getSubtitleWordConfidence(String currentUserId, String courseId, String lessonId, String subtitleId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        SubtitleTrack subtitleTrack = findSubtitle(lessonId, subtitleId);
+        String confidenceFileKey = subtitleTrack.getWordConfidenceFileKey();
+        if (confidenceFileKey == null || confidenceFileKey.isBlank()) {
+            throw new NotFoundException("AI word confidence file not found for subtitle: " + subtitleId);
+        }
+        try {
+            String content = s3Service.readTextObject(confidenceFileKey);
+            List<SubtitleWordConfidenceResponse.SubtitleWordConfidenceItem> words = objectMapper.readValue(
+                    content,
+                    new TypeReference<>() {}
+            );
+            return new SubtitleWordConfidenceResponse(subtitleTrack.getId(), words);
+        } catch (JsonProcessingException ex) {
+            throw new BadRequestException(ErrorCode.SUBTITLE_FILE_INVALID, "AI word confidence file is invalid");
+        } catch (RuntimeException ex) {
+            throw new NotFoundException("AI word confidence file not found for subtitle: " + subtitleId);
+        }
     }
 
     private void promoteAnotherDefaultIfNeeded(String lessonId, SubtitleTrack selectedSubtitle) {
@@ -157,8 +232,8 @@ public class SubtitleTrackService implements ISubtitleTrackService {
 
     @Override
     @Transactional
-    public void deleteSubtitle(String lessonId, String subtitleId) {
-        ensureInstructor(lessonId);
+    public void deleteSubtitle(String currentUserId, String courseId, String lessonId, String subtitleId) {
+        ensureInstructor(currentUserId, courseId, lessonId);
         SubtitleTrack subtitleTrack = subtitleTrackRepository.findByIdAndVideoLessonLessonId(subtitleId, lessonId)
                 .orElseThrow(() -> new NotFoundException("Subtitle not found with id: " + subtitleId));
         boolean wasDefault = Boolean.TRUE.equals(subtitleTrack.getIsDefault());
@@ -181,13 +256,14 @@ public class SubtitleTrackService implements ISubtitleTrackService {
                 .orElseThrow(() -> new NotFoundException("Video lesson not found for lessonId: " + lessonId));
     }
 
-    private VideoLesson ensureInstructor(String lessonId) {
-        VideoLesson videoLesson = ensureVideoLessonExists(lessonId);
-        String currentUserId = AuthenticationUtil.extractUserId();
-        if (!lessonService.isLessonInstructor(lessonId, currentUserId)) {
-            throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "You do not have permission to manage subtitles for this lesson");
-        }
-        return videoLesson;
+    private SubtitleTrack findSubtitle(String lessonId, String subtitleId) {
+        return subtitleTrackRepository.findByIdAndVideoLessonLessonId(subtitleId, lessonId)
+                .orElseThrow(() -> new NotFoundException("Subtitle not found with id: " + subtitleId));
+    }
+
+    private VideoLesson ensureInstructor(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        return ensureVideoLessonExists(lessonId);
     }
 
     private void applyUploadedFile(

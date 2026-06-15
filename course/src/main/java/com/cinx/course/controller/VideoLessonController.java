@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateVideoLessonRequest;
 import com.cinx.course.dto.request.UpdateVideoLessonRequest;
 import com.cinx.course.dto.response.VideoLessonResponse;
@@ -20,8 +21,9 @@ public class VideoLessonController {
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", videoService.getVideoByLessonId(courseId, lessonId))
+                new ApiResponse<>(true, "Success", videoService.getReadableVideoByLessonId(currentUserId, courseId, lessonId))
         );
     }
 
@@ -31,7 +33,8 @@ public class VideoLessonController {
             @PathVariable String lessonId,
             @RequestBody CreateVideoLessonRequest request
     ) {
-        videoService.createVideo(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        videoService.createVideo(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
         );
@@ -43,7 +46,8 @@ public class VideoLessonController {
             @PathVariable String lessonId,
             @RequestBody UpdateVideoLessonRequest request
     ) {
-        videoService.updateVideo(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        videoService.updateVideo(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
         );

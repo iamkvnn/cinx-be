@@ -1,112 +1,147 @@
 import json
-import numpy as np
+import logging
 from sqlalchemy.orm import Session
 from sqlalchemy import select
 from sentence_transformers import SentenceTransformer
-from google import genai
 from app.core.config import settings
-from app.entities.course_chunk import CourseChunk
 from app.entities.course import Course
+from app.services.llm_client import DigitalOceanLLMClient
+from app.services.rag_index import IndexedChunk, rag_index, rebuild_rag_index
 
 # Load the model globally so it doesn't reload on every request
 embed_model = SentenceTransformer("all-MiniLM-L6-v2")
+logger = logging.getLogger(__name__)
 
 class RAGService:
     def __init__(self, db: Session):
         self.db = db
-        if settings.GEMINI_API_KEY:
-            self.llm = genai.Client(api_key=settings.GEMINI_API_KEY)
-        else:
-            self.llm = None
+        self.llm = DigitalOceanLLMClient()
 
     def embed_text(self, text: str) -> list[float]:
         return embed_model.encode([text])[0].tolist()
 
     def generate_learning_path(self, user_goal: str, top_k: int = 5):
-        goal_embedding = np.array(self.embed_text(user_goal))
+        goal_embedding = self.embed_text(user_goal)
+
+        top_k = max(1, top_k)
+        chunk_results = rag_index.search(goal_embedding, top_k)
+        if not chunk_results:
+            rebuild_rag_index(self.db)
+            chunk_results = rag_index.search(goal_embedding, top_k)
         
-        # Load all chunks and compute cosine similarity
-        chunks = self.db.execute(select(CourseChunk)).scalars().all()
-        
-        if not chunks:
+        if not chunk_results:
             return {"error": "No course chunks available in database."}
 
-        # Vector search
-        chunk_embeddings = np.array([c.embedding for c in chunks])
-        
-        # Cosine similarity
-        norm_goal = np.linalg.norm(goal_embedding)
-        norm_chunks = np.linalg.norm(chunk_embeddings, axis=1)
-        
-        # Avoid division by zero
-        norm_chunks[norm_chunks == 0] = 1e-9
-        if norm_goal == 0: norm_goal = 1e-9
-            
-        similarities = np.dot(chunk_embeddings, goal_embedding) / (norm_chunks * norm_goal)
+        course_scores: dict[str, float] = {}
+        course_chunks: dict[str, list[IndexedChunk]] = {}
+        for chunk, score in chunk_results:
+            course_scores[chunk.course_id] = max(score, course_scores.get(chunk.course_id, float("-inf")))
+            course_chunks.setdefault(chunk.course_id, []).append(chunk)
 
-        # Sort all chunks by similarity in descending order
-        sorted_indices = np.argsort(similarities)[::-1]
-        top_course_ids = [chunks[i].course_id for i in sorted_indices[:top_k]]
+        top_course_ids = [
+            course_id
+            for course_id, _ in sorted(course_scores.items(), key=lambda item: item[1], reverse=True)[:5]
+        ]
 
         # Fetch the FULL structures of these specific courses
         courses = self.db.execute(select(Course).where(Course.id.in_(top_course_ids))).scalars().all()
+        course_by_id = {course.id: course for course in courses}
+        ordered_courses = [course_by_id[course_id] for course_id in top_course_ids if course_id in course_by_id]
 
         # Build context utilizing full course hierarchy so AI won't miss any lessons!
         context_parts = []
-        for c in courses:
-            course_text = f"Course ID: {c.id}, Title: {c.title}\nDescription: {c.description}\nSections:\n"
+        for c in ordered_courses:
+            selected_lesson_ids = {
+                lesson_id
+                for chunk in course_chunks.get(c.id, [])
+                for lesson_id in (chunk.lesson_ids or [])
+            }
+            course_text = f"Course ID: {c.id}, Title: {c.title}\nRelevant Sections:\n"
             sections = c.curriculum or []
             if sections:
                 for sec in sections:
+                    lessons = sec.get("lessons", [])
+                    relevant_lessons = [
+                        lesson
+                        for lesson in lessons
+                        if not selected_lesson_ids or lesson.get("id") in selected_lesson_ids
+                    ]
+                    if not relevant_lessons:
+                        continue
                     course_text += f"  - Section Title: {sec.get('title')}\n"
-                    for les in sec.get('lessons', []):
+                    for les in relevant_lessons:
                         course_text += f"      * Lesson ID: {les.get('id')}, Title: {les.get('title')}, Type: {les.get('lessonType')}\n"
             context_parts.append(course_text)
 
         context_text = "\n\n".join(context_parts)
         
-        if not self.llm:
+        if not self.llm.is_configured():
             return {
-                "error": "Gemini API key not configured. Cannot generate learning path.",
-                "retrieved_chunks": [{"course_id": c.id} for c in courses]
+                "error": "DigitalOcean model access key not configured. Cannot generate learning path.",
+                "retrieved_chunks": [{"course_id": c.id} for c in ordered_courses]
             }
             
         prompt = f"""
-You are an expert AI learning path generator. The user has a learning goal: "{user_goal}".
-Below is the curriculum of highly relevant courses. Your task is to construct a comprehensive, logically sequenced learning path.
+You are an AI learning path generator.
 
-CRITICAL REQUIREMENTS:
-1. SELECT THE BEST COURSES: Review the provided courses and select AT LEAST 2 but NO MORE THAN 5 of the most relevant courses to form the learning path. Discard any courses that are only weakly related to the user's goal.
-2. INCLUDE ALL RELEVANT LESSONS: For the courses you select, do not skip important foundational or sequential lessons. Ensure the path is complete.
-3. LOGICAL REORDERING: You MUST structure the learning flow logically from beginner to advanced. You are allowed and encouraged to reorder lessons, even mixing lessons from different sections or courses if it creates a more optimal step-by-step learning experience.
-4. NO HALLUCINATION: Only use the exact `Course ID` and `Lesson ID` provided in the Retrieved Content.
+Goal: "{user_goal}"
+
+Use ONLY the Retrieved Content below to create a logical learning path.
+
+Rules:
+
+* Select 1 to 3 most relevant courses only.
+* Exclude weakly related courses.
+* Return selected course IDs in `courseIds`.
+* Build `lessonOrder` as one ordered list of lesson IDs.
+* Lessons may be reordered across courses/sections for the best beginner-to-advanced flow.
+* Include important foundational and sequential lessons.
+* Place quizzes/assignments after related lessons.
+* Do not invent IDs, titles, courses, lessons, or extra content.
+* Every lesson ID must belong to one selected course.
+* No duplicate lesson IDs.
+* Output valid JSON only. No markdown. No trailing commas.
 
 Retrieved Content:
 {context_text}
 
-Output ONLY valid JSON in the following format, with no markdown code blocks around it:
+JSON format:
 {{
-  "pathName": "Generated Path Name",
-  "description": "Detailed description of why this path fits the goal and how the sequence flows",
-  "items": [
-    {{
-      "courseId": "string",
-      "lessonId": "string",
-      "reason": "Why this specific lesson is placed at this point in the sequence"
-    }}
-  ]
+"pathName": "string",
+"description": "string",
+"detailReason": "string",
+"courseIds": ["string"],
+"lessonOrder": ["string"]
 }}
 """
-        print("LLM Prompt:", prompt)  # Debug: Print the prompt being sent to the LLM
-        response = self.llm.models.generate_content(
-                model="gemini-3-flash-preview",
-                contents=prompt
+
+        logger.info(
+            "Generating learning path with DigitalOcean LLM model=%s course_count=%s chunk_count=%s",
+            settings.DIGITALOCEAN_LLM_MODEL,
+            len(ordered_courses),
+            len(chunk_results),
         )
-        text = response.text.replace("```json", "").replace("```", "").strip()
-        print("LLM Raw Response:", text)  # Debug: Print the raw response from the LLM
+
+        text, error = self.llm.generate_learning_path_json(prompt)
+        if error:
+            return {
+                "error": error,
+                "retrieved_chunks": [{"course_id": c.id} for c in ordered_courses],
+            }
         
         try:
-            result = json.loads(text)
+            result = json.loads(self._extract_json(text))
             return result
         except json.JSONDecodeError:
             return {"error": "Failed to parse LLM response into JSON", "raw": text}
+
+    def _extract_json(self, text: str) -> str:
+        cleaned = text.replace("```json", "").replace("```", "").strip()
+        if cleaned.startswith("{") and cleaned.endswith("}"):
+            return cleaned
+
+        start = cleaned.find("{")
+        end = cleaned.rfind("}")
+        if start != -1 and end != -1 and end > start:
+            return cleaned[start:end + 1]
+        return cleaned

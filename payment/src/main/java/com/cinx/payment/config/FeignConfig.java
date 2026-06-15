@@ -10,8 +10,11 @@ public class FeignConfig {
     @Bean
     public RequestInterceptor requestInterceptor() {
         return requestTemplate -> {
-            String token = "Bearer " + AuthenticationUtil.extractJwt();
-            requestTemplate.header("Authorization", token);
+            String userId = AuthenticationUtil.extractUserId();
+            if (userId == null) {
+                return;
+            }
+            requestTemplate.header("X-User-Id", userId);
         };
     }
 }

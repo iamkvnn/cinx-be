@@ -34,6 +34,17 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
     List<Lesson> findByCourseAndStableId(@Param("courseId") String courseId, @Param("stableId") String stableId);
 
     @Query("""
+        SELECT l
+        FROM Lesson l
+        JOIN l.section s
+        JOIN s.course c
+        WHERE c.id = :courseId
+            AND l.stableId = :stableId
+            AND c.status IN (com.cinx.course.consts.CourseStatus.PUBLISHED, com.cinx.course.consts.CourseStatus.ARCHIVED)
+    """)
+    List<Lesson> findReadableByCourseAndStableId(@Param("courseId") String courseId, @Param("stableId") String stableId);
+
+    @Query("""
         SELECT l FROM Lesson l
         JOIN l.section s
         JOIN s.course c

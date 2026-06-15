@@ -22,14 +22,20 @@ public class InternalCartController {
     private final ICartService cartService;
 
     @PostMapping
-    public ApiResponse<Void> addToCart(@RequestBody AddToCartRequest request) {
-        cartService.addToCart(request);
+    public ApiResponse<Void> addToCart(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody AddToCartRequest request
+    ) {
+        cartService.addToCart(userId, request);
         return new ApiResponse<>(true, "Item added to cart successfully", null);
     }
 
     @DeleteMapping("/ids")
-    public ApiResponse<Void> removeAllFromCartByIds(@RequestParam List<String> itemIds) {
-        cartService.removeAllFromCartByIds(itemIds);
+    public ApiResponse<Void> removeAllFromCartByIds(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestParam List<String> itemIds
+    ) {
+        cartService.removeAllFromCartByIds(userId, itemIds);
         return new ApiResponse<>(true, "Items removed from cart successfully", null);
     }
 }

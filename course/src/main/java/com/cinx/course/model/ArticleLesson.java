@@ -13,6 +13,9 @@ public class ArticleLesson {
     @Id
     private String lessonId;
 
-    @Column(length = 10000)
-    private String content;
+    private String articleUrl;
+    private String fileKey;
+    private String fileName;
+    private String fileType;
+    private Long fileSize;
 }

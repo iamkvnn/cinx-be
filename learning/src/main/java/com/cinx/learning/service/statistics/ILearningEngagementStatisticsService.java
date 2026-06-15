@@ -6,7 +6,7 @@ import com.cinx.learning.service.activity.LearningActivityGroupBy;
 import java.time.LocalDate;
 
 public interface ILearningEngagementStatisticsService {
-    CourseEngagementOverviewResponse getInstructorCourseEngagement(String courseId, LearningActivityGroupBy groupBy, LocalDate startDate, LocalDate endDate);
+    CourseEngagementOverviewResponse getInstructorCourseEngagement(String currentUserId, String courseId, LearningActivityGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
     CourseEngagementOverviewResponse getAdminCourseEngagement(String courseId, LearningActivityGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 }

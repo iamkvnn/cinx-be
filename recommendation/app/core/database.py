@@ -62,17 +62,28 @@ def ensure_schema():
             if column_name not in course_columns:
                 conn.execute(text(f"ALTER TABLE courses {ddl}"))
 
-    if "user_preferences" not in inspector.get_table_names():
+    if "user_preferences" in inspector.get_table_names():
+        user_preference_columns = {column["name"] for column in inspector.get_columns("user_preferences")}
+        user_preference_missing_columns = {
+            "user_id": "ADD COLUMN user_id VARCHAR(50) NULL",
+            "categoryId": "ADD COLUMN categoryId VARCHAR(100) NULL",
+            "created_at": "ADD COLUMN created_at DATETIME NULL",
+        }
+        with engine.begin() as conn:
+            for column_name, ddl in user_preference_missing_columns.items():
+                if column_name not in user_preference_columns:
+                    conn.execute(text(f"ALTER TABLE user_preferences {ddl}"))
+            if "category" in user_preference_columns and "categoryId" not in user_preference_columns:
+                conn.execute(text("UPDATE user_preferences SET categoryId = category WHERE categoryId IS NULL"))
+
+    if "course_chunks" not in inspector.get_table_names():
         return
-    user_preference_columns = {column["name"] for column in inspector.get_columns("user_preferences")}
-    user_preference_missing_columns = {
-        "user_id": "ADD COLUMN user_id VARCHAR(50) NULL",
-        "categoryId": "ADD COLUMN categoryId VARCHAR(100) NULL",
-        "created_at": "ADD COLUMN created_at DATETIME NULL",
+    course_chunk_columns = {column["name"] for column in inspector.get_columns("course_chunks")}
+    course_chunk_missing_columns = {
+        "section_title": "ADD COLUMN section_title VARCHAR(255) NULL",
+        "lesson_ids": "ADD COLUMN lesson_ids JSON NULL",
     }
     with engine.begin() as conn:
-        for column_name, ddl in user_preference_missing_columns.items():
-            if column_name not in user_preference_columns:
-                conn.execute(text(f"ALTER TABLE user_preferences {ddl}"))
-        if "category" in user_preference_columns and "categoryId" not in user_preference_columns:
-            conn.execute(text("UPDATE user_preferences SET categoryId = category WHERE categoryId IS NULL"))
+        for column_name, ddl in course_chunk_missing_columns.items():
+            if column_name not in course_chunk_columns:
+                conn.execute(text(f"ALTER TABLE course_chunks {ddl}"))

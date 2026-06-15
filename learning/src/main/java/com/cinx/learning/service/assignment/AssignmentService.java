@@ -84,8 +84,8 @@ public class AssignmentService implements IAssignmentService {
 
     @Transactional
     @Override
-    public void scoreAssignmentSubmission(String submissionId, Double score) {
-        AssignmentSubmission submission = authorizationService.requireAssignmentSubmissionInstructorOrAdmin(submissionId);
+    public void scoreAssignmentSubmission(String currentUserId, String submissionId, Double score) {
+        AssignmentSubmission submission = authorizationService.requireAssignmentSubmissionInstructor(currentUserId, submissionId);
         if (score == null || score < 0.0 || score > 10.0) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST, "Score must be between 0 and 10");
         }
@@ -99,8 +99,8 @@ public class AssignmentService implements IAssignmentService {
     }
 
     @Override
-    public void deleteAssignmentSubmission(String submissionId) {
-        authorizationService.requireAssignmentSubmissionDeleteAllowed(submissionId);
+    public void deleteAssignmentSubmission(String currentUserId, String submissionId) {
+        authorizationService.requireAssignmentSubmissionDeleteAllowed(currentUserId, submissionId);
         assignmentSubmissionRepository.deleteById(submissionId);
     }
 

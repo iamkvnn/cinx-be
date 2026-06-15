@@ -5,6 +5,8 @@ import com.cinx.course.messaging.event.CourseContentPublishedEvent;
 import com.cinx.course.messaging.event.LessonChangedEvent;
 import com.cinx.course.messaging.event.QuizSyncEvent;
 import com.cinx.course.messaging.event.ScoringModeChangedEvent;
+import com.cinx.course.messaging.event.SubtitleGenerateRequestedEvent;
+import com.cinx.course.messaging.event.SubtitleTranslateRequestedEvent;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -76,6 +78,30 @@ public class CourseEventProducer {
                 eventType,
                 EXCHANGE,
                 routingKey,
+                event
+        );
+    }
+
+    public void publishSubtitleGenerateRequestedEvent(SubtitleGenerateRequestedEvent event) {
+        outboxEventPublisher.enqueue(
+                event.jobId(),
+                "SubtitleJob",
+                event.jobId(),
+                "SubtitleGenerateRequested",
+                EXCHANGE,
+                "course.subtitle.generate.requested",
+                event
+        );
+    }
+
+    public void publishSubtitleTranslateRequestedEvent(SubtitleTranslateRequestedEvent event) {
+        outboxEventPublisher.enqueue(
+                event.jobId(),
+                "SubtitleJob",
+                event.jobId(),
+                "SubtitleTranslateRequested",
+                EXCHANGE,
+                "course.subtitle.translate.requested",
                 event
         );
     }

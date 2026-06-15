@@ -29,7 +29,7 @@ public class VideoTrackingController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/video-tracking")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<PaginatedApiResponse<VideoLessonTrackingHistoryResponse>> getVideoLessonTrackingHistories(
             @PathVariable String courseId,
             @PathVariable String lessonId,
@@ -37,7 +37,8 @@ public class VideoTrackingController {
             @RequestParam(defaultValue = "10") int size,
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort) {
-        authorizationService.requireLessonInstructorOrAdmin(lessonId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireLessonInstructor(currentUserId, lessonId);
         return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(courseId, lessonId, page, size)));
     }
 

@@ -49,7 +49,7 @@ public class LearningNotificationListener {
                     .pushPayload(Map.of(
                             "userIds", List.of(event.getUserId()),
                             "title", title,
-                            "body", message,
+                            "message", message,
                             "data", Map.of("courseId", event.getCourseId())
                     ))
                     .build();
@@ -86,7 +86,7 @@ public class LearningNotificationListener {
                     .pushPayload(Map.of(
                             "userIds", List.of(event.getUserId()),
                             "title", title,
-                            "body", message,
+                            "message", message,
                             "data", buildDailyGoalPushData(event)
                     ))
                     .build();

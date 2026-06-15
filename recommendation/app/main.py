@@ -4,10 +4,12 @@ import logging
 
 from app.core.config import settings
 from app.core.database import ensure_schema
+from app.core.database import SessionLocal
 from app.core.logging import CorrelationMiddleware, configure_logging
 from app.api.recommendation import router as recommendation_router
 from app.api.learning_path import router as learning_path_router
 from app.messaging.rabbitmq_consumer import start_consumer
+from app.services.rag_index import rebuild_rag_index
 
 
 logger = logging.getLogger(__name__)
@@ -25,6 +27,11 @@ async def lifespan(app: FastAPI):
     configure_logging()
     logger.info("Starting recommendation service")
     ensure_schema()
+    db = SessionLocal()
+    try:
+        rebuild_rag_index(db)
+    finally:
+        db.close()
 
     import asyncio
     consumer_task = asyncio.create_task(start_consumer())

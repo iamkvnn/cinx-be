@@ -11,11 +11,11 @@ import java.time.LocalDate;
 public interface IStatisticsService {
     DashboardMetricsResponse getDashboardMetrics(Integer year, Integer month);
 
-    InstructorStatisticsResponse getInstructorOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
+    InstructorStatisticsResponse getInstructorOverview(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
     AdminOverviewResponse getAdminOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
-    CourseStatisticsResponse getCourseStatistics(String courseId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
+    CourseStatisticsResponse getCourseStatistics(String instructorId, String courseId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
     InstructorRevenueResponse getInstructorRevenueSeries(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 }

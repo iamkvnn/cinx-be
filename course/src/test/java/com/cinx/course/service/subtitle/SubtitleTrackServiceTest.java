@@ -61,7 +61,6 @@ class SubtitleTrackServiceTest {
         authenticate("instructor-1");
         VideoLesson videoLesson = videoLesson("lesson-1");
         when(videoLessonRepository.findByLessonId("lesson-1")).thenReturn(Optional.of(videoLesson));
-        when(lessonService.isLessonInstructor("lesson-1", "instructor-1")).thenReturn(true);
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode("lesson-1", "vi")).thenReturn(Optional.empty());
         when(subtitleTrackRepository.countByVideoLessonLessonId("lesson-1")).thenReturn(0L);
         when(s3Service.readTextObject("uploads/intro.vi.srt")).thenReturn("""
@@ -73,7 +72,7 @@ class SubtitleTrackServiceTest {
         when(subtitleTrackRepository.save(any(SubtitleTrack.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(subtitleTrackMapper.toDto(any(SubtitleTrack.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
-        SubtitleTrackResponse response = subtitleTrackService.createSubtitle("lesson-1", new CreateSubtitleTrackRequest(
+        SubtitleTrackResponse response = subtitleTrackService.createSubtitle("instructor-1", "course-1", "lesson-1", new CreateSubtitleTrackRequest(
                 "vi",
                 "Vietnamese",
                 "uploads/intro.vi.srt",
@@ -96,11 +95,10 @@ class SubtitleTrackServiceTest {
     void createSubtitle_rejectsDuplicateLanguage() {
         authenticate("instructor-1");
         when(videoLessonRepository.findByLessonId("lesson-1")).thenReturn(Optional.of(videoLesson("lesson-1")));
-        when(lessonService.isLessonInstructor("lesson-1", "instructor-1")).thenReturn(true);
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode("lesson-1", "en"))
                 .thenReturn(Optional.of(new SubtitleTrack()));
 
-        assertThatThrownBy(() -> subtitleTrackService.createSubtitle("lesson-1", new CreateSubtitleTrackRequest(
+        assertThatThrownBy(() -> subtitleTrackService.createSubtitle("instructor-1", "course-1", "lesson-1", new CreateSubtitleTrackRequest(
                 "en",
                 "English",
                 "uploads/intro.en.vtt",
@@ -134,6 +132,8 @@ class SubtitleTrackServiceTest {
                 track.getDisplayName(),
                 track.getFileUrl(),
                 track.getFileKey(),
+                track.getWordConfidenceFileKey(),
+                track.getWordConfidenceFileUrl(),
                 track.getFileName(),
                 track.getFileType(),
                 track.getFileSize(),

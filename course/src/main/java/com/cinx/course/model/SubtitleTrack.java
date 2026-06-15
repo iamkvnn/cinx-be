@@ -48,6 +48,10 @@ public class SubtitleTrack extends AuditableEntity {
 
     private String originalFileKey;
 
+    private String wordConfidenceFileKey;
+
+    private String wordConfidenceFileUrl;
+
     @Column(nullable = false)
     private String fileName;
 

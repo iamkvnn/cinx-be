@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateLessonRequest;
 import com.cinx.course.dto.request.UpdateLessonRequest;
 import com.cinx.course.dto.response.LessonResponse;
@@ -24,9 +25,10 @@ public class LessonController {
             @PathVariable String sectionId,
             @RequestBody CreateLessonRequest request
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lesson created successfully",
-                lessonService.createLesson(courseId, sectionId, request)
+                lessonService.createLesson(currentUserId, courseId, sectionId, request)
         ));
     }
 
@@ -38,9 +40,10 @@ public class LessonController {
             @PathVariable String lessonId,
             @RequestBody UpdateLessonRequest request
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(ApiResponse.success(
                 "Lesson updated successfully",
-                lessonService.updateLesson(courseId, sectionId, lessonId, request)
+                lessonService.updateLesson(currentUserId, courseId, sectionId, lessonId, request)
         ));
     }
 
@@ -51,7 +54,8 @@ public class LessonController {
             @PathVariable String sectionId,
             @PathVariable String lessonId
     ) {
-        lessonService.deleteLesson(courseId, sectionId, lessonId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        lessonService.deleteLesson(currentUserId, courseId, sectionId, lessonId);
         return ResponseEntity.ok(ApiResponse.success("Lesson deleted successfully", null));
     }
 }

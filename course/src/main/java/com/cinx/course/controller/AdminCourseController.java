@@ -6,10 +6,8 @@ import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.RejectCourseRequest;
-import com.cinx.course.dto.response.CourseCurriculumResponse;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.service.course.ICourseService;
-import com.cinx.course.service.curriculum.ICurriculumService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +22,6 @@ import org.springframework.web.bind.annotation.*;
 @PreAuthorize("hasRole('ADMIN')")
 public class AdminCourseController {
     private final ICourseService courseService;
-    private final ICurriculumService curriculumService;
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
@@ -54,42 +51,6 @@ public class AdminCourseController {
                 size,
                 sort);
         return ResponseEntity.ok(PaginationWrapper.wrap(courses));
-    }
-
-    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Course fetched successfully", courseService.getCourseById(courseId)));
-    }
-
-    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/draft")
-    public ResponseEntity<ApiResponse<CourseResponse>> getCourseDraft(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course draft fetched successfully",
-                courseService.getDraftCourseById(courseId)
-        ));
-    }
-
-    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/curriculum")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getCourseCurriculum(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course curriculum fetched successfully",
-                curriculumService.getPublishedSnapshotCurriculum(courseId)
-        ));
-    }
-
-    @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/draft/curriculum")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getDraftCurriculum(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course draft curriculum fetched successfully",
-                curriculumService.getDraftCurriculum(courseId)
-        ));
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))

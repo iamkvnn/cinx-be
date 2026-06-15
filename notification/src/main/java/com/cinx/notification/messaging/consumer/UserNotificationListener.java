@@ -47,7 +47,7 @@ public class UserNotificationListener {
                         .pushPayload(Map.of(
                                 "userIds", payload.get("userIds"),
                                 "title", payload.get("title"),
-                                "body", payload.get("message"),
+                                "message", payload.get("message"),
                                 "data", Map.of()
                         ))
                         .build();

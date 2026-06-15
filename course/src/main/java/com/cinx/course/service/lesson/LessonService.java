@@ -2,6 +2,7 @@ package com.cinx.course.service.lesson;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
+import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.consts.LessonType;
@@ -18,6 +19,7 @@ import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
+import com.cinx.course.service.course.ICourseAccessService;
 import com.cinx.course.service.course.ICourseDraftService;
 import com.cinx.course.service.section.ISectionService;
 import com.cinx.course.utils.OrderIndexUtils;
@@ -36,6 +38,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 @Service
 @RequiredArgsConstructor
@@ -46,6 +49,7 @@ public class LessonService implements ILessonService {
     private final ICourseDraftService courseDraftService;
     private final ISectionService sectionService;
     private final LessonMapper lessonMapper;
+    private final ICourseAccessService courseAccessService;
 
     @Override
     @Transactional(readOnly = true)
@@ -108,6 +112,39 @@ public class LessonService implements ILessonService {
         }
     }
 
+    @Override
+    @Transactional(readOnly = true)
+    public void ensureCanReadLessonContent(String currentUserId, String courseId, String lessonId, LessonType lessonType) {
+        Course course = courseAccessService.ensureReadableCourse(currentUserId, courseId);
+        Lesson lesson = lessonRepository.findReadableByCourseAndStableId(courseId, lessonId).stream()
+                .filter(candidate -> lessonType == null || candidate.getLessonType() == lessonType)
+                .findFirst()
+                .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
+
+        if (Boolean.TRUE.equals(lesson.getIsPreview())) {
+            return;
+        }
+
+        if (currentUserId == null) {
+            throw new ForbiddenException(ErrorCode.NOT_ENROLLED_IN_COURSE, "You must enroll in this course before viewing this lesson");
+        }
+        if (courseAccessService.isAdmin() || courseAccessService.isCourseOwner(currentUserId, course)) {
+            return;
+        }
+        if (!courseAccessService.isEnrolled(currentUserId, courseId)) {
+            throw new ForbiddenException(ErrorCode.NOT_ENROLLED_IN_COURSE, "You must enroll in this course before viewing this lesson");
+        }
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void ensureLessonInstructor(String currentUserId, String courseId, String lessonId, LessonType lessonType) {
+        ensureLessonBelongsToCourse(courseId, lessonId, lessonType);
+        if (!isLessonInstructor(lessonId, currentUserId)) {
+            throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "You do not have permission to manage this lesson");
+        }
+    }
+
     private Optional<Lesson> findEnrolledReadableLesson(String courseId, String lessonId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
@@ -123,7 +160,8 @@ public class LessonService implements ILessonService {
 
     @Override
     @Transactional
-    public LessonResponse createLesson(String courseId, String sectionId, CreateLessonRequest request) {
+    public LessonResponse createLesson(String currentUserId, String courseId, String sectionId, CreateLessonRequest request) {
+        ensureCourseInstructor(currentUserId, courseId);
         Section section = sectionService.editableSection(courseId, sectionId);
         String stableId = UUID.randomUUID().toString();
         List<String> prerequisiteIds = normalizePrerequisites(section.getDraft().getId(), stableId, request.prerequisiteIds());
@@ -132,27 +170,31 @@ public class LessonService implements ILessonService {
         lesson.setStableId(stableId);
         lesson.setOrderIndex(nextLessonOrderIndex(section.getId()));
         lesson.setPrerequisiteIds(new ArrayList<>(prerequisiteIds));
+        validatePreviewEligibility(lesson.getLessonType(), lesson.getIsPreview());
         lessonRepository.save(lesson);
         return lessonMapper.toResponse(lesson);
     }
 
     @Override
     @Transactional
-    public LessonResponse updateLesson(String courseId, String sectionId, String lessonId, UpdateLessonRequest request) {
+    public LessonResponse updateLesson(String currentUserId, String courseId, String sectionId, String lessonId, UpdateLessonRequest request) {
+        ensureCourseInstructor(currentUserId, courseId);
         Lesson lesson = getForUpdate(courseId, sectionId, lessonId, null);
         lessonMapper.partialUpdate(lesson, request);
         if (request.prerequisiteIds() != null) {
             lesson.setPrerequisiteIds(new ArrayList<>(normalizePrerequisites(lesson.getSection().getDraft().getId(), lesson.getStableId(), request.prerequisiteIds())));
         }
+        validatePreviewEligibility(lesson.getLessonType(), lesson.getIsPreview());
         lessonRepository.save(lesson);
         return lessonMapper.toResponse(lesson);
     }
 
     @Override
     @Transactional
-    public LessonPositionResponse moveLesson(String courseId, String lessonId, MoveLessonRequest request) {
+    public LessonPositionResponse moveLesson(String currentUserId, String courseId, String lessonId, MoveLessonRequest request) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        courseAccessService.ensureCurrentUserOwns(currentUserId, course);
         CourseDraft draft = courseDraftService.getOrCreateDraft(course);
         List<Section> draftSections = sectionRepository.findDraftByDraftForUpdate(draft.getId());
         Map<String, Section> sectionsByStableId = draftSections.stream()
@@ -165,7 +207,7 @@ public class LessonService implements ILessonService {
                 .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
         Section sourceSection = movedLesson.getSection();
 
-        List<String> affectedSectionIds = List.of(sourceSection, targetSection).stream()
+        List<String> affectedSectionIds = Stream.of(sourceSection, targetSection)
                 .map(Section::getId)
                 .distinct()
                 .toList();
@@ -217,7 +259,8 @@ public class LessonService implements ILessonService {
 
     @Override
     @Transactional
-    public void deleteLesson(String courseId, String sectionId, String lessonId) {
+    public void deleteLesson(String currentUserId, String courseId, String sectionId, String lessonId) {
+        ensureCourseInstructor(currentUserId, courseId);
         Lesson lesson = getForUpdate(courseId, sectionId, lessonId, null);
         lessonRepository.delete(lesson);
     }
@@ -237,6 +280,21 @@ public class LessonService implements ILessonService {
                 .filter(Objects::nonNull)
                 .max(Integer::compareTo)
                 .orElse(0) + OrderIndexUtils.ORDER_STEP;
+    }
+
+    private void ensureCourseInstructor(String currentUserId, String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        courseAccessService.ensureCurrentUserOwns(currentUserId, course);
+    }
+
+    private void validatePreviewEligibility(LessonType lessonType, Boolean isPreview) {
+        if (!Boolean.TRUE.equals(isPreview)) {
+            return;
+        }
+        if (lessonType != LessonType.ARTICLE && lessonType != LessonType.VIDEO) {
+            throw new BadRequestException(ErrorCode.LESSON_TYPE_INVALID, "Only article or video lessons can be marked as preview");
+        }
     }
 
     private List<String> normalizePrerequisites(String draftId, String targetStableId, List<String> prerequisiteIds) {

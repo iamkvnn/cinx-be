@@ -21,6 +21,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -60,20 +61,11 @@ public class CourseController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<ApiResponse<CourseResponse>> getCourseById(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseResponse>> getReadableCourseById(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Course fetched successfully", courseService.getPublishedCourseById(courseId))
+                new ApiResponse<>(true, "Course fetched successfully", courseService.getReadableCourseById(currentUserId, courseId))
         );
-    }
-
-    @Operation(summary = "Get enrolled course", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/enrolled")
-    public ResponseEntity<ApiResponse<CourseResponse>> getEnrolledCourseById(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course fetched successfully",
-                courseService.getEnrolledCourseByIdForCurrentUser(courseId)
-        ));
     }
 
     @Operation(summary = "Get my courses", security = @SecurityRequirement(name = "bearer-jwt"))
@@ -107,61 +99,33 @@ public class CourseController {
 
     @Operation(summary = "Get editable course draft", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{id}/draft")
-    public ResponseEntity<ApiResponse<CourseResponse>> getCourseDraft(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseResponse>> getEditableCourseDraft(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course draft fetched successfully",
-                courseService.getOwnedDraftCourseById(courseId)
-        ));
-    }
-
-    @Operation(summary = "Get owned published course snapshot", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/published")
-    public ResponseEntity<ApiResponse<CourseResponse>> getPublishedSnapshot(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course published snapshot fetched successfully",
-                courseService.getOwnedPublishedSnapshotCourseById(courseId)
+                courseService.getEditableDraftCourseById(currentUserId, courseId)
         ));
     }
 
     @GetMapping("/{id}/curriculum")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getPublishedCurriculum(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getReadableCurriculum(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course curriculum fetched successfully",
-                curriculumService.getPublishedCurriculum(courseId)
-        ));
-    }
-
-    @Operation(summary = "Get enrolled course curriculum", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/enrolled/curriculum")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getEnrolledCurriculum(@PathVariable("id") String courseId) {
-        courseService.getEnrolledCourseByIdForCurrentUser(courseId);
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course curriculum fetched successfully",
-                curriculumService.getEnrolledCurriculum(courseId)
+                curriculumService.getReadableCurriculum(currentUserId, courseId)
         ));
     }
 
     @Operation(summary = "Get editable course curriculum", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{id}/draft/curriculum")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getDraftCurriculum(@PathVariable("id") String courseId) {
+    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getEditableDraftCurriculum(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course draft curriculum fetched successfully",
-                curriculumService.getOwnedDraftCurriculum(courseId)
-        ));
-    }
-
-    @Operation(summary = "Get owned published course curriculum snapshot", security = @SecurityRequirement(name = "bearer-jwt"))
-    @GetMapping("/{id}/published/curriculum")
-    public ResponseEntity<ApiResponse<CourseCurriculumResponse>> getPublishedSnapshotCurriculum(@PathVariable("id") String courseId) {
-        return ResponseEntity.ok(new ApiResponse<>(
-                true,
-                "Course published curriculum snapshot fetched successfully",
-                curriculumService.getOwnedPublishedSnapshotCurriculum(courseId)
+                curriculumService.getEditableDraftCurriculum(currentUserId, courseId)
         ));
     }
 
@@ -186,61 +150,73 @@ public class CourseController {
             @PathVariable String lessonId,
             @Valid @RequestBody MoveLessonRequest request
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Lesson position updated successfully",
-                lessonService.moveLesson(id, lessonId, request)
+                lessonService.moveLesson(currentUserId, id, lessonId, request)
         ));
     }
 
     @GetMapping("/ids")
-    public ResponseEntity<ApiResponse<List<CourseResponse>>> getCourseById(@RequestParam("ids") List<String> courseIds) {
+    public ResponseEntity<ApiResponse<List<CourseResponse>>> getCoursesByIds(@RequestParam("ids") List<String> courseIds) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Course fetched successfully", courseService.getPublishedCourseByIds(courseIds))
+                new ApiResponse<>(true, "Course fetched successfully", courseService.getReadableCourseByIds(currentUserId, courseIds))
         );
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@RequestBody CreateCourseRequest request) {
+    @PreAuthorize("hasRole('INSTRUCTOR')")
+    public ResponseEntity<ApiResponse<CourseResponse>> createCourse(@Valid @RequestBody CreateCourseRequest request) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Course created successfully", courseService.createCourse(request))
+                new ApiResponse<>(true, "Course created successfully", courseService.createCourse(currentUserId, request))
         );
     }
 
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/{id}")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<CourseResponse>> updateCourse(@PathVariable("id") String courseId, @Valid @RequestBody UpdateCourseRequest request) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Course updated successfully", courseService.updateCourse(courseId, request))
+                new ApiResponse<>(true, "Course updated successfully", courseService.updateCourse(currentUserId, courseId, request))
         );
     }
 
     @Operation(summary = "Submit course for approval", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{id}/submit")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<CourseResponse>> submitCourse(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok().body(
-                new ApiResponse<>(true, "Course submitted successfully", courseService.submitCourse(courseId))
+                new ApiResponse<>(true, "Course submitted successfully", courseService.submitCourse(currentUserId, courseId))
         );
     }
 
     @Operation(summary = "Archive course", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{id}/archive")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<CourseResponse>> archiveCourse(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course archived successfully",
-                courseService.archiveCourse(courseId)
+                courseService.archiveCourse(currentUserId, courseId)
         ));
     }
 
     @Operation(summary = "Unarchive course", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{id}/unarchive")
+    @PreAuthorize("hasAnyRole('INSTRUCTOR', 'ADMIN')")
     public ResponseEntity<ApiResponse<CourseResponse>> unarchiveCourse(@PathVariable("id") String courseId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Course unarchived successfully",
-                courseService.unarchiveCourse(courseId)
+                courseService.unarchiveCourse(currentUserId, courseId)
         ));
     }
 

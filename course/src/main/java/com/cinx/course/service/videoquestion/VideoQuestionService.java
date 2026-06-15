@@ -3,7 +3,7 @@ package com.cinx.course.service.videoquestion;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.common.utils.AuthenticationUtil;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateVideoQuestionRequest;
 import com.cinx.course.dto.request.UpdateVideoQuestionRequest;
 import com.cinx.course.dto.response.VideoOptionResponse;
@@ -37,13 +37,13 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<VideoQuestionResponse> getQuestionsByLessonId(String lessonId) {
-        videoLessonRepository.findById(lessonId)
+    public List<VideoQuestionResponse> getQuestionsByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        videoLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Video lesson not found"));
         
         List<VideoQuestion> questions = videoQuestionRepository.findByVideoLessonLessonIdOrderByTimestampSecondsAsc(lessonId);
         
-        String currentUserId = AuthenticationUtil.extractUserId();
         boolean isInstructor = lessonService.isLessonInstructor(lessonId, currentUserId);
 
         if (isInstructor) {
@@ -66,12 +66,12 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional(readOnly = true)
-    public VideoQuestionResponse getQuestionById(String lessonId, String id) {
+    public VideoQuestionResponse getQuestionById(String currentUserId, String courseId, String lessonId, String id) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
         VideoQuestion question = videoQuestionRepository.findByIdAndVideoLessonLessonId(id, lessonId)
                 .orElseThrow(() -> new NotFoundException("Video question not found"));
 
         VideoQuestionResponse q = videoQuestionMapper.toDto(question);
-        String currentUserId = AuthenticationUtil.extractUserId();
         boolean isInstructor = lessonService.isLessonInstructor(lessonId, currentUserId);
         if (isInstructor) {
             return q;
@@ -89,8 +89,9 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional
-    public VideoQuestionResponse createQuestion(String lessonId, CreateVideoQuestionRequest request) {
-        VideoLesson videoLesson = videoLessonRepository.findById(lessonId)
+    public VideoQuestionResponse createQuestion(String currentUserId, String courseId, String lessonId, CreateVideoQuestionRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        VideoLesson videoLesson = videoLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Video lesson not found"));
 
         if (request.timestampSeconds() < 0 || request.timestampSeconds() > videoLesson.getDuration()) {
@@ -114,7 +115,8 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional
-    public VideoQuestionResponse updateQuestion(String lessonId, String id, UpdateVideoQuestionRequest request) {
+    public VideoQuestionResponse updateQuestion(String currentUserId, String courseId, String lessonId, String id, UpdateVideoQuestionRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
         VideoQuestion question = videoQuestionRepository.findByIdAndVideoLessonLessonId(id, lessonId)
                 .orElseThrow(() -> new NotFoundException("Video question not found"));
 
@@ -141,7 +143,8 @@ public class VideoQuestionService implements IVideoQuestionService {
 
     @Override
     @Transactional
-    public void deleteQuestion(String lessonId, String id) {
+    public void deleteQuestion(String currentUserId, String courseId, String lessonId, String id) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
         VideoQuestion question = videoQuestionRepository.findByIdAndVideoLessonLessonId(id, lessonId)
                 .orElseThrow(() -> new NotFoundException("Video question not found"));
         videoQuestionRepository.delete(question);
