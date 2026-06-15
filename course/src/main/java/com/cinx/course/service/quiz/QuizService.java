@@ -41,14 +41,14 @@ public class QuizService implements IQuizService {
     @Override
     @Transactional(readOnly = true)
     public QuizLessonResponse getQuizByLessonId(String currentUserId, String courseId, String lessonId) {
-        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.QUIZ);
         return getQuizOrThrow(lessonId);
     }
 
     @Override
     @Transactional(readOnly = true)
     public QuizLessonResponse getReadableQuizByLessonId(String currentUserId, String courseId, String lessonId) {
-        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.QUIZ);
         return getQuizOrThrow(lessonId);
     }
 
@@ -61,7 +61,7 @@ public class QuizService implements IQuizService {
     @Transactional
     @Override
     public void createQuiz(String currentUserId, String courseId, String lessonId, CreateQuizLessonRequest request) {
-        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.QUIZ);
         if (request.getQuestions().size() < request.getNumberOfQuestionPerQuizSession()) {
             throw new BadRequestException(ErrorCode.QUIZ_CONFIGURATION_INVALID,
                     "Number of questions must be >= numberOfQuestionPerQuizSession");
@@ -81,7 +81,7 @@ public class QuizService implements IQuizService {
     @Transactional
     @Override
     public void updateQuiz(String currentUserId, String courseId, String lessonId, UpdateQuizLessonRequest request) {
-        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.QUIZ);
         QuizLesson existing = getOrThrow(lessonId);
 
         boolean scoringModeChanged = request.getScoringMode() != null
@@ -109,7 +109,7 @@ public class QuizService implements IQuizService {
     @Transactional
     @Override
     public void syncQuiz(String currentUserId, String courseId, String lessonId, SyncQuizRequest request) {
-        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.QUIZ);
         QuizLesson existing = getOrThrow(lessonId);
 
         if (Boolean.TRUE.equals(request.triggerRegrade())) {

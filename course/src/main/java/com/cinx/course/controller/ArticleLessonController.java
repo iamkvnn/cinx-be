@@ -8,6 +8,7 @@ import com.cinx.course.dto.response.ArticleLessonResponse;
 import com.cinx.course.service.article.IArticleService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -32,7 +33,7 @@ public class ArticleLessonController {
     public ResponseEntity<ApiResponse<?>> createArticleLesson(
             @PathVariable String courseId,
             @PathVariable String lessonId,
-            @RequestBody CreateArticleLessonRequest request
+            @Valid @RequestBody CreateArticleLessonRequest request
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
         articleService.createArticle(currentUserId, courseId, lessonId, request);
@@ -44,7 +45,7 @@ public class ArticleLessonController {
     public ResponseEntity<ApiResponse<?>> updateArticleLesson(
             @PathVariable String courseId,
             @PathVariable String lessonId,
-            @RequestBody UpdateArticleLessonRequest request
+            @Valid @RequestBody UpdateArticleLessonRequest request
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
         articleService.updateArticle(currentUserId, courseId, lessonId, request);
