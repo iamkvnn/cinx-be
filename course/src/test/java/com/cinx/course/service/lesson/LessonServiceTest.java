@@ -1,6 +1,8 @@
 package com.cinx.course.service.lesson;
 
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ForbiddenException;
+import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.MoveLessonRequest;
 import com.cinx.course.dto.request.UpdateLessonRequest;
@@ -14,14 +16,18 @@ import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
+import com.cinx.course.service.course.ICourseAccessService;
 import com.cinx.course.service.course.ICourseDraftService;
 import com.cinx.course.service.section.ISectionService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.util.List;
 import java.util.Optional;
@@ -48,8 +54,94 @@ class LessonServiceTest {
     private ISectionService sectionService;
     @Mock
     private LessonMapper lessonMapper;
+    @Mock
+    private ICourseAccessService courseAccessService;
     @InjectMocks
     private LessonService lessonService;
+
+    @AfterEach
+    void clearSecurityContext() {
+        SecurityContextHolder.clearContext();
+    }
+
+    @Test
+    void ensureCanReadLessonContentAllowsPreviewLessonWithoutAuthentication() {
+        Section section = publishedSection(course(CourseStatus.PUBLISHED));
+        Lesson lesson = lesson("les-1", 1024, section);
+        lesson.setIsPreview(true);
+        when(courseAccessService.ensureReadableCourse(null, "course-1")).thenReturn(section.getCourse());
+        when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
+
+        lessonService.ensureCanReadLessonContent(null, "course-1", "les-1", LessonType.VIDEO);
+
+        verify(courseAccessService, never()).isEnrolled(any(), any());
+    }
+
+    @Test
+    void ensureCanReadLessonContentRejectsAnonymousNonPreviewLesson() {
+        Section section = publishedSection(course(CourseStatus.PUBLISHED));
+        Lesson lesson = lesson("les-1", 1024, section);
+        lesson.setIsPreview(false);
+        when(courseAccessService.ensureReadableCourse(null, "course-1")).thenReturn(section.getCourse());
+        when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
+
+        assertThatThrownBy(() -> lessonService.ensureCanReadLessonContent(null, "course-1", "les-1", LessonType.VIDEO))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
+    void ensureCanReadLessonContentAllowsEnrolledUserForNonPreviewLesson() {
+        authenticate("student-1");
+        Section section = publishedSection(course(CourseStatus.PUBLISHED));
+        Lesson lesson = lesson("les-1", 1024, section);
+        lesson.setIsPreview(false);
+        when(courseAccessService.ensureReadableCourse("student-1", "course-1")).thenReturn(section.getCourse());
+        when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
+        when(courseAccessService.isEnrolled("student-1", "course-1")).thenReturn(true);
+
+        lessonService.ensureCanReadLessonContent("student-1", "course-1", "les-1", LessonType.VIDEO);
+    }
+
+    @Test
+    void updateLessonRejectsPreviewForNonArticleOrVideoLesson() {
+        Section section = section("sec-1", draft(course()));
+        Lesson lesson = lesson("les-1", 1024, section);
+        lesson.setLessonType(LessonType.QUIZ);
+        lesson.setIsPreview(true);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(section.getDraft().getCourse()));
+        when(sectionService.editableSection("course-1", "sec-1")).thenReturn(section);
+        when(lessonRepository.findBySectionAndStableId(section.getId(), "les-1")).thenReturn(Optional.of(lesson));
+
+        assertThatThrownBy(() -> lessonService.updateLesson("inst-1", "course-1", "sec-1", "les-1", new UpdateLessonRequest(
+                null,
+                null,
+                true,
+                null
+        ))).isInstanceOf(BadRequestException.class);
+
+        verify(lessonRepository, never()).save(any());
+    }
+
+    @Test
+    void updateLessonAllowsAnyNumberOfPreviewVideoOrArticleLessons() {
+        Section section = section("sec-1", draft(course()));
+        Lesson lesson = lesson("les-1", 1024, section);
+        lesson.setIsPreview(true);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(section.getDraft().getCourse()));
+        when(sectionService.editableSection("course-1", "sec-1")).thenReturn(section);
+        when(lessonRepository.findBySectionAndStableId(section.getId(), "les-1")).thenReturn(Optional.of(lesson));
+        when(lessonMapper.toResponse(lesson)).thenReturn(response(lesson));
+
+        LessonResponse response = lessonService.updateLesson("inst-1", "course-1", "sec-1", "les-1", new UpdateLessonRequest(
+                null,
+                null,
+                true,
+                null
+        ));
+
+        assertThat(response.id()).isEqualTo("les-1");
+        verify(lessonRepository).save(lesson);
+    }
 
     @Test
     void moveLesson_updatesOnlyMovedLessonInsideSectionWhenSparseGapExists() {
@@ -62,6 +154,7 @@ class LessonServiceTest {
         mockDraft(course, draft, List.of(section), second, List.of(first, second, third));
 
         LessonPositionResponse response = lessonService.moveLesson(
+                "inst-1",
                 "course-1",
                 "les-2",
                 new MoveLessonRequest("sec-1", "les-3", null)
@@ -88,7 +181,7 @@ class LessonServiceTest {
         Lesson third = lesson("les-3", 1024, secondSection);
         mockDraft(course, draft, List.of(firstSection, secondSection), second, List.of(first, second, third));
 
-        lessonService.moveLesson("course-1", "les-2", new MoveLessonRequest("sec-2", "les-3", null));
+        lessonService.moveLesson("inst-1", "course-1", "les-2", new MoveLessonRequest("sec-2", "les-3", null));
 
         Lesson saved = capturedSavedLesson();
         assertThat(saved).isSameAs(second);
@@ -106,7 +199,7 @@ class LessonServiceTest {
         Lesson lesson = lesson("les-1", 2048, firstSection);
         mockDraft(course, draft, List.of(firstSection, secondSection), lesson, List.of(lesson));
 
-        lessonService.moveLesson("course-1", "les-1", new MoveLessonRequest("sec-2", null, null));
+        lessonService.moveLesson("inst-1", "course-1", "les-1", new MoveLessonRequest("sec-2", null, null));
 
         Lesson saved = capturedSavedLesson();
         assertThat(saved).isSameAs(lesson);
@@ -126,6 +219,7 @@ class LessonServiceTest {
         mockDraft(course, draft, List.of(section), second, List.of(first, second, third));
 
         LessonPositionResponse response = lessonService.moveLesson(
+                "inst-1",
                 "course-1",
                 "les-2",
                 new MoveLessonRequest("sec-1", "les-1", "les-3")
@@ -146,7 +240,7 @@ class LessonServiceTest {
         Lesson third = lesson("les-3", 3, section);
         mockDraft(course, draft, List.of(section), second, List.of(first, second, third));
 
-        lessonService.moveLesson("course-1", "les-2", new MoveLessonRequest("sec-1", null, "les-1"));
+        lessonService.moveLesson("inst-1", "course-1", "les-2", new MoveLessonRequest("sec-1", null, "les-1"));
 
         assertThat(capturedSavedLessons()).containsExactly(second, first, third);
         assertThat(second.getOrderIndex()).isEqualTo(1024);
@@ -163,6 +257,7 @@ class LessonServiceTest {
         mockDraftSections(course, draft, List.of(section));
 
         assertThatThrownBy(() -> lessonService.moveLesson(
+                "inst-1",
                 "course-1",
                 "les-1",
                 new MoveLessonRequest("sec-missing", null, null)
@@ -185,6 +280,7 @@ class LessonServiceTest {
         mockDraft(course, draft, List.of(firstSection, secondSection), second, List.of(first, second, third));
 
         assertThatThrownBy(() -> lessonService.moveLesson(
+                "inst-1",
                 "course-1",
                 "les-2",
                 new MoveLessonRequest("sec-2", "les-1", null)
@@ -204,6 +300,7 @@ class LessonServiceTest {
         mockDraft(course, draft, List.of(section), second, List.of(first, second));
 
         assertThatThrownBy(() -> lessonService.moveLesson(
+                "inst-1",
                 "course-1",
                 "les-2",
                 new MoveLessonRequest("sec-1", "les-2", null)
@@ -219,12 +316,13 @@ class LessonServiceTest {
         Section secondSection = section("sec-2", firstSection.getDraft());
         Lesson first = lesson("les-1", 1024, firstSection);
         Lesson second = lesson("les-2", 1024, secondSection);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(firstSection.getDraft().getCourse()));
         when(sectionService.editableSection("course-1", "sec-1")).thenReturn(firstSection);
         when(lessonRepository.findBySectionAndStableId(firstSection.getId(), "les-1")).thenReturn(Optional.of(first));
         when(lessonRepository.findByDraft("draft-1")).thenReturn(List.of(first, second));
         when(lessonMapper.toResponse(first)).thenReturn(response(first));
 
-        lessonService.updateLesson("course-1", "sec-1", "les-1", new UpdateLessonRequest(
+        lessonService.updateLesson("inst-1", "course-1", "sec-1", "les-1", new UpdateLessonRequest(
                 null,
                 null,
                 null,
@@ -242,11 +340,12 @@ class LessonServiceTest {
         Lesson first = lesson("les-1", 1024, firstSection);
         Lesson second = lesson("les-2", 1024, secondSection);
         second.setPrerequisiteIds(List.of("les-1"));
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(firstSection.getDraft().getCourse()));
         when(sectionService.editableSection("course-1", "sec-1")).thenReturn(firstSection);
         when(lessonRepository.findBySectionAndStableId(firstSection.getId(), "les-1")).thenReturn(Optional.of(first));
         when(lessonRepository.findByDraft("draft-1")).thenReturn(List.of(first, second));
 
-        assertThatThrownBy(() -> lessonService.updateLesson("course-1", "sec-1", "les-1", new UpdateLessonRequest(
+        assertThatThrownBy(() -> lessonService.updateLesson("inst-1", "course-1", "sec-1", "les-1", new UpdateLessonRequest(
                 null,
                 null,
                 null,
@@ -290,6 +389,13 @@ class LessonServiceTest {
         return course;
     }
 
+    private Course course(CourseStatus status) {
+        Course course = course();
+        course.setStatus(status);
+        course.setInstructorId("inst-1");
+        return course;
+    }
+
     private CourseDraft draft(Course course) {
         CourseDraft draft = new CourseDraft();
         draft.setId("draft-1");
@@ -303,6 +409,20 @@ class LessonServiceTest {
         section.setStableId(stableId);
         section.setDraft(draft);
         return section;
+    }
+
+    private Section publishedSection(Course course) {
+        Section section = new Section();
+        section.setId("sec-1-entity");
+        section.setStableId("sec-1");
+        section.setCourse(course);
+        return section;
+    }
+
+    private void authenticate(String userId) {
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
+        authentication.setAuthenticated(true);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
     }
 
     private Lesson lesson(String stableId, Integer orderIndex, Section section) {

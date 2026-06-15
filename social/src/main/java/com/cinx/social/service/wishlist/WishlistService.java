@@ -1,6 +1,5 @@
 package com.cinx.social.service.wishlist;
 
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.social.dto.request.AddToWishlistRequest;
 import com.cinx.social.dto.response.WishlistItemResponse;
 import com.cinx.social.mapper.WishlistItemMapper;
@@ -22,16 +21,14 @@ public class WishlistService implements IWishlistService{
     private final WishlistEventProducer wishlistEventProducer;
 
     @Override
-    public List<WishlistItemResponse> getWishlistByUserId() {
-        String userId = AuthenticationUtil.extractUserId();
+    public List<WishlistItemResponse> getWishlistByUserId(String userId) {
         return wishlistItemRepository.findByUserId(userId).stream()
                 .map(wishlistItemMapper::toDto)
                 .toList();
     }
 
     @Override
-    public void addToWishlist(AddToWishlistRequest request) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void addToWishlist(String userId, AddToWishlistRequest request) {
         wishlistItemRepository.save(WishlistItem.builder()
                 .userId(userId)
                 .courseId(request.courseId())
@@ -41,8 +38,7 @@ public class WishlistService implements IWishlistService{
 
     @Transactional
     @Override
-    public void removeFromWishlist(String courseId) {
-        String userId = AuthenticationUtil.extractUserId();
+    public void removeFromWishlist(String userId, String courseId) {
         wishlistItemRepository.deleteByUserIdAndCourseId(userId, courseId);
         wishlistEventProducer.publishWishlistRemovedEvent(new WishlistEvent(userId, courseId, false));
     }

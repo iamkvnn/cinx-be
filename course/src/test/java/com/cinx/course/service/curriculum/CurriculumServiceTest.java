@@ -13,11 +13,13 @@ import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
+import com.cinx.course.service.course.ICourseAccessService;
 import com.cinx.course.service.course.ICourseDraftService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.security.authentication.TestingAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
@@ -42,6 +44,8 @@ class CurriculumServiceTest {
     @Mock
     private ICourseDraftService courseDraftService;
     @Mock
+    private ICourseAccessService courseAccessService;
+    @Mock
     private LessonMapper lessonMapper;
     @InjectMocks
     private CurriculumService curriculumService;
@@ -52,18 +56,18 @@ class CurriculumServiceTest {
     }
 
     @Test
-    void getPublishedCurriculumReturnsSectionsWithNestedLessons() {
+    void getReadableCurriculumReturnsSectionsWithNestedLessons() {
         Course course = course(true);
         Section firstSection = section("sec-1", 1024);
         Section secondSection = section("sec-2", 2048);
         Lesson firstLesson = lesson("les-1", 1024, firstSection);
         Lesson secondLesson = lesson("les-2", 1024, secondSection);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureReadableCourse(null, "course-1")).thenReturn(course);
         when(sectionRepository.findPublishedByCourse("course-1")).thenReturn(List.of(firstSection, secondSection));
         when(lessonRepository.findPublishedByCourse("course-1")).thenReturn(List.of(firstLesson, secondLesson));
         when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
-        CourseCurriculumResponse response = curriculumService.getPublishedCurriculum("course-1");
+        CourseCurriculumResponse response = curriculumService.getReadableCurriculum(null, "course-1");
 
         assertThat(response.courseId()).isEqualTo("course-1");
         assertThat(response.sections()).extracting("id").containsExactly("sec-1", "sec-2");
@@ -72,8 +76,10 @@ class CurriculumServiceTest {
     }
 
     @Test
-    void getDraftCurriculumUsesDraftWhenPresent() {
+    void getEditableDraftCurriculumUsesDraftWhenPresent() {
         Course course = course(true);
+        course.setInstructorId("inst-1");
+        authenticate("inst-1");
         CourseDraft draft = new CourseDraft();
         draft.setId("draft-1");
         draft.setCourse(course);
@@ -85,55 +91,83 @@ class CurriculumServiceTest {
         when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(lesson));
         when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
-        CourseCurriculumResponse response = curriculumService.getDraftCurriculum("course-1");
+        CourseCurriculumResponse response = curriculumService.getEditableDraftCurriculum("inst-1", "course-1");
 
         assertThat(response.sections()).extracting("id").containsExactly("sec-draft");
         assertThat(response.sections().getFirst().lessons()).extracting(LessonResponse::id).containsExactly("les-draft");
     }
 
     @Test
-    void getPublishedCurriculumRejectsUnpublishedCourse() {
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course(false)));
+    void getReadableCurriculumRejectsUnpublishedCourse() {
+        when(courseAccessService.ensureReadableCourse(null, "course-1"))
+                .thenThrow(new NotFoundException("Course not found with id: course-1"));
 
-        assertThatThrownBy(() -> curriculumService.getPublishedCurriculum("course-1"))
+        assertThatThrownBy(() -> curriculumService.getReadableCurriculum(null, "course-1"))
                 .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void getPublishedSnapshotCurriculumAllowsArchivedCourse() {
-        Course course = course(CourseStatus.ARCHIVED);
-        Section section = section("sec-1", 1024);
-        Lesson lesson = lesson("les-1", 1024, section);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
-        when(sectionRepository.findPublishedByCourse("course-1")).thenReturn(List.of(section));
-        when(lessonRepository.findPublishedByCourse("course-1")).thenReturn(List.of(lesson));
-        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+    void getReadableCurriculumRejectsArchivedCourseForAnonymousUser() {
+        when(courseAccessService.ensureReadableCourse(null, "course-1"))
+                .thenThrow(new NotFoundException("Course not found with id: course-1"));
 
-        CourseCurriculumResponse response = curriculumService.getPublishedSnapshotCurriculum("course-1");
-
-        assertThat(response.sections()).extracting("id").containsExactly("sec-1");
-        assertThat(response.sections().getFirst().lessons()).extracting(LessonResponse::id).containsExactly("les-1");
+        assertThatThrownBy(() -> curriculumService.getReadableCurriculum(null, "course-1"))
+                .isInstanceOf(NotFoundException.class);
     }
 
     @Test
-    void getOwnedPublishedSnapshotCurriculumAllowsArchivedCourse() {
+    void getReadableCurriculumAllowsArchivedCourseForOwner() {
         authenticate("inst-1");
         Course course = course(CourseStatus.ARCHIVED);
         course.setInstructorId("inst-1");
         Section section = section("sec-1", 1024);
         Lesson lesson = lesson("les-1", 1024, section);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureReadableCourse("inst-1", "course-1")).thenReturn(course);
         when(sectionRepository.findPublishedByCourse("course-1")).thenReturn(List.of(section));
         when(lessonRepository.findPublishedByCourse("course-1")).thenReturn(List.of(lesson));
         when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
-        CourseCurriculumResponse response = curriculumService.getOwnedPublishedSnapshotCurriculum("course-1");
+        CourseCurriculumResponse response = curriculumService.getReadableCurriculum("inst-1", "course-1");
 
         assertThat(response.sections()).extracting("id").containsExactly("sec-1");
     }
 
     @Test
-    void getOwnedDraftCurriculumReturnsDraftForArchivedCourseWhenDraftExists() {
+    void getReadableCurriculumAllowsArchivedCourseForAdmin() {
+        authenticateAdmin("admin-1");
+        Course course = course(CourseStatus.ARCHIVED);
+        course.setInstructorId("inst-1");
+        Section section = section("sec-1", 1024);
+        Lesson lesson = lesson("les-1", 1024, section);
+        when(courseAccessService.ensureReadableCourse("admin-1", "course-1")).thenReturn(course);
+        when(sectionRepository.findPublishedByCourse("course-1")).thenReturn(List.of(section));
+        when(lessonRepository.findPublishedByCourse("course-1")).thenReturn(List.of(lesson));
+        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+
+        CourseCurriculumResponse response = curriculumService.getReadableCurriculum("admin-1", "course-1");
+
+        assertThat(response.sections()).extracting("id").containsExactly("sec-1");
+    }
+
+    @Test
+    void getReadableCurriculumAllowsArchivedCourseForEnrolledUser() {
+        authenticate("student-1");
+        Course course = course(CourseStatus.ARCHIVED);
+        course.setInstructorId("inst-1");
+        Section section = section("sec-1", 1024);
+        Lesson lesson = lesson("les-1", 1024, section);
+        when(courseAccessService.ensureReadableCourse("student-1", "course-1")).thenReturn(course);
+        when(sectionRepository.findPublishedByCourse("course-1")).thenReturn(List.of(section));
+        when(lessonRepository.findPublishedByCourse("course-1")).thenReturn(List.of(lesson));
+        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+
+        CourseCurriculumResponse response = curriculumService.getReadableCurriculum("student-1", "course-1");
+
+        assertThat(response.sections()).extracting("id").containsExactly("sec-1");
+    }
+
+    @Test
+    void getEditableDraftCurriculumReturnsDraftForArchivedCourseWhenDraftExists() {
         authenticate("inst-1");
         Course course = course(CourseStatus.ARCHIVED);
         course.setInstructorId("inst-1");
@@ -148,31 +182,56 @@ class CurriculumServiceTest {
         when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftLesson));
         when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
-        CourseCurriculumResponse response = curriculumService.getOwnedDraftCurriculum("course-1");
+        CourseCurriculumResponse response = curriculumService.getEditableDraftCurriculum("inst-1", "course-1");
 
         assertThat(response.sections()).extracting("id").containsExactly("sec-draft");
         assertThat(response.sections().getFirst().lessons()).extracting(LessonResponse::id).containsExactly("les-draft");
     }
 
     @Test
-    void getDraftCurriculumReturnsEmptyCurriculumForFirstTimeDraft() {
+    void getEditableDraftCurriculumAllowsAdminWhenDraftExists() {
+        authenticateAdmin("admin-1");
+        Course course = course(CourseStatus.PUBLISHED);
+        course.setInstructorId("inst-1");
+        CourseDraft draft = new CourseDraft();
+        draft.setId("draft-1");
+        draft.setCourse(course);
+        Section draftSection = section("sec-draft", 1024);
+        Lesson draftLesson = lesson("les-draft", 1024, draftSection);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
+        when(sectionRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftSection));
+        when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftLesson));
+        when(lessonMapper.toResponse(any(Lesson.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
+
+        CourseCurriculumResponse response = curriculumService.getEditableDraftCurriculum("admin-1", "course-1");
+
+        assertThat(response.sections()).extracting("id").containsExactly("sec-draft");
+    }
+
+    @Test
+    void getEditableDraftCurriculumReturnsEmptyCurriculumForFirstTimeDraft() {
         Course course = course(CourseStatus.DRAFT);
+        course.setInstructorId("inst-1");
+        authenticate("inst-1");
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
 
-        CourseCurriculumResponse response = curriculumService.getDraftCurriculum("course-1");
+        CourseCurriculumResponse response = curriculumService.getEditableDraftCurriculum("inst-1", "course-1");
 
         assertThat(response.courseId()).isEqualTo("course-1");
         assertThat(response.sections()).isEmpty();
     }
 
     @Test
-    void getDraftCurriculumRejectsPublishedCourseWithoutDraft() {
+    void getEditableDraftCurriculumRejectsPublishedCourseWithoutDraft() {
         Course course = course(CourseStatus.PUBLISHED);
+        course.setInstructorId("inst-1");
+        authenticate("inst-1");
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
 
-        assertThatThrownBy(() -> curriculumService.getDraftCurriculum("course-1"))
+        assertThatThrownBy(() -> curriculumService.getEditableDraftCurriculum("inst-1", "course-1"))
                 .isInstanceOf(NotFoundException.class);
     }
 
@@ -188,7 +247,17 @@ class CurriculumServiceTest {
     }
 
     private void authenticate(String userId) {
-        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(userId, null));
+        TestingAuthenticationToken authentication = new TestingAuthenticationToken(userId, null);
+        authentication.setAuthenticated(true);
+        SecurityContextHolder.getContext().setAuthentication(authentication);
+    }
+
+    private void authenticateAdmin(String userId) {
+        SecurityContextHolder.getContext().setAuthentication(new TestingAuthenticationToken(
+                userId,
+                null,
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        ));
     }
 
     private Section section(String stableId, Integer orderIndex) {

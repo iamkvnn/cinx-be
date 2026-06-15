@@ -8,13 +8,13 @@ import com.cinx.course.dto.response.SubtitleJobResponse;
 import java.util.List;
 
 public interface ISubtitleJobService {
-    SubtitleJobResponse createDefaultSubtitleJob(String courseId, String lessonId, GenerateDefaultSubtitleJobRequest request);
+    SubtitleJobResponse createDefaultSubtitleJob(String currentUserId, String courseId, String lessonId, GenerateDefaultSubtitleJobRequest request);
 
-    List<SubtitleJobResponse> createTranslationJobs(String courseId, String lessonId, TranslateSubtitleJobRequest request);
+    List<SubtitleJobResponse> createTranslationJobs(String currentUserId, String courseId, String lessonId, TranslateSubtitleJobRequest request);
 
-    List<SubtitleJobResponse> getJobsByLessonId(String courseId, String lessonId);
+    List<SubtitleJobResponse> getJobsByLessonId(String currentUserId, String courseId, String lessonId);
 
-    SubtitleJobResponse getJobById(String courseId, String lessonId, String jobId);
+    SubtitleJobResponse getJobById(String currentUserId, String courseId, String lessonId, String jobId);
 
     void markProcessing(String jobId, Integer progressPercent);
 

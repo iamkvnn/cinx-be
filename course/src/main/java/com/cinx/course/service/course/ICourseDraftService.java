@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface ICourseDraftService {
     Optional<CourseDraft> findDraft(Course course);
     CourseDraft getOrCreateDraft(Course course);
+    CourseDraft createDraftFromCourse(Course course);
     CourseDraft updateDraft(Course course, UpdateCourseRequest request, Category category, Long discountRate);
     List<LessonChangedEvent> approveDraft(Course course);
 }

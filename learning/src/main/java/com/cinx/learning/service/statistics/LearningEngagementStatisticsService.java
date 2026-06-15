@@ -2,7 +2,6 @@ package com.cinx.learning.service.statistics;
 
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.learning.dto.response.CourseResponse;
 import com.cinx.learning.dto.response.CourseEngagementOverviewResponse;
 import com.cinx.learning.dto.response.LearningActivityByTimeResponse;
@@ -32,9 +31,8 @@ public class LearningEngagementStatisticsService implements ILearningEngagementS
 
     @Override
     @Transactional(readOnly = true)
-    public CourseEngagementOverviewResponse getInstructorCourseEngagement(String courseId, LearningActivityGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
+    public CourseEngagementOverviewResponse getInstructorCourseEngagement(String currentUserId, String courseId, LearningActivityGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
         CourseResponse course = courseService.getCourseById(courseId).data();
-        String currentUserId = AuthenticationUtil.extractUserId();
         if (course.instructor() == null || !currentUserId.equals(course.instructor().id())) {
             throw new BadRequestException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "Only the course instructor can view this engagement overview");
         }

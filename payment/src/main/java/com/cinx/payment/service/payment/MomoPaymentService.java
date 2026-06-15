@@ -3,7 +3,6 @@ package com.cinx.payment.service.payment;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.payment.config.MomoPaymentConfig;
 import com.cinx.payment.consts.PaymentMethod;
 import com.cinx.payment.consts.PaymentStatus;
@@ -35,9 +34,6 @@ public class MomoPaymentService extends PaymentTemplate {
     private final MomoPaymentConfig momoConfig;
     private final EnrollmentService enrollmentService;
     private final PaymentMapper paymentMapper;
-
-    @Value("${feBaseUrl}")
-    private String feBaseUrl;
 
     @Value("${MoMo.returnUrl}")
     private String returnUrlEnv;
@@ -80,9 +76,9 @@ public class MomoPaymentService extends PaymentTemplate {
     }
 
     @Override
-    public String getPaymentUrl(String orderId) {
-        String userId = AuthenticationUtil.extractUserId();
+    public String getPaymentUrl(String userId, String orderId) {
         OrderResponse order = enrollmentService.getOrderById(orderId).data();
+        ensureOrderPayableByCurrentUser(order, userId);
         MomoPayment momoPayment = momoPaymentRepository
                 .findByOrderId(orderId)
                 .orElseGet(() -> createPayment(order));
@@ -96,7 +92,7 @@ public class MomoPaymentService extends PaymentTemplate {
         MomoPaymentRequest request;
         try {
             request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),
-                        momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_CC, momoPayment.getRequestId());
+                        momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM, momoPayment.getRequestId());
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException(e);
         }
@@ -137,7 +133,11 @@ public class MomoPaymentService extends PaymentTemplate {
     }
 
     @Override
-    public PaymentResponse cancelPayment(String orderId) {
+    public PaymentResponse cancelPayment(String userId, String orderId) {
+            OrderResponse order = enrollmentService.getOrderById(orderId).data();
+            if (userId != null) {
+                ensureOrderPayableByCurrentUser(order, userId);
+            }
             Optional<MomoPayment> opt = momoPaymentRepository.findByOrderId(orderId);
             if (opt.isEmpty()) {
                 return null;
@@ -148,5 +148,17 @@ public class MomoPaymentService extends PaymentTemplate {
             }
             payment.setStatus(PaymentStatus.CANCELLED);
             return paymentMapper.toDto(momoPaymentRepository.save(payment));
+    }
+
+    private void ensureOrderPayableByCurrentUser(OrderResponse order, String userId) {
+        if (order == null) {
+            throw new NotFoundException("Order not found");
+        }
+        if (!Objects.equals(order.userId(), userId)) {
+            throw new BadRequestException(ErrorCode.NOT_RESOURCE_OWNER, "You are not allowed to pay this order");
+        }
+        if (order.paymentMethod() != PaymentMethod.MOMO) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Order is not configured for MOMO payment");
+        }
     }
 }

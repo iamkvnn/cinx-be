@@ -7,8 +7,10 @@ import com.cinx.enrollment.dto.response.OrderResponse;
 import org.springframework.data.domain.Page;
 
 public interface IOrderService {
-    Page<OrderDetailResponse> getOrdersByUserId(int page, int size, String query, String sort);
-    OrderDetailResponse getOrderById(String orderId);
-    OrderResponse createOrder(CreateOrderRequest request);
+    Page<OrderDetailResponse> getOrdersByUserId(String userId, int page, int size, String query, String sort);
+    OrderDetailResponse getOrderById(String userId, String orderId);
+    OrderDetailResponse getInternalOrderById(String orderId);
+    OrderResponse createOrder(String userId, CreateOrderRequest request);
     OrderDetailResponse updateOrderStatus(String orderId, OrderStatus status);
+    OrderDetailResponse cancelOrder(String userId, String orderId);
 }

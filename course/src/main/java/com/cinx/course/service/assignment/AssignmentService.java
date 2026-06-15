@@ -27,16 +27,16 @@ public class AssignmentService implements IAssignmentService {
     private String cdnUrl;
 
     @Override
-    public AssignmentLessonResponse getAssignmentByLessonId(String courseId, String lessonId) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
+    public AssignmentLessonResponse getAssignmentByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.ASSIGNMENT);
         return assignmentLessonRepository.findByLessonId(lessonId)
                 .map(assignmentMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Assignment not found for lessonId: " + lessonId));
     }
 
     @Override
-    public void createAssignment(String courseId, String lessonId, CreateAssignmentLessonRequest request) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
+    public void createAssignment(String currentUserId, String courseId, String lessonId, CreateAssignmentLessonRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ASSIGNMENT);
         assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Assignment already exists for lessonId: " + lessonId);
         },() -> {
@@ -53,8 +53,8 @@ public class AssignmentService implements IAssignmentService {
     }
 
     @Override
-    public void updateAssignment(String courseId, String lessonId, UpdateAssignmentLessonRequest request) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ASSIGNMENT);
+    public void updateAssignment(String currentUserId, String courseId, String lessonId, UpdateAssignmentLessonRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ASSIGNMENT);
         assignmentLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             assignmentMapper.partialUpdate(existing, request);
             if (existing.getAttachments() != null && !existing.getAttachments().isEmpty()) {

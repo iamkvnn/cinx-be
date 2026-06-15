@@ -8,10 +8,13 @@ public class AuthenticationUtil {
 
     public static String extractUserId() {
         Authentication authentication = getAuthentication();
-        if (authentication == null) {
-            return null;
+        if (authentication != null
+                && authentication.isAuthenticated()
+                && authentication.getName() != null
+                && !"anonymousUser".equals(authentication.getName())) {
+            return authentication.getName();
         }
-        return authentication.getName();
+        return null;
     }
 
     public static String extractJwt() {

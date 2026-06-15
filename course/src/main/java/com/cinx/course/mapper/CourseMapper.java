@@ -83,6 +83,7 @@ public interface CourseMapper {
     void copyDraftToCourse(CourseDraft draft, @MappingTarget Course course);
 
     @Mapping(target = "instructor", source = "instructor")
+    @Mapping(target = "instructor.id", source = "instructor.userId")
     CourseResponse toResponse(Course course, UserDto instructor);
 
     @Mapping(target = "id", source = "course.id")
@@ -90,6 +91,7 @@ public interface CourseMapper {
     @Mapping(target = "description", source = "draft.description")
     @Mapping(target = "category", source = "draft.category")
     @Mapping(target = "instructor", source = "instructor")
+    @Mapping(target = "instructor.id", source = "instructor.userId")
     @Mapping(target = "images", source = "course.images")
     @Mapping(target = "price", source = "draft.price")
     @Mapping(target = "discountedPrice", source = "draft.discountedPrice")

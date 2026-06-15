@@ -9,7 +9,9 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
+import jakarta.validation.Valid;
 
 import java.util.List;
 
@@ -28,7 +30,8 @@ public class CategoryController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<?>> createCategory(@RequestBody CreateCategoryRequest request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<?>> createCategory(@Valid @RequestBody CreateCategoryRequest request) {
         categoryService.createCategory(request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
@@ -37,7 +40,8 @@ public class CategoryController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/{id}")
-    public ResponseEntity<ApiResponse<?>> updateCategory(@PathVariable String id, @RequestBody UpdateCategoryRequest request) {
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<?>> updateCategory(@PathVariable String id, @Valid @RequestBody UpdateCategoryRequest request) {
         categoryService.updateCategory(id, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)

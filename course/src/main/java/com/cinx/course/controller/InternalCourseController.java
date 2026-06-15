@@ -32,26 +32,19 @@ public class InternalCourseController {
     private final IVideoQuestionService videoQuestionService;
 
     @GetMapping("/courses/{id}")
-    public ApiResponse<CourseResponse> getCourseById(@PathVariable String id) {
-        return new ApiResponse<>(true, "Course fetched successfully", courseService.getPublishedCourseById(id));
-    }
-
-    @GetMapping("/courses/enrolled/{id}")
-    public ApiResponse<CourseResponse> getEnrolledCourseById(@PathVariable String id) {
-        return new ApiResponse<>(true, "Course fetched successfully", courseService.getEnrolledCourseById(id));
+    public ApiResponse<CourseResponse> getReadableCourseById(
+            @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
+            @PathVariable String id
+    ) {
+        return new ApiResponse<>(true, "Course fetched successfully", courseService.getReadableCourseById(currentUserId, id));
     }
 
     @GetMapping("/courses/{id}/lessons")
     public ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id) {
-        return new ApiResponse<>(true, "Course fetched successfully", lessonService.getLessonIdsByCourseId(id));
-    }
-
-    @GetMapping("/courses/enrolled/{id}/lessons")
-    public ApiResponse<List<String>> getEnrolledCourseLessonIdsByCourseId(@PathVariable String id) {
         return new ApiResponse<>(true, "Course fetched successfully", lessonService.getEnrolledLessonIdsByCourseId(id));
     }
 
-    @GetMapping("/courses/enrolled/{courseId}/lessons/{lessonId}")
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}")
     public ApiResponse<LessonResponse> getEnrolledLessonById(
             @PathVariable String courseId,
             @PathVariable String lessonId
@@ -68,23 +61,19 @@ public class InternalCourseController {
     }
 
     @GetMapping("/courses/{id}/curriculum")
-    public ApiResponse<CourseCurriculumResponse> getCourseCurriculum(@PathVariable String id) {
-        return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getPublishedCurriculum(id));
-    }
-
-    @GetMapping("/courses/enrolled/{id}/curriculum")
-    public ApiResponse<CourseCurriculumResponse> getEnrolledCourseCurriculum(@PathVariable String id) {
-        return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getEnrolledCurriculum(id));
+    public ApiResponse<CourseCurriculumResponse> getCourseCurriculum(
+            @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
+            @PathVariable String id
+    ) {
+        return new ApiResponse<>(true, "Course curriculum fetched successfully", curriculumService.getReadableCurriculum(currentUserId, id));
     }
 
     @GetMapping("/courses/ids")
-    public ApiResponse<List<CourseResponse>> getCoursesByIds(@RequestParam List<String> ids) {
-        return new ApiResponse<>(true, "Courses fetched successfully", courseService.getPublishedCourseByIds(ids));
-    }
-
-    @GetMapping("/courses/enrolled/ids")
-    public ApiResponse<List<CourseResponse>> getEnrolledCoursesByIds(@RequestParam List<String> ids) {
-        return new ApiResponse<>(true, "Courses fetched successfully", courseService.getEnrolledCourseByIds(ids));
+    public ApiResponse<List<CourseResponse>> getCoursesByIds(
+            @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
+            @RequestParam List<String> ids
+    ) {
+        return new ApiResponse<>(true, "Courses fetched successfully", courseService.getReadableCourseByIds(currentUserId, ids));
     }
 
     @PostMapping("/courses/{id}/update-rating")
@@ -101,18 +90,20 @@ public class InternalCourseController {
 
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/quizzes")
     public ApiResponse<QuizLessonResponse> getQuizLessonById(
+            @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
-        return new ApiResponse<>(true, "Quiz lesson fetched successfully", quizService.getQuizByLessonId(courseId, lessonId));
+        return new ApiResponse<>(true, "Quiz lesson fetched successfully", quizService.getQuizByLessonId(currentUserId, courseId, lessonId));
     }
 
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/videos")
     public ApiResponse<VideoLessonResponse> getVideoLessonById(
+            @RequestHeader(value = "X-User-Id", required = false) String currentUserId,
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
-        return new ApiResponse<>(true, "Video lesson fetched successfully", videoService.getVideoByLessonId(courseId, lessonId));
+        return new ApiResponse<>(true, "Video lesson fetched successfully", videoService.getReadableVideoByLessonId(currentUserId, courseId, lessonId));
     }
 
     @GetMapping("/video-questions/{id}/check-answer")

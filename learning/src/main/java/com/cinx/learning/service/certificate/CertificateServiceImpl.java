@@ -15,6 +15,7 @@ import com.cinx.learning.service.course.CourseService;
 import com.cinx.learning.service.learningProgress.ILearningProgressService;
 import com.cinx.learning.service.s3.S3Service;
 import com.cinx.learning.service.user.UserService;
+import com.cinx.learning.service.authorization.LearningAuthorizationService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -36,6 +37,7 @@ public class CertificateServiceImpl implements ICertificateService {
     private final ILearningProgressService learningProgressService;
     private final CertificateGeneratorService certificateGeneratorService;
     private final S3Service s3Service;
+    private final LearningAuthorizationService authorizationService;
 
     @Override
     @Transactional
@@ -64,7 +66,8 @@ public class CertificateServiceImpl implements ICertificateService {
     }
 
     @Override
-    public Page<CertificateRequestResponse> getRequestsByCourse(String courseId, CertificateStatus status, int page, int size) {
+    public Page<CertificateRequestResponse> getRequestsByCourse(String currentUserId, String courseId, CertificateStatus status, int page, int size) {
+        authorizationService.requireCourseInstructor(currentUserId, courseId);
         if (status != null) {
             return certificateRequestRepository.findByCourseIdAndStatus(courseId, status, PageRequest.of(page - 1, size))
                     .map(certificateRequestMapper::toDto);
@@ -85,9 +88,10 @@ public class CertificateServiceImpl implements ICertificateService {
 
     @Override
     @Transactional
-    public CertificateRequestResponse approveCertificate(String requestId) {
+    public CertificateRequestResponse approveCertificate(String currentUserId, String requestId) {
         CertificateRequest request = certificateRequestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Certificate request not found"));
+        authorizationService.requireCourseInstructor(currentUserId, request.getCourseId());
 
         if (request.getStatus() != CertificateStatus.PENDING) {
             throw new BadRequestException(ErrorCode.CERTIFICATE_REQUEST_NOT_PENDING, "Request is not in PENDING state");
@@ -116,9 +120,10 @@ public class CertificateServiceImpl implements ICertificateService {
 
     @Override
     @Transactional
-    public CertificateRequestResponse rejectCertificate(String requestId) {
+    public CertificateRequestResponse rejectCertificate(String currentUserId, String requestId) {
         CertificateRequest request = certificateRequestRepository.findById(requestId)
                 .orElseThrow(() -> new NotFoundException("Certificate request not found"));
+        authorizationService.requireCourseInstructor(currentUserId, request.getCourseId());
 
         if (request.getStatus() != CertificateStatus.PENDING) {
             throw new BadRequestException(ErrorCode.CERTIFICATE_REQUEST_NOT_PENDING, "Request is not in PENDING state");

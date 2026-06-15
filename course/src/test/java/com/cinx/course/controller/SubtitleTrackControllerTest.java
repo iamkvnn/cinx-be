@@ -32,7 +32,7 @@ class SubtitleTrackControllerTest {
         SubtitleTrackController controller = new SubtitleTrackController(subtitleTrackService, subtitleJobService);
         GenerateDefaultSubtitleJobRequest request = new GenerateDefaultSubtitleJobRequest("vi", null);
         SubtitleJobResponse job = job("job-1", SubtitleJobType.GENERATE_DEFAULT, "vi");
-        when(subtitleJobService.createDefaultSubtitleJob("course-1", "lesson-1", request)).thenReturn(job);
+        when(subtitleJobService.createDefaultSubtitleJob(null, "course-1", "lesson-1", request)).thenReturn(job);
 
         ResponseEntity<ApiResponse<SubtitleJobResponse>> response = controller.createDefaultSubtitleJob(
                 "course-1",
@@ -43,7 +43,7 @@ class SubtitleTrackControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().success()).isTrue();
         assertThat(response.getBody().data()).isEqualTo(job);
-        verify(subtitleJobService).createDefaultSubtitleJob("course-1", "lesson-1", request);
+        verify(subtitleJobService).createDefaultSubtitleJob(null, "course-1", "lesson-1", request);
     }
 
     @Test
@@ -51,7 +51,7 @@ class SubtitleTrackControllerTest {
         SubtitleTrackController controller = new SubtitleTrackController(subtitleTrackService, subtitleJobService);
         TranslateSubtitleJobRequest request = new TranslateSubtitleJobRequest(null, List.of("en"));
         List<SubtitleJobResponse> jobs = List.of(job("job-1", SubtitleJobType.TRANSLATE, "en"));
-        when(subtitleJobService.createTranslationJobs("course-1", "lesson-1", request)).thenReturn(jobs);
+        when(subtitleJobService.createTranslationJobs(null, "course-1", "lesson-1", request)).thenReturn(jobs);
 
         ResponseEntity<ApiResponse<List<SubtitleJobResponse>>> response = controller.createTranslationJobs(
                 "course-1",
@@ -62,14 +62,14 @@ class SubtitleTrackControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().success()).isTrue();
         assertThat(response.getBody().data()).isEqualTo(jobs);
-        verify(subtitleJobService).createTranslationJobs("course-1", "lesson-1", request);
+        verify(subtitleJobService).createTranslationJobs(null, "course-1", "lesson-1", request);
     }
 
     @Test
     void getSubtitleJobWrapsApiResponse() {
         SubtitleTrackController controller = new SubtitleTrackController(subtitleTrackService, subtitleJobService);
         SubtitleJobResponse job = job("job-1", SubtitleJobType.TRANSLATE, "en");
-        when(subtitleJobService.getJobById("course-1", "lesson-1", "job-1")).thenReturn(job);
+        when(subtitleJobService.getJobById(null, "course-1", "lesson-1", "job-1")).thenReturn(job);
 
         ResponseEntity<ApiResponse<SubtitleJobResponse>> response = controller.getSubtitleJob(
                 "course-1",
@@ -80,7 +80,7 @@ class SubtitleTrackControllerTest {
         assertThat(response.getBody()).isNotNull();
         assertThat(response.getBody().success()).isTrue();
         assertThat(response.getBody().data()).isEqualTo(job);
-        verify(subtitleJobService).getJobById("course-1", "lesson-1", "job-1");
+        verify(subtitleJobService).getJobById(null, "course-1", "lesson-1", "job-1");
     }
 
     private SubtitleJobResponse job(String id, SubtitleJobType type, String targetLanguageCode) {

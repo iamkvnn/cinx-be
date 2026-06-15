@@ -8,10 +8,12 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
 @RequiredArgsConstructor
+@PreAuthorize("hasRole('INSTRUCTOR')")
 @RequestMapping("/api/v1/courses")
 public class CourseImageController {
     private final ICourseImageService courseImageService;

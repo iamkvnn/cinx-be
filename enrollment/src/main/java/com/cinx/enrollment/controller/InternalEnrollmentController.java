@@ -1,6 +1,7 @@
 package com.cinx.enrollment.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.enrollment.dto.response.CheckEnrollmentStatus;
 import com.cinx.enrollment.dto.response.OrderDetailResponse;
@@ -26,9 +27,12 @@ public class InternalEnrollmentController {
     private final IOrderService orderService;
 
     @PostMapping("/enrollments/check")
-    public ApiResponse<List<CheckEnrollmentStatus>> checkEnrollmentStatus(@RequestBody List<String> courseIds) {
+    public ApiResponse<List<CheckEnrollmentStatus>> checkEnrollmentStatus(
+            @RequestHeader("X-User-Id") String userId,
+            @RequestBody List<String> courseIds
+    ) {
         return new ApiResponse<>(true, "Enrollment status fetched successfully",
-                enrollmentService.checkEnrollmentStatus(courseIds));
+                enrollmentService.checkEnrollmentStatus(userId, courseIds));
     }
 
     @PostMapping("/enrollments")
@@ -44,6 +48,6 @@ public class InternalEnrollmentController {
 
     @GetMapping("/orders/{orderId}")
     public ApiResponse<OrderDetailResponse> getOrderById(@PathVariable String orderId) {
-        return new ApiResponse<>(true, "Order fetched successfully", orderService.getOrderById(orderId));
+        return new ApiResponse<>(true, "Order fetched successfully", orderService.getInternalOrderById(orderId));
     }
 }

@@ -78,7 +78,6 @@ class SubtitleJobServiceTest {
         authenticate("instructor-1");
         VideoLesson videoLesson = videoLesson("lesson-1");
         when(videoLessonRepository.findByLessonId("lesson-1")).thenReturn(Optional.of(videoLesson));
-        when(lessonService.isLessonInstructor("lesson-1", "instructor-1")).thenReturn(true);
         when(subtitleTrackRepository.countByVideoLessonLessonId("lesson-1")).thenReturn(0L);
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode("lesson-1", "vi")).thenReturn(Optional.empty());
         when(subtitleJobRepository.existsByVideoLessonLessonIdAndTargetLanguageCodeAndStatusIn(eq("lesson-1"), eq("vi"), anyList()))
@@ -87,6 +86,7 @@ class SubtitleJobServiceTest {
         when(subtitleJobMapper.toDto(any(SubtitleJob.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
         SubtitleJobResponse response = subtitleJobService.createDefaultSubtitleJob(
+                "instructor-1",
                 "course-1",
                 "lesson-1",
                 new GenerateDefaultSubtitleJobRequest("vi", null)
@@ -107,10 +107,10 @@ class SubtitleJobServiceTest {
     void createDefaultSubtitleJob_rejectsUnsupportedLanguageAndExistingSubtitle() {
         authenticate("instructor-1");
         when(videoLessonRepository.findByLessonId("lesson-1")).thenReturn(Optional.of(videoLesson("lesson-1")));
-        when(lessonService.isLessonInstructor("lesson-1", "instructor-1")).thenReturn(true);
         when(subtitleTrackRepository.countByVideoLessonLessonId("lesson-1")).thenReturn(0L);
 
         assertThatThrownBy(() -> subtitleJobService.createDefaultSubtitleJob(
+                "instructor-1",
                 "course-1",
                 "lesson-1",
                 new GenerateDefaultSubtitleJobRequest("zz", null)
@@ -118,6 +118,7 @@ class SubtitleJobServiceTest {
 
         when(subtitleTrackRepository.countByVideoLessonLessonId("lesson-1")).thenReturn(1L);
         assertThatThrownBy(() -> subtitleJobService.createDefaultSubtitleJob(
+                "instructor-1",
                 "course-1",
                 "lesson-1",
                 new GenerateDefaultSubtitleJobRequest("vi", null)
@@ -130,7 +131,6 @@ class SubtitleJobServiceTest {
         VideoLesson videoLesson = videoLesson("lesson-1");
         SubtitleTrack source = subtitle("source-1", "vi", true);
         when(videoLessonRepository.findByLessonId("lesson-1")).thenReturn(Optional.of(videoLesson));
-        when(lessonService.isLessonInstructor("lesson-1", "instructor-1")).thenReturn(true);
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndIsDefaultTrue("lesson-1")).thenReturn(List.of(source));
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode(eq("lesson-1"), any())).thenReturn(Optional.empty());
         when(subtitleJobRepository.existsByVideoLessonLessonIdAndTargetLanguageCodeAndStatusIn(eq("lesson-1"), any(), anyList()))
@@ -145,6 +145,7 @@ class SubtitleJobServiceTest {
         when(subtitleJobMapper.toDto(any(SubtitleJob.class))).thenAnswer(invocation -> response(invocation.getArgument(0)));
 
         List<SubtitleJobResponse> responses = subtitleJobService.createTranslationJobs(
+                "instructor-1",
                 "course-1",
                 "lesson-1",
                 new TranslateSubtitleJobRequest(null, List.of("en", "fr"))
@@ -163,10 +164,10 @@ class SubtitleJobServiceTest {
         authenticate("instructor-1");
         SubtitleTrack source = subtitle("source-1", "vi", true);
         when(videoLessonRepository.findByLessonId("lesson-1")).thenReturn(Optional.of(videoLesson("lesson-1")));
-        when(lessonService.isLessonInstructor("lesson-1", "instructor-1")).thenReturn(true);
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndIsDefaultTrue("lesson-1")).thenReturn(List.of(source));
 
         assertThatThrownBy(() -> subtitleJobService.createTranslationJobs(
+                "instructor-1",
                 "course-1",
                 "lesson-1",
                 new TranslateSubtitleJobRequest(null, List.of("en", "en"))
@@ -175,6 +176,7 @@ class SubtitleJobServiceTest {
         when(subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode("lesson-1", "en"))
                 .thenReturn(Optional.of(subtitle("existing-1", "en", false)));
         assertThatThrownBy(() -> subtitleJobService.createTranslationJobs(
+                "instructor-1",
                 "course-1",
                 "lesson-1",
                 new TranslateSubtitleJobRequest(null, List.of("en"))

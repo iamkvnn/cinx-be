@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateVideoQuestionRequest;
 import com.cinx.course.dto.request.UpdateVideoQuestionRequest;
 import com.cinx.course.dto.response.VideoQuestionResponse;
@@ -26,8 +27,9 @@ public class VideoQuestionController {
     public ResponseEntity<ApiResponse<List<VideoQuestionResponse>>> getQuestionsByLessonId(
             @PathVariable String courseId,
             @PathVariable String lessonId) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "Questions fetched successfully",
-                videoQuestionService.getQuestionsByLessonId(lessonId)));
+                videoQuestionService.getQuestionsByLessonId(currentUserId, courseId, lessonId)));
     }
 
     @GetMapping("/{id}")
@@ -37,8 +39,9 @@ public class VideoQuestionController {
             @PathVariable String lessonId,
             @PathVariable String id
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity
-                .ok(new ApiResponse<>(true, "Question fetched successfully", videoQuestionService.getQuestionById(lessonId, id)));
+                .ok(new ApiResponse<>(true, "Question fetched successfully", videoQuestionService.getQuestionById(currentUserId, courseId, lessonId, id)));
     }
 
     @PostMapping
@@ -47,8 +50,9 @@ public class VideoQuestionController {
             @PathVariable String courseId,
             @PathVariable String lessonId,
             @RequestBody @Valid CreateVideoQuestionRequest request) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(true, "Video question created",
-                videoQuestionService.createQuestion(lessonId, request)));
+                videoQuestionService.createQuestion(currentUserId, courseId, lessonId, request)));
     }
 
     @PutMapping("/{id}")
@@ -58,8 +62,9 @@ public class VideoQuestionController {
             @PathVariable String lessonId,
             @PathVariable String id,
             @RequestBody @Valid UpdateVideoQuestionRequest request) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Video question updated", videoQuestionService.updateQuestion(lessonId, id, request)));
+                new ApiResponse<>(true, "Video question updated", videoQuestionService.updateQuestion(currentUserId, courseId, lessonId, id, request)));
     }
 
     @DeleteMapping("/{id}")
@@ -69,7 +74,8 @@ public class VideoQuestionController {
             @PathVariable String lessonId,
             @PathVariable String id
     ) {
-        videoQuestionService.deleteQuestion(lessonId, id);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        videoQuestionService.deleteQuestion(currentUserId, courseId, lessonId, id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Video question deleted", null));
     }
 }

@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -26,6 +27,7 @@ public class UserController {
 
     @Operation(summary = "List all users (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<PaginatedApiResponse<UserDto>> getAllUsers(
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
@@ -41,12 +43,14 @@ public class UserController {
 
     @Operation(summary = "Get user by ID", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or #id == authentication.name")
     public ResponseEntity<ApiResponse<UserDto>> getUserById(@PathVariable String id) {
         return ResponseEntity.ok(new ApiResponse<>(true, "User fetched successfully", userService.findByUserId(id)));
     }
 
     @Operation(summary = "Approve instructor (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{id}/verify-instructor")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> verifyInstructor(@PathVariable String id) {
         userService.verifyInstructor(id);
         return ResponseEntity.ok(new ApiResponse<>(true, "Instructor verified successfully", null));
@@ -54,6 +58,7 @@ public class UserController {
 
     @Operation(summary = "Reject instructor (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{id}/reject-instructor")
+    @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<ApiResponse<?>> rejectInstructor(
             @PathVariable String id,
             @RequestParam String reason
@@ -71,6 +76,7 @@ public class UserController {
 
     @Operation(summary = "Update user profile", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/{id}")
+    @PreAuthorize("hasRole('ADMIN') or #id == authentication.name")
     public ResponseEntity<ApiResponse<UserDto>> updateUser(
             @PathVariable String id,
             @Valid @RequestBody UpdateProfileRequest dto

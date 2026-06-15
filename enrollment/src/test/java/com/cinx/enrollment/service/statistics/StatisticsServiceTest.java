@@ -1,6 +1,5 @@
 package com.cinx.enrollment.service.statistics;
 
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.response.AdminOverviewResponse;
 import com.cinx.enrollment.dto.response.CourseStatisticsResponse;
@@ -15,8 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
-import org.mockito.MockedStatic;
-import org.mockito.Mockito;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -60,18 +57,17 @@ class StatisticsServiceTest {
         when(orderItemRepository.sumGrossRevenueByInstructor(eq("instructor-1"), any(), any())).thenReturn(500L);
         when(orderItemRepository.findTopCoursesByRevenueForInstructor(eq("instructor-1"), any(), any(), any(Pageable.class)))
                 .thenReturn(Page.empty());
+        when(orderItemRepository.aggregateCourseRevenueByInstructor(eq(OrderStatus.PAID), eq("instructor-1"), any(), any()))
+                .thenReturn(List.of());
         when(orderItemRepository.aggregateRevenueByMonthForInstructor(eq("instructor-1"), any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{middleMonth, 500L}));
 
-        InstructorStatisticsResponse response;
-        try (MockedStatic<AuthenticationUtil> authentication = Mockito.mockStatic(AuthenticationUtil.class)) {
-            authentication.when(AuthenticationUtil::extractUserId).thenReturn("instructor-1");
-            response = statisticsService.getInstructorOverview(
-                    StatisticsGroupBy.MONTH,
-                    startMonth.atDay(1),
-                    endMonth.atEndOfMonth()
-            );
-        }
+        InstructorStatisticsResponse response = statisticsService.getInstructorOverview(
+                "instructor-1",
+                StatisticsGroupBy.MONTH,
+                startMonth.atDay(1),
+                endMonth.atEndOfMonth()
+        );
 
         assertThat(response.revenueByTime()).hasSize(3);
         assertThat(response.revenueByTime().get(0).grossRevenue()).isZero();
@@ -90,16 +86,13 @@ class StatisticsServiceTest {
         when(orderItemRepository.aggregateRevenueByDayForCourse(eq("instructor-1"), eq("course-1"), any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{middleDay, 600L}));
 
-        CourseStatisticsResponse response;
-        try (MockedStatic<AuthenticationUtil> authentication = Mockito.mockStatic(AuthenticationUtil.class)) {
-            authentication.when(AuthenticationUtil::extractUserId).thenReturn("instructor-1");
-            response = statisticsService.getCourseStatistics(
-                    "course-1",
-                    StatisticsGroupBy.DAY,
-                    startDate,
-                    endDate
-            );
-        }
+        CourseStatisticsResponse response = statisticsService.getCourseStatistics(
+                "instructor-1",
+                "course-1",
+                StatisticsGroupBy.DAY,
+                startDate,
+                endDate
+        );
 
         assertThat(response.revenueByTime()).hasSize(3);
         assertThat(response.revenueByTime().get(0).grossRevenue()).isZero();
@@ -115,8 +108,10 @@ class StatisticsServiceTest {
         when(orderRepository.sumRevenueBetween(eq(OrderStatus.PAID), any(), any())).thenReturn(1_000L);
         when(orderRepository.countOrdersBetween(eq(OrderStatus.PAID), any(), any())).thenReturn(2L);
         when(orderItemRepository.findTopCoursesByRevenue(any(), any(), any(Pageable.class))).thenReturn(Page.empty());
+        when(enrolledCourseRepository.findTopEnrolledCourses(any(), any(), any(Pageable.class))).thenReturn(List.of());
         when(orderItemRepository.aggregatePlatformRevenueByMonth(any(), any()))
                 .thenReturn(List.<Object[]>of(new Object[]{endLabel, 1_000L}));
+        when(enrolledCourseRepository.aggregateEnrollmentsByMonth(any(), any())).thenReturn(List.of());
 
         AdminOverviewResponse response = statisticsService.getAdminOverview(
                 StatisticsGroupBy.MONTH,

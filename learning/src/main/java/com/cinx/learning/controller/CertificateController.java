@@ -11,6 +11,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -43,6 +44,7 @@ public class CertificateController {
 
     @Operation(summary = "Get certificate requests by course ID (For Instructor)", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/requests/{courseId}")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<PaginatedApiResponse<CertificateRequestResponse>> getRequestsByCourse(
             @PathVariable String courseId,
             @RequestParam(required = false) CertificateStatus status,
@@ -51,7 +53,8 @@ public class CertificateController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        Page<CertificateRequestResponse> result = certificateService.getRequestsByCourse(courseId, status, page, size);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        Page<CertificateRequestResponse> result = certificateService.getRequestsByCourse(currentUserId, courseId, status, page, size);
         return ResponseEntity.ok(new PaginatedApiResponse<>(
                 true, "Success",
                 result.getContent(),
@@ -61,6 +64,7 @@ public class CertificateController {
 
     @Operation(summary = "Get all certificate requests", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/requests")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<PaginatedApiResponse<CertificateRequestResponse>> getAllRequests(
             @RequestParam(required = false) CertificateStatus status,
             @RequestParam(defaultValue = "1") int page,
@@ -78,13 +82,17 @@ public class CertificateController {
 
     @Operation(summary = "Approve certificate request (For Instructor)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/requests/{requestId}/approve")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<CertificateRequestResponse>> approveCertificate(@PathVariable String requestId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Approved successfully", certificateService.approveCertificate(requestId)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Approved successfully", certificateService.approveCertificate(currentUserId, requestId)));
     }
 
     @Operation(summary = "Reject certificate request (For Instructor)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PutMapping("/requests/{requestId}/reject")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<CertificateRequestResponse>> rejectCertificate(@PathVariable String requestId) {
-        return ResponseEntity.ok(new ApiResponse<>(true, "Rejected successfully", certificateService.rejectCertificate(requestId)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(new ApiResponse<>(true, "Rejected successfully", certificateService.rejectCertificate(currentUserId, requestId)));
     }
 }

@@ -8,5 +8,5 @@ import java.time.LocalDate;
 public interface ICourseStatisticsService {
     AdminCourseStatisticsOverviewResponse getAdminOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 
-    InstructorCourseStatisticsOverviewResponse getInstructorOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
+    InstructorCourseStatisticsOverviewResponse getInstructorOverview(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate);
 }

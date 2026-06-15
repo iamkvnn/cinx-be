@@ -1,9 +1,6 @@
 package com.cinx.course.service.curriculum;
 
-import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.common.exception.ForbiddenException;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.response.CourseCurriculumResponse;
 import com.cinx.course.dto.response.CurriculumSectionResponse;
@@ -16,6 +13,7 @@ import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
 import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
+import com.cinx.course.service.course.ICourseAccessService;
 import com.cinx.course.service.course.ICourseDraftService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -24,7 +22,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -35,40 +32,13 @@ public class CurriculumService implements ICurriculumService {
     private final SectionRepository sectionRepository;
     private final LessonRepository lessonRepository;
     private final ICourseDraftService courseDraftService;
+    private final ICourseAccessService courseAccessService;
     private final LessonMapper lessonMapper;
 
     @Override
     @Transactional(readOnly = true)
-    public CourseCurriculumResponse getPublishedCurriculum(String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (course.getStatus() != CourseStatus.PUBLISHED) {
-            throw new NotFoundException("Course not found with id: " + courseId);
-        }
-        return publishedSnapshot(course);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CourseCurriculumResponse getPublishedSnapshotCurriculum(String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
-            throw new NotFoundException("Course not found with id: " + courseId);
-        }
-        return publishedSnapshot(course);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CourseCurriculumResponse getOwnedPublishedSnapshotCurriculum(String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        ensureCurrentUserOwns(course);
-        if (course.getStatus() != CourseStatus.PUBLISHED && course.getStatus() != CourseStatus.ARCHIVED) {
-            throw new NotFoundException("Course not found with id: " + courseId);
-        }
-        return publishedSnapshot(course);
+    public CourseCurriculumResponse getReadableCurriculum(String currentUserId, String courseId) {
+        return publishedSnapshot(courseAccessService.ensureReadableCourse(currentUserId, courseId));
     }
 
     private CourseCurriculumResponse publishedSnapshot(Course course) {
@@ -92,18 +62,10 @@ public class CurriculumService implements ICurriculumService {
 
     @Override
     @Transactional(readOnly = true)
-    public CourseCurriculumResponse getDraftCurriculum(String courseId) {
+    public CourseCurriculumResponse getEditableDraftCurriculum(String currentUserId, String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        return draftCurriculum(course);
-    }
-
-    @Override
-    @Transactional(readOnly = true)
-    public CourseCurriculumResponse getOwnedDraftCurriculum(String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        ensureCurrentUserOwns(course);
+        courseAccessService.ensureCurrentUserOwns(currentUserId, course);
         return draftCurriculum(course);
     }
 
@@ -118,12 +80,6 @@ public class CurriculumService implements ICurriculumService {
         List<Section> sections = sectionRepository.findDraftByDraft(draft.get().getId());
         List<Lesson> lessons = lessonRepository.findDraftByDraft(draft.get().getId());
         return toResponse(course.getId(), sections, lessons);
-    }
-
-    private void ensureCurrentUserOwns(Course course) {
-        if (!Objects.equals(course.getInstructorId(), AuthenticationUtil.extractUserId())) {
-            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not allowed to access this course");
-        }
     }
 
     private CourseCurriculumResponse toResponse(String courseId, List<Section> sections, List<Lesson> lessons) {

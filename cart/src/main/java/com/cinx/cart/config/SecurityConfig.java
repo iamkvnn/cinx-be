@@ -1,6 +1,5 @@
 package com.cinx.cart.config;
 
-import com.cinx.cart.config.JWTAccessDeniedHandler;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;

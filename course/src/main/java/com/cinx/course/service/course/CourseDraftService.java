@@ -54,11 +54,7 @@ public class CourseDraftService implements ICourseDraftService {
         CourseDraft draft = getOrCreateDraft(course);
         courseMapper.partialUpdate(draft, request);
         draft.setCategory(category);
-        if (request.price() != null || request.discountedPrice() != null) {
-            draft.setDiscountRate(discountRate);
-        }
-        course.setPublishStatus(null);
-        courseRepository.save(course);
+        draft.setDiscountRate(discountRate);
         return courseDraftRepository.save(draft);
     }
 
@@ -88,9 +84,14 @@ public class CourseDraftService implements ICourseDraftService {
         return lessonChangedEvents;
     }
 
-    private CourseDraft clonePublishedToDraft(Course course) {
+    @Override
+    public CourseDraft createDraftFromCourse(Course course) {
         CourseDraft draft = courseMapper.toDraft(course);
-        draft = courseDraftRepository.save(draft);
+        return courseDraftRepository.save(draft);
+    }
+
+    private CourseDraft clonePublishedToDraft(Course course) {
+        CourseDraft draft = createDraftFromCourse(course);
         Map<String, Section> clonedSections = new HashMap<>();
         List<Section> publishedSections = sectionRepository.findPublishedByCourse(course.getId());
         List<Section> sectionClones = new ArrayList<>();

@@ -25,7 +25,7 @@ public class AssignmentController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/list")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<PaginatedApiResponse<AssignmentSubmissionResponse>> getAssignmentSubmissions(
             @RequestParam String assignmentId,
             @RequestParam(defaultValue = "1") int page,
@@ -33,7 +33,8 @@ public class AssignmentController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        authorizationService.requireLessonInstructorOrAdmin(assignmentId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireLessonInstructor(currentUserId, assignmentId);
         return ResponseEntity.ok(PaginationWrapper.wrap(assignmentService.getAssignmentSubmissions(assignmentId, page, size)));
     }
 
@@ -56,19 +57,21 @@ public class AssignmentController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{submissionId}/score")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<?>> scoreAssignmentSubmission(
             @PathVariable String submissionId,
             @RequestParam Double score
     ) {
-        assignmentService.scoreAssignmentSubmission(submissionId, score);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        assignmentService.scoreAssignmentSubmission(currentUserId, submissionId, score);
         return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submission scored successfully", null));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping("/{submissionId}")
     public ResponseEntity<ApiResponse<?>> deleteAssignmentSubmission(@PathVariable String submissionId) {
-        assignmentService.deleteAssignmentSubmission(submissionId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        assignmentService.deleteAssignmentSubmission(currentUserId, submissionId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Assignment submission deleted successfully", null));
     }
 }

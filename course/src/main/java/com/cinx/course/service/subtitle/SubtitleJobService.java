@@ -3,9 +3,7 @@ package com.cinx.course.service.subtitle;
 import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
-import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.consts.LessonType;
 import com.cinx.course.consts.SubtitleFormat;
 import com.cinx.course.consts.SubtitleJobStatus;
@@ -55,8 +53,8 @@ public class SubtitleJobService implements ISubtitleJobService {
 
     @Override
     @Transactional
-    public SubtitleJobResponse createDefaultSubtitleJob(String courseId, String lessonId, GenerateDefaultSubtitleJobRequest request) {
-        VideoLesson videoLesson = ensureInstructor(courseId, lessonId);
+    public SubtitleJobResponse createDefaultSubtitleJob(String currentUserId, String courseId, String lessonId, GenerateDefaultSubtitleJobRequest request) {
+        VideoLesson videoLesson = ensureInstructor(currentUserId, courseId, lessonId);
         if (subtitleTrackRepository.countByVideoLessonLessonId(lessonId) > 0) {
             throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Default subtitle can only be generated when the video has no subtitles");
         }
@@ -82,8 +80,8 @@ public class SubtitleJobService implements ISubtitleJobService {
 
     @Override
     @Transactional
-    public List<SubtitleJobResponse> createTranslationJobs(String courseId, String lessonId, TranslateSubtitleJobRequest request) {
-        VideoLesson videoLesson = ensureInstructor(courseId, lessonId);
+    public List<SubtitleJobResponse> createTranslationJobs(String currentUserId, String courseId, String lessonId, TranslateSubtitleJobRequest request) {
+        VideoLesson videoLesson = ensureInstructor(currentUserId, courseId, lessonId);
         SubtitleTrack source = resolveSourceSubtitle(lessonId, request.sourceSubtitleId());
         if (source.getStatus() != SubtitleStatus.READY) {
             throw new BadRequestException(ErrorCode.SUBTITLE_INVALID, "Source subtitle must be ready before translation");
@@ -127,8 +125,8 @@ public class SubtitleJobService implements ISubtitleJobService {
 
     @Override
     @Transactional(readOnly = true)
-    public List<SubtitleJobResponse> getJobsByLessonId(String courseId, String lessonId) {
-        ensureInstructor(courseId, lessonId);
+    public List<SubtitleJobResponse> getJobsByLessonId(String currentUserId, String courseId, String lessonId) {
+        ensureInstructor(currentUserId, courseId, lessonId);
         return subtitleJobRepository.findByVideoLessonLessonIdOrderByCreatedAtDesc(lessonId)
                 .stream()
                 .map(subtitleJobMapper::toDto)
@@ -137,8 +135,8 @@ public class SubtitleJobService implements ISubtitleJobService {
 
     @Override
     @Transactional(readOnly = true)
-    public SubtitleJobResponse getJobById(String courseId, String lessonId, String jobId) {
-        ensureInstructor(courseId, lessonId);
+    public SubtitleJobResponse getJobById(String currentUserId, String courseId, String lessonId, String jobId) {
+        ensureInstructor(currentUserId, courseId, lessonId);
         return subtitleJobMapper.toDto(subtitleJobRepository.findByIdAndVideoLessonLessonId(jobId, lessonId)
                 .orElseThrow(() -> new NotFoundException("Subtitle job not found with id: " + jobId)));
     }
@@ -297,14 +295,9 @@ public class SubtitleJobService implements ISubtitleJobService {
         return languageCode;
     }
 
-    private VideoLesson ensureInstructor(String courseId, String lessonId) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
-        VideoLesson videoLesson = ensureVideoLessonExists(lessonId);
-        String currentUserId = AuthenticationUtil.extractUserId();
-        if (!lessonService.isLessonInstructor(lessonId, currentUserId)) {
-            throw new ForbiddenException(ErrorCode.INSTRUCTOR_ACCESS_REQUIRED, "You do not have permission to manage subtitles for this lesson");
-        }
-        return videoLesson;
+    private VideoLesson ensureInstructor(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        return ensureVideoLessonExists(lessonId);
     }
 
     private VideoLesson ensureVideoLessonExists(String lessonId) {

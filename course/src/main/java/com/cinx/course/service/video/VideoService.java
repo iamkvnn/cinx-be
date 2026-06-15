@@ -25,16 +25,26 @@ public class VideoService implements IVideoService {
     private String cdnUrl;
 
     @Override
-    public VideoLessonResponse getVideoByLessonId(String courseId, String lessonId) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
+    public VideoLessonResponse getVideoByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        return getVideoOrThrow(lessonId);
+    }
+
+    @Override
+    public VideoLessonResponse getReadableVideoByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.VIDEO);
+        return getVideoOrThrow(lessonId);
+    }
+
+    private VideoLessonResponse getVideoOrThrow(String lessonId) {
         return videoLessonRepository.findByLessonId(lessonId)
                 .map(videoLessonMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Video not found for lessonId: " + lessonId));
     }
 
     @Override
-    public void createVideo(String courseId, String lessonId, CreateVideoLessonRequest request) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
+    public void createVideo(String currentUserId, String courseId, String lessonId, CreateVideoLessonRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
         videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Video already exists for lessonId: " + lessonId);
         },() -> {
@@ -46,8 +56,8 @@ public class VideoService implements IVideoService {
     }
 
     @Override
-    public void updateVideo(String courseId, String lessonId, UpdateVideoLessonRequest request) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.VIDEO);
+    public void updateVideo(String currentUserId, String courseId, String lessonId, UpdateVideoLessonRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.VIDEO);
         videoLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             videoLessonMapper.partialUpdate(existing, request);
             if (request.getFileKey() != null) {

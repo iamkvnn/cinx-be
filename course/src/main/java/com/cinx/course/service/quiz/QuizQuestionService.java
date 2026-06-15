@@ -3,6 +3,7 @@ package com.cinx.course.service.quiz;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.course.consts.LessonType;
 import com.cinx.course.dto.request.CreateQuizQuestionRequest;
 import com.cinx.course.dto.request.UpdateQuizOptionRequest;
 import com.cinx.course.dto.request.UpdateQuizQuestionRequest;
@@ -14,6 +15,7 @@ import com.cinx.course.model.QuizQuestion;
 import com.cinx.course.repository.QuizLessonRepository;
 import com.cinx.course.repository.QuizOptionRepository;
 import com.cinx.course.repository.QuizQuestionRepository;
+import com.cinx.course.service.lesson.ILessonService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,9 +32,11 @@ public class QuizQuestionService implements IQuizQuestionService {
     private final QuizQuestionRepository quizQuestionRepository;
     private final QuizOptionRepository quizOptionRepository;
     private final QuizLessonRepository quizLessonRepository;
+    private final ILessonService lessonService;
     @Override
     @Transactional(readOnly = true)
-    public List<QuizQuestionResponse> getQuestions(String lessonId) {
+    public List<QuizQuestionResponse> getQuestions(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.ARTICLE);
         quizLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Quiz not found for lessonId: " + lessonId));
         return quizQuestionRepository.findAllByQuizLessonId(lessonId).stream()
@@ -42,7 +46,8 @@ public class QuizQuestionService implements IQuizQuestionService {
 
     @Transactional
     @Override
-    public QuizQuestionResponse addQuestion(String lessonId, CreateQuizQuestionRequest request) {
+    public QuizQuestionResponse addQuestion(String currentUserId, String courseId, String lessonId, CreateQuizQuestionRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
         QuizLesson quiz = quizLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Quiz not found for lessonId: " + lessonId));
 
@@ -98,7 +103,8 @@ public class QuizQuestionService implements IQuizQuestionService {
 
     @Transactional
     @Override
-    public QuizQuestionResponse updateQuestion(String lessonId, String questionId, UpdateQuizQuestionRequest request) {
+    public QuizQuestionResponse updateQuestion(String currentUserId, String courseId, String lessonId, String questionId, UpdateQuizQuestionRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
         QuizLesson quiz = quizLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Quiz not found for lessonId: " + lessonId));
         QuizQuestion question = quizQuestionRepository.findByIdAndQuizLessonId(questionId, lessonId)
@@ -119,7 +125,8 @@ public class QuizQuestionService implements IQuizQuestionService {
 
     @Transactional
     @Override
-    public void deleteQuestion(String lessonId, String questionId) {
+    public void deleteQuestion(String currentUserId, String courseId, String lessonId, String questionId) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
         QuizLesson quiz = quizLessonRepository.findByLessonId(lessonId)
                 .orElseThrow(() -> new NotFoundException("Quiz not found for lessonId: " + lessonId));
         QuizQuestion question = quizQuestionRepository.findByIdAndQuizLessonId(questionId, lessonId)

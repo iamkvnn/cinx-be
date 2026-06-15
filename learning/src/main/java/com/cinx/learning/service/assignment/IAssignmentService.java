@@ -8,6 +8,6 @@ public interface IAssignmentService {
     Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size);
     AssignmentSubmissionResponse getAssignmentSubmission(String userId, String assignmentId);
     void submitAssignment(String userId, String assignmentId, CreateAssignmentSubmissionRequest request);
-    void scoreAssignmentSubmission(String submissionId, Double score);
-    void deleteAssignmentSubmission(String submissionId);
+    void scoreAssignmentSubmission(String currentUserId, String submissionId, Double score);
+    void deleteAssignmentSubmission(String currentUserId, String submissionId);
 }

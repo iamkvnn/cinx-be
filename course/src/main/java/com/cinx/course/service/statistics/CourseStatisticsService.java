@@ -1,6 +1,5 @@
 package com.cinx.course.service.statistics;
 
-import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.response.AdminCourseStatisticsOverviewResponse;
 import com.cinx.course.dto.response.InstructorCourseStatisticsOverviewResponse;
@@ -39,8 +38,7 @@ public class CourseStatisticsService implements ICourseStatisticsService {
 
     @Override
     @Transactional(readOnly = true)
-    public InstructorCourseStatisticsOverviewResponse getInstructorOverview(StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
-        String instructorId = AuthenticationUtil.extractUserId();
+    public InstructorCourseStatisticsOverviewResponse getInstructorOverview(String instructorId, StatisticsGroupBy groupBy, LocalDate startDate, LocalDate endDate) {
         StatisticsDateRange range = statisticsRangeResolver.resolve(groupBy, startDate, endDate);
         List<Object[]> timeRows = range.groupByDay()
                 ? courseRepository.aggregateCreatedCoursesByInstructorAndDay(instructorId, range.start(), range.end())

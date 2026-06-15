@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateAssignmentLessonRequest;
 import com.cinx.course.dto.request.UpdateAssignmentLessonRequest;
 import com.cinx.course.dto.response.AssignmentLessonResponse;
@@ -22,8 +23,9 @@ public class AssignmentLessonController {
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
+        String currentUserId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(
-                new ApiResponse<>(true, "Success", assignmentService.getAssignmentByLessonId(courseId, lessonId))
+                new ApiResponse<>(true, "Success", assignmentService.getAssignmentByLessonId(currentUserId, courseId, lessonId))
         );
     }
 
@@ -34,7 +36,8 @@ public class AssignmentLessonController {
             @PathVariable String lessonId,
             @RequestBody CreateAssignmentLessonRequest request
     ) {
-        assignmentService.createAssignment(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        assignmentService.createAssignment(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
         );
@@ -47,7 +50,8 @@ public class AssignmentLessonController {
             @PathVariable String lessonId,
             @RequestBody UpdateAssignmentLessonRequest request
     ) {
-        assignmentService.updateAssignment(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        assignmentService.updateAssignment(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(
                 new ApiResponse<>(true, "Success", null)
         );

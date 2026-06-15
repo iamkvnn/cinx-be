@@ -53,19 +53,21 @@ public class LearningProgressController {
 
     @Operation(summary = "Get overview progress of students in a course", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/progress")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<List<CourseProgressResponse>>> getCourseProgress(@PathVariable String courseId) {
-        authorizationService.requireCourseInstructorOrAdmin(courseId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireCourseInstructor(currentUserId, courseId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", learningProgressService.getCourseProgressByCourseId(courseId)));
     }
 
     @Operation(summary = "Get detailed progress of a student in a course", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/courses/{courseId}/students/{studentId}/progress")
-    @PreAuthorize("hasAnyRole('INSTRUCTOR','ADMIN')")
+    @PreAuthorize("hasRole('INSTRUCTOR')")
     public ResponseEntity<ApiResponse<List<LearningItemProgressResponse>>> getStudentProgress(
             @PathVariable String courseId,
             @PathVariable String studentId) {
-        authorizationService.requireCourseInstructorOrAdmin(courseId);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        authorizationService.requireCourseInstructor(currentUserId, courseId);
         return ResponseEntity.ok(new ApiResponse<>(true, "Success", learningProgressService.getLearningItemProgressByCourseId(studentId, courseId)));
     }
 }

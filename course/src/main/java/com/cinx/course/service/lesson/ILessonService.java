@@ -16,9 +16,11 @@ public interface ILessonService {
     LessonResponse getEnrolledLessonByCourseIdAndLessonId(String courseId, String lessonId);
     Lesson getForUpdate(String courseId, String sectionId, String lessonId, LessonType lessonType);
     void ensureLessonBelongsToCourse(String courseId, String lessonId, LessonType lessonType);
-    LessonResponse createLesson(String courseId, String sectionId, CreateLessonRequest request);
-    LessonResponse updateLesson(String courseId, String sectionId, String lessonId, UpdateLessonRequest request);
-    LessonPositionResponse moveLesson(String courseId, String lessonId, MoveLessonRequest request);
-    void deleteLesson(String courseId, String sectionId, String lessonId);
+    void ensureCanReadLessonContent(String currentUserId, String courseId, String lessonId, LessonType lessonType);
+    void ensureLessonInstructor(String currentUserId, String courseId, String lessonId, LessonType lessonType);
+    LessonResponse createLesson(String currentUserId, String courseId, String sectionId, CreateLessonRequest request);
+    LessonResponse updateLesson(String currentUserId, String courseId, String sectionId, String lessonId, UpdateLessonRequest request);
+    LessonPositionResponse moveLesson(String currentUserId, String courseId, String lessonId, MoveLessonRequest request);
+    void deleteLesson(String currentUserId, String courseId, String sectionId, String lessonId);
     boolean isLessonInstructor(String lessonStableId, String userId);
 }

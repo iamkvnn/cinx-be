@@ -21,16 +21,26 @@ public class ArticleService implements IArticleService {
     private final ILessonService lessonService;
 
     @Override
-    public ArticleLessonResponse getArticleByLessonId(String courseId, String lessonId) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
+    public ArticleLessonResponse getArticleByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        return getArticleOrThrow(lessonId);
+    }
+
+    @Override
+    public ArticleLessonResponse getReadableArticleByLessonId(String currentUserId, String courseId, String lessonId) {
+        lessonService.ensureCanReadLessonContent(currentUserId, courseId, lessonId, LessonType.ARTICLE);
+        return getArticleOrThrow(lessonId);
+    }
+
+    private ArticleLessonResponse getArticleOrThrow(String lessonId) {
         return articleLessonRepository.findByLessonId(lessonId)
                 .map(articleLessonMapper::toDto)
                 .orElseThrow(() -> new NotFoundException("Article not found for lessonId: " + lessonId));
     }
 
     @Override
-    public void createArticle(String courseId, String lessonId, CreateArticleLessonRequest request) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
+    public void createArticle(String currentUserId, String courseId, String lessonId, CreateArticleLessonRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
         articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "Article already exists for lessonId: " + lessonId);
         },() -> {
@@ -41,8 +51,8 @@ public class ArticleService implements IArticleService {
     }
 
     @Override
-    public void updateArticle(String courseId, String lessonId, UpdateArticleLessonRequest request) {
-        lessonService.ensureLessonBelongsToCourse(courseId, lessonId, LessonType.ARTICLE);
+    public void updateArticle(String currentUserId, String courseId, String lessonId, UpdateArticleLessonRequest request) {
+        lessonService.ensureLessonInstructor(currentUserId, courseId, lessonId, LessonType.ARTICLE);
         articleLessonRepository.findByLessonId(lessonId).ifPresentOrElse(existing -> {
             articleLessonMapper.partialUpdate(existing, request);
             articleLessonRepository.save(existing);

@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.response.AdminCourseStatisticsOverviewResponse;
 import com.cinx.course.dto.response.InstructorCourseStatisticsOverviewResponse;
 import com.cinx.course.service.statistics.ICourseStatisticsService;
@@ -45,10 +46,11 @@ public class CourseStatisticsController {
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate
     ) {
+        String instructorId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(new ApiResponse<>(
                 true,
                 "Instructor course statistics fetched successfully",
-                courseStatisticsService.getInstructorOverview(groupBy, startDate, endDate)
+                courseStatisticsService.getInstructorOverview(instructorId, groupBy, startDate, endDate)
         ));
     }
 }

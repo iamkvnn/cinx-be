@@ -12,6 +12,7 @@ import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -41,6 +42,7 @@ public class VoucherController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PreAuthorize("hasRole('ADMIN')")
     @PostMapping
     public ResponseEntity<ApiResponse<?>> createVoucher(@Valid @RequestBody CreateVoucherRequest request) {
         voucherService.createVoucher(request);
@@ -48,6 +50,7 @@ public class VoucherController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PreAuthorize("hasRole('ADMIN')")
     @PutMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> updateVoucher(@PathVariable String id, @Valid @RequestBody UpdateVoucherRequest request) {
         voucherService.updateVoucher(id, request);
@@ -55,6 +58,7 @@ public class VoucherController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PreAuthorize("hasRole('ADMIN')")
     @DeleteMapping("/{id}")
     public ResponseEntity<ApiResponse<?>> deleteVoucher(@PathVariable String id) {
         voucherService.deleteVoucher(id);

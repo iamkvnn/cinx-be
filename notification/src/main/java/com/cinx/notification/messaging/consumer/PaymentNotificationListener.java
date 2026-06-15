@@ -43,9 +43,7 @@ public class PaymentNotificationListener {
             // Enrich: payment event only carries orderId; we need userId + email
             ApiResponse<OrderDetailResponse> orderResponse = enrollmentClient.getOrderById(event.getOrderId());
             if (orderResponse == null || !orderResponse.success() || orderResponse.data() == null) {
-                log.error("Failed to fetch order details for order: {}", event.getOrderId());
-                channel.basicAck(tag, false);
-                return;
+                throw new IllegalStateException("Failed to fetch order details for order: " + event.getOrderId());
             }
 
             OrderDetailResponse order = orderResponse.data();
@@ -53,9 +51,7 @@ public class PaymentNotificationListener {
 
             ApiResponse<UserDto> userResponse = userClient.getUserById(userId);
             if (userResponse == null || !userResponse.success() || userResponse.data() == null) {
-                log.error("Failed to fetch user details for userId: {}", userId);
-                channel.basicAck(tag, false);
-                return;
+                throw new IllegalStateException("Failed to fetch user details for userId: " + userId);
             }
 
             UserDto user = userResponse.data();

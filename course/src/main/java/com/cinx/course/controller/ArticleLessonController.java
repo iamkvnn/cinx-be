@@ -1,6 +1,7 @@
 package com.cinx.course.controller;
 
 import com.cinx.common.dto.ApiResponse;
+import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.course.dto.request.CreateArticleLessonRequest;
 import com.cinx.course.dto.request.UpdateArticleLessonRequest;
 import com.cinx.course.dto.response.ArticleLessonResponse;
@@ -22,8 +23,8 @@ public class ArticleLessonController {
             @PathVariable String courseId,
             @PathVariable String lessonId
     ) {
-
-        return ResponseEntity.ok(ApiResponse.success("Success", articleService.getArticleByLessonId(courseId, lessonId)));
+        String currentUserId = AuthenticationUtil.extractUserId();
+        return ResponseEntity.ok(ApiResponse.success("Success", articleService.getReadableArticleByLessonId(currentUserId, courseId, lessonId)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
@@ -33,7 +34,8 @@ public class ArticleLessonController {
             @PathVariable String lessonId,
             @RequestBody CreateArticleLessonRequest request
     ) {
-        articleService.createArticle(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        articleService.createArticle(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 
@@ -44,7 +46,8 @@ public class ArticleLessonController {
             @PathVariable String lessonId,
             @RequestBody UpdateArticleLessonRequest request
     ) {
-        articleService.updateArticle(courseId, lessonId, request);
+        String currentUserId = AuthenticationUtil.extractUserId();
+        articleService.updateArticle(currentUserId, courseId, lessonId, request);
         return ResponseEntity.ok(ApiResponse.success("Success", null));
     }
 }

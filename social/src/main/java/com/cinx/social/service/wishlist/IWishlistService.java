@@ -6,7 +6,7 @@ import com.cinx.social.dto.response.WishlistItemResponse;
 import java.util.List;
 
 public interface IWishlistService {
-    List<WishlistItemResponse> getWishlistByUserId();
-    void addToWishlist(AddToWishlistRequest request);
-    void removeFromWishlist(String courseId);
+    List<WishlistItemResponse> getWishlistByUserId(String userId);
+    void addToWishlist(String userId, AddToWishlistRequest request);
+    void removeFromWishlist(String userId, String courseId);
 }
