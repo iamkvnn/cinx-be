@@ -2,10 +2,13 @@ package com.cinx.notification.messaging.consumer;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.notification.client.CourseClient;
+import com.cinx.notification.client.UserClient;
 import com.cinx.notification.dto.response.course.CourseResponse;
+import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.social.CourseAnswerCreatedEvent;
 import com.cinx.notification.messaging.event.social.CourseQuestionCreatedEvent;
+import com.cinx.notification.messaging.event.social.CourseReviewCreatedEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -27,8 +30,54 @@ import java.util.Map;
 public class SocialNotificationListener {
 
     private final CourseClient courseClient;
+    private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+
+    @RabbitHandler
+    public void handleReviewCreated(CourseReviewCreatedEvent event, Channel channel,
+                                    @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                    @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
+        log.info("Received review created event: {}", event.getReviewId());
+        try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
+
+            ApiResponse<CourseResponse> courseRes = courseClient.getCourseById(event.getCourseId());
+            if (courseRes != null && courseRes.success() && courseRes.data() != null) {
+                CourseResponse course = courseRes.data();
+                if (course.instructor() != null && course.instructor().id() != null
+                        && !course.instructor().id().equals(event.getReviewerUserId())) {
+                    String reviewerName = resolveUserName(event.getReviewerUserId());
+                    String ratingText = event.getRating() != null
+                            ? String.format("%.1f-star", event.getRating())
+                            : "new";
+                    String title = "New Review in " + course.title();
+                    String message = String.format(
+                            "%s left a %s review for your course.",
+                            reviewerName, ratingText);
+
+                    NotificationContext ctx = NotificationContext.builder()
+                            .channels(List.of("IN_APP"))
+                            .inAppPayload(Map.of(
+                                    "userIds", List.of(course.instructor().id()),
+                                    "title", title,
+                                    "message", message
+                            ))
+                            .build();
+                    dispatchService.dispatch(ctx);
+                }
+            }
+
+            idempotencyService.markSuccess(messageId);
+            channel.basicAck(tag, false);
+        } catch (Exception e) {
+            log.error("Error processing review created event", e);
+            nack(channel, tag);
+        }
+    }
 
     @RabbitHandler
     public void handleQuestionCreated(CourseQuestionCreatedEvent event, Channel channel,
@@ -118,5 +167,18 @@ public class SocialNotificationListener {
         } catch (Exception ex) {
             log.error("Error nacking message", ex);
         }
+    }
+
+    private String resolveUserName(String userId) {
+        try {
+            ApiResponse<UserDto> userRes = userClient.getUserById(userId);
+            if (userRes != null && userRes.success() && userRes.data() != null
+                    && userRes.data().name() != null && !userRes.data().name().isBlank()) {
+                return userRes.data().name();
+            }
+        } catch (Exception ex) {
+            log.warn("Could not resolve reviewer name for userId={}: {}", userId, ex.getMessage());
+        }
+        return "A student";
     }
 }

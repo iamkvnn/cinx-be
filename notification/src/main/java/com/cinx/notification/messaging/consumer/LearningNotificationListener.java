@@ -1,6 +1,8 @@
 package com.cinx.notification.messaging.consumer;
 
 import com.cinx.notification.messaging.context.NotificationContext;
+import com.cinx.notification.messaging.event.learning.CertificateApprovedEvent;
+import com.cinx.notification.messaging.event.learning.CertificateRequestedEvent;
 import com.cinx.notification.messaging.event.learning.CourseCompletedEvent;
 import com.cinx.notification.messaging.event.learning.DailyReminderDueEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
@@ -25,6 +27,107 @@ public class LearningNotificationListener {
 
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+
+    @RabbitHandler
+    public void handleCertificateRequested(CertificateRequestedEvent event, Channel channel,
+                                           @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                           @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
+        log.info("Received certificate requested event for requestId={}, instructorId={}",
+                event.getRequestId(), event.getInstructorId());
+        try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
+            String courseTitle = event.getCourseTitle() != null ? event.getCourseTitle() : "your course";
+            String studentName = event.getUserName() != null ? event.getUserName() : "A student";
+            String title = "New Certificate Request";
+            String message = studentName + " requested a certificate for " + courseTitle + ".";
+            if (event.getInstructorId() == null || event.getInstructorId().isBlank()) {
+                throw new IllegalStateException("Certificate request event missing instructorId");
+            }
+            if (event.getInstructorEmail() == null || event.getInstructorEmail().isBlank()) {
+                throw new IllegalStateException("Certificate request event missing instructorEmail");
+            }
+
+            NotificationContext ctx = NotificationContext.builder()
+                    .channels(List.of("EMAIL", "IN_APP"))
+                    .emailPayload(Map.of(
+                            "to", event.getInstructorEmail(),
+                            "subject", "New Certificate Request - " + courseTitle,
+                            "body", String.format(
+                                    "<html><body><h2>New Certificate Request</h2>" +
+                                            "<p>%s requested a certificate for <b>%s</b>.</p>" +
+                                            "</body></html>",
+                                    studentName, courseTitle)
+                    ))
+                    .inAppPayload(Map.of(
+                            "userIds", List.of(event.getInstructorId()),
+                            "title", title,
+                            "message", message
+                    ))
+                    .build();
+
+            dispatchService.dispatch(ctx);
+            idempotencyService.markSuccess(messageId);
+            channel.basicAck(tag, false);
+        } catch (Exception e) {
+            log.error("Error processing certificate requested event", e);
+            nack(channel, tag);
+        }
+    }
+
+    @RabbitHandler
+    public void handleCertificateApproved(CertificateApprovedEvent event, Channel channel,
+                                          @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                          @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId) {
+        log.info("Received certificate approved event for requestId={}, userId={}",
+                event.getRequestId(), event.getUserId());
+        try {
+            if (idempotencyService.isProcessed(messageId)) {
+                channel.basicAck(tag, false);
+                return;
+            }
+            String courseTitle = event.getCourseTitle() != null ? event.getCourseTitle() : "your course";
+            String title = "Certificate Approved";
+            String message = "Your certificate for " + courseTitle + " has been approved.";
+            if (event.getUserId() == null || event.getUserId().isBlank()) {
+                throw new IllegalStateException("Certificate approved event missing userId");
+            }
+            if (event.getUserEmail() == null || event.getUserEmail().isBlank()) {
+                throw new IllegalStateException("Certificate approved event missing userEmail");
+            }
+
+            NotificationContext ctx = NotificationContext.builder()
+                    .channels(List.of("EMAIL", "IN_APP"))
+                    .emailPayload(Map.of(
+                            "to", event.getUserEmail(),
+                            "subject", "Certificate Approved - " + courseTitle,
+                            "body", String.format(
+                                    "<html><body><h2>Certificate Approved</h2>" +
+                                            "<p>Congratulations%s!</p>" +
+                                            "<p>Your certificate for <b>%s</b> has been approved.</p>" +
+                                            "<p><a href=\"%s\">View your certificate</a></p>" +
+                                            "</body></html>",
+                                    event.getUserName() != null ? " " + event.getUserName() : "",
+                                    courseTitle,
+                                    event.getCertificateUrl())
+                    ))
+                    .inAppPayload(Map.of(
+                            "userIds", List.of(event.getUserId()),
+                            "title", title,
+                            "message", message
+                    ))
+                    .build();
+
+            dispatchService.dispatch(ctx);
+            idempotencyService.markSuccess(messageId);
+            channel.basicAck(tag, false);
+        } catch (Exception e) {
+            log.error("Error processing certificate approved event", e);
+            nack(channel, tag);
+        }
+    }
 
     @RabbitHandler
     public void handleCourseCompleted(CourseCompletedEvent event, Channel channel,

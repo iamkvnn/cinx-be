@@ -1,6 +1,8 @@
 package com.cinx.learning.messaging;
 
 import com.cinx.learning.consts.DailyGoalType;
+import com.cinx.learning.messaging.event.CertificateApprovedEvent;
+import com.cinx.learning.messaging.event.CertificateRequestedEvent;
 import com.cinx.learning.messaging.event.CourseCompletedEvent;
 import com.cinx.learning.messaging.event.DailyReminderDueEvent;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,18 @@ public class NotificationPublisher {
                 .build();
         publish("learning.reminder.due", event);
         log.info("DailyReminderDueEvent published - userId={}, goalType={}", userId, goalType);
+    }
+
+    public void publishCertificateRequested(CertificateRequestedEvent event) {
+        publish("learning.certificate.requested", event);
+        log.info("CertificateRequestedEvent published - requestId={}, instructorId={}",
+                event.getRequestId(), event.getInstructorId());
+    }
+
+    public void publishCertificateApproved(CertificateApprovedEvent event) {
+        publish("learning.certificate.approved", event);
+        log.info("CertificateApprovedEvent published - requestId={}, userId={}",
+                event.getRequestId(), event.getUserId());
     }
 
     private void publish(String routingKey, Object event) {

@@ -9,6 +9,9 @@ import com.cinx.learning.dto.response.CourseResponse;
 import com.cinx.learning.dto.response.CourseProgressResponse;
 import com.cinx.learning.dto.response.UserDto;
 import com.cinx.learning.mapper.CertificateRequestMapper;
+import com.cinx.learning.messaging.NotificationPublisher;
+import com.cinx.learning.messaging.event.CertificateApprovedEvent;
+import com.cinx.learning.messaging.event.CertificateRequestedEvent;
 import com.cinx.learning.model.CertificateRequest;
 import com.cinx.learning.repository.CertificateRequestRepository;
 import com.cinx.learning.service.course.CourseService;
@@ -23,6 +26,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.time.Instant;
 import java.util.UUID;
 import java.util.List;
 
@@ -38,6 +42,7 @@ public class CertificateServiceImpl implements ICertificateService {
     private final CertificateGeneratorService certificateGeneratorService;
     private final S3Service s3Service;
     private final LearningAuthorizationService authorizationService;
+    private final NotificationPublisher notificationPublisher;
 
     @Override
     @Transactional
@@ -62,7 +67,19 @@ public class CertificateServiceImpl implements ICertificateService {
                 .status(CertificateStatus.PENDING)
                 .requestedAt(LocalDateTime.now())
                 .build();
-        return certificateRequestMapper.toDto(certificateRequestRepository.save(request));
+        CertificateRequest savedRequest = certificateRequestRepository.save(request);
+        UserDto user = userService.getUserById(userId).data();
+        notificationPublisher.publishCertificateRequested(CertificateRequestedEvent.builder()
+                .requestId(savedRequest.getId())
+                .userId(userId)
+                .userName(user != null ? user.name() : null)
+                .courseId(courseId)
+                .courseTitle(course.title())
+                .instructorId(course.instructor() != null ? course.instructor().id() : null)
+                .instructorEmail(course.instructor() != null ? course.instructor().email() : null)
+                .occurredAt(Instant.now())
+                .build());
+        return certificateRequestMapper.toDto(savedRequest);
     }
 
     @Override
@@ -115,7 +132,18 @@ public class CertificateServiceImpl implements ICertificateService {
         request.setCertificateUrl(uploadedUrl);
         request.setApprovedAt(LocalDateTime.now());
 
-        return certificateRequestMapper.toDto(certificateRequestRepository.save(request));
+        CertificateRequest savedRequest = certificateRequestRepository.save(request);
+        notificationPublisher.publishCertificateApproved(CertificateApprovedEvent.builder()
+                .requestId(savedRequest.getId())
+                .userId(savedRequest.getUserId())
+                .userName(userDto.name())
+                .userEmail(userDto.email())
+                .courseId(savedRequest.getCourseId())
+                .courseTitle(courseDto.title())
+                .certificateUrl(uploadedUrl)
+                .occurredAt(Instant.now())
+                .build());
+        return certificateRequestMapper.toDto(savedRequest);
     }
 
     @Override

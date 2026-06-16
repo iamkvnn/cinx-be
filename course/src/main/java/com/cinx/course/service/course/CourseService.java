@@ -228,16 +228,15 @@ public class CourseService implements ICourseService {
         if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
             throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only courses waiting for approval can be approved");
         }
-        var lessonChangedEvents = courseDraftService.approveDraft(course);
+        courseDraftService.approveDraft(course);
         course.setStatus(CourseStatus.PUBLISHED);
         course.setPublishStatus(CoursePublishStatus.PUBLISHED);
         Course savedCourse = courseRepository.save(course);
-        if (!lessonChangedEvents.isEmpty()) {
-            courseEventProducer.publishCourseContentPublishedEvent(new CourseContentPublishedEvent(
-                    savedCourse.getId(),
-                    savedCourse.getTitle()
-            ));
-        }
+        courseEventProducer.publishCourseContentPublishedEvent(new CourseContentPublishedEvent(
+                savedCourse.getId(),
+                savedCourse.getTitle(),
+                savedCourse.getInstructorId()
+        ));
         publishRecommendationEvent(savedCourse, "course.course.published", "CoursePublished", true);
         return toResponse(savedCourse);
     }

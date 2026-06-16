@@ -36,15 +36,6 @@ public class AuthNotificationPublisher {
         ));
     }
 
-    /** OTP sent when user requests email change. */
-    public void publishOtpChangeEmail(String email, String otp) {
-        publish("auth.otp.change-email", Map.of(
-                "to", email,
-                "subject", "Yêu cầu đổi email",
-                "body", "Mã OTP của bạn là: " + otp
-        ));
-    }
-
     /** Notification when admin bans a user account. */
     public void publishAccountBanned(String email, String body) {
         publish("auth.account.banned", Map.of(

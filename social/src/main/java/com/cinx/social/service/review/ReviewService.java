@@ -12,7 +12,9 @@ import com.cinx.social.dto.request.CreateReviewRequest;
 import com.cinx.social.dto.request.UpdateReviewRequest;
 import com.cinx.social.dto.response.ReviewResponse;
 import com.cinx.social.dto.response.CheckEnrollmentStatus;
+import com.cinx.social.event.CourseReviewCreatedEvent;
 import com.cinx.social.mapper.ReviewMapper;
+import com.cinx.social.messaging.CourseReviewEventPublisher;
 import com.cinx.social.model.Report;
 import com.cinx.social.model.ReportType;
 import com.cinx.social.model.Review;
@@ -24,7 +26,9 @@ import com.cinx.social.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.Instant;
 import java.util.List;
+import java.util.UUID;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -47,6 +51,7 @@ public class ReviewService implements IReviewService {
     private final ReviewMapper reviewMapper;
     private final CourseService courseService;
     private final EnrollmentClient enrollmentClient;
+    private final CourseReviewEventPublisher reviewEventPublisher;
 
     @Override
     public Page<ReviewResponse> getReviewsByCourseId(String courseId, int page, int size, String sort) {
@@ -94,7 +99,7 @@ public class ReviewService implements IReviewService {
         if (reviewRepository.existsByUserIdAndCourseId(userId, request.courseId())) {
             throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "You have already reviewed this course");
         }
-        reviewRepository.save(Review.builder()
+        Review review = reviewRepository.save(Review.builder()
                 .courseId(request.courseId())
                 .userId(userId)
                 .content(request.content())
@@ -102,6 +107,15 @@ public class ReviewService implements IReviewService {
                 .build());
 
         updateCourseRatingInCourseService(request.courseId());
+        reviewEventPublisher.publishReviewCreatedEvent(CourseReviewCreatedEvent.builder()
+                .eventId(UUID.randomUUID().toString())
+                .reviewId(review.getId())
+                .courseId(review.getCourseId())
+                .reviewerUserId(userId)
+                .rating(review.getRating())
+                .content(review.getContent())
+                .occurredAt(Instant.now())
+                .build());
     }
 
     private void updateCourseRatingInCourseService(String courseId) {
