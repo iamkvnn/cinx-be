@@ -1,7 +1,9 @@
 package com.cinx.social.model;
 
+import com.cinx.common.model.AuditableEntity;
 import jakarta.persistence.*;
 import lombok.*;
+import lombok.experimental.SuperBuilder;
 
 import java.util.List;
 
@@ -9,13 +11,10 @@ import java.util.List;
 @Table(uniqueConstraints = @UniqueConstraint(columnNames = {"userId", "courseId"}))
 @Getter
 @Setter
-@Builder
+@SuperBuilder
 @NoArgsConstructor
 @AllArgsConstructor
-public class Review {
-    @Id
-    @GeneratedValue(strategy = GenerationType.UUID)
-    private String id;
+public class Review extends AuditableEntity {
     private String userId;
     private String courseId;
     private Double rating;
