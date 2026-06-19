@@ -225,6 +225,9 @@ public class CourseService implements ICourseService {
     public CourseResponse approveCourse(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be approved");
+        }
         if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
             throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only courses waiting for approval can be approved");
         }

@@ -82,16 +82,22 @@ public interface CourseMapper {
     @Mapping(target = "images", ignore = true)
     void copyDraftToCourse(CourseDraft draft, @MappingTarget Course course);
 
-    @Mapping(target = "instructor", source = "instructor")
     @Mapping(target = "instructor.id", source = "instructor.userId")
+    @Mapping(target = "instructor.email", source = "instructor.email")
+    @Mapping(target = "instructor.name", source = "instructor.name")
+    @Mapping(target = "instructor.gender", source = "instructor.gender")
+    @Mapping(target = "instructor.avatarUrl", source = "instructor.avatarUrl")
     CourseResponse toResponse(Course course, UserDto instructor);
 
     @Mapping(target = "id", source = "course.id")
     @Mapping(target = "title", source = "draft.title")
     @Mapping(target = "description", source = "draft.description")
     @Mapping(target = "category", source = "draft.category")
-    @Mapping(target = "instructor", source = "instructor")
     @Mapping(target = "instructor.id", source = "instructor.userId")
+    @Mapping(target = "instructor.email", source = "instructor.email")
+    @Mapping(target = "instructor.name", source = "instructor.name")
+    @Mapping(target = "instructor.gender", source = "instructor.gender")
+    @Mapping(target = "instructor.avatarUrl", source = "instructor.avatarUrl")
     @Mapping(target = "images", source = "course.images")
     @Mapping(target = "price", source = "draft.price")
     @Mapping(target = "discountedPrice", source = "draft.discountedPrice")
