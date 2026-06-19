@@ -44,6 +44,8 @@ public class CourseNotificationListener {
                 courseTitle = "your course";
             }
 
+            notifyInstructorCoursePublished(event, courseTitle);
+
             ApiResponse<List<String>> enrolledRes = enrollmentClient.getUserIdsEnrolledInCourse(event.getCourseId());
             if (enrolledRes == null || !enrolledRes.success()
                     || enrolledRes.data() == null || enrolledRes.data().isEmpty()) {
@@ -103,5 +105,43 @@ public class CourseNotificationListener {
                 log.error("Error nacking message", ex);
             }
         }
+    }
+
+    private void notifyInstructorCoursePublished(CourseContentPublishedEvent event, String courseTitle) {
+        if (event.getInstructorId() == null || event.getInstructorId().isBlank()) {
+            return;
+        }
+
+        ApiResponse<UserDto> userRes = userClient.getUserById(event.getInstructorId());
+        if (userRes == null || !userRes.success() || userRes.data() == null) {
+            throw new IllegalStateException("Failed to fetch instructor details for userId: " + event.getInstructorId());
+        }
+
+        UserDto instructor = userRes.data();
+        if (instructor.email() == null || instructor.email().isBlank()) {
+            throw new IllegalStateException("Instructor email is missing for userId: " + event.getInstructorId());
+        }
+        String title = "Course Published";
+        String message = "Your course " + courseTitle + " has been approved and published.";
+
+        NotificationContext ctx = NotificationContext.builder()
+                .channels(List.of("EMAIL", "IN_APP"))
+                .emailPayload(Map.of(
+                        "to", instructor.email(),
+                        "subject", "Course Published - " + courseTitle,
+                        "body", String.format(
+                                "<html><body><h2>Course Published</h2>" +
+                                        "<p>Dear %s,</p>" +
+                                        "<p>Your course <b>%s</b> has been approved by admin and is now published.</p>" +
+                                        "</body></html>",
+                                instructor.name(), courseTitle)
+                ))
+                .inAppPayload(Map.of(
+                        "userIds", List.of(event.getInstructorId()),
+                        "title", title,
+                        "message", message
+                ))
+                .build();
+        dispatchService.dispatch(ctx);
     }
 }

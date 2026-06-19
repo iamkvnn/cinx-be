@@ -1,7 +1,6 @@
 package com.cinx.payment.messaging;
 
 import com.cinx.payment.consts.OrderStatus;
-import com.cinx.payment.dto.response.OrderResponse;
 import com.cinx.payment.messaging.event.OrderEvent;
 import com.cinx.payment.service.payment.IPaymentStrategyService;
 import com.cinx.payment.service.payment.PaymentServiceFactory;
@@ -12,8 +11,6 @@ import org.springframework.amqp.rabbit.annotation.RabbitListener;
 import org.springframework.amqp.support.AmqpHeaders;
 import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
-
-import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -30,8 +27,6 @@ public class OrderQueueConsumer {
             IPaymentStrategyService paymentService = paymentServiceFactory.getPaymentService(orderEvent.getPaymentMethod());
             if (orderEvent.getStatus() == OrderStatus.CANCELLED) {
                 paymentService.cancelPayment(null, orderEvent.getId());
-            } else {
-                ensurePaymentExists(orderEvent, paymentService);
             }
             channel.basicAck(tag, false);
         } catch (Exception e) {
@@ -44,20 +39,4 @@ public class OrderQueueConsumer {
         }
     }
 
-    private void ensurePaymentExists(OrderEvent orderEvent, IPaymentStrategyService paymentService) {
-        try {
-            paymentService.getPaymentByOrderId(orderEvent.getId());
-        } catch (Exception ignored) {
-            paymentService.createPayment(new OrderResponse(
-                    orderEvent.getId(),
-                    orderEvent.getUserId(),
-                    List.of(),
-                    orderEvent.getTotalPrice(),
-                    orderEvent.getDiscounted(),
-                    orderEvent.getOrderDate(),
-                    orderEvent.getStatus(),
-                    orderEvent.getPaymentMethod()
-            ));
-        }
-    }
 }

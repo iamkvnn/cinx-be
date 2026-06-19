@@ -225,19 +225,21 @@ public class CourseService implements ICourseService {
     public CourseResponse approveCourse(String courseId) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be approved");
+        }
         if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
             throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only courses waiting for approval can be approved");
         }
-        var lessonChangedEvents = courseDraftService.approveDraft(course);
+        courseDraftService.approveDraft(course);
         course.setStatus(CourseStatus.PUBLISHED);
         course.setPublishStatus(CoursePublishStatus.PUBLISHED);
         Course savedCourse = courseRepository.save(course);
-        if (!lessonChangedEvents.isEmpty()) {
-            courseEventProducer.publishCourseContentPublishedEvent(new CourseContentPublishedEvent(
-                    savedCourse.getId(),
-                    savedCourse.getTitle()
-            ));
-        }
+        courseEventProducer.publishCourseContentPublishedEvent(new CourseContentPublishedEvent(
+                savedCourse.getId(),
+                savedCourse.getTitle(),
+                savedCourse.getInstructorId()
+        ));
         publishRecommendationEvent(savedCourse, "course.course.published", "CoursePublished", true);
         return toResponse(savedCourse);
     }

@@ -4,10 +4,9 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
-import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
+import com.cinx.enrollment.dto.request.UpdatePaymentMethodRequest;
 import com.cinx.enrollment.dto.response.OrderDetailResponse;
-import com.cinx.enrollment.dto.response.OrderResponse;
 import com.cinx.enrollment.service.order.IOrderService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -46,10 +45,21 @@ public class OrderController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
-    public ResponseEntity<ApiResponse<OrderResponse>> createOrder(@Valid @RequestBody CreateOrderRequest request) {
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> createOrder(@Valid @RequestBody CreateOrderRequest request) {
         String userId = AuthenticationUtil.extractUserId();
-        OrderResponse response = orderService.createOrder(userId, request);
+        OrderDetailResponse response = orderService.createOrder(userId, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Order created successfully", response));
+    }
+
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PutMapping("/{orderId}/payment-method")
+    public ResponseEntity<ApiResponse<OrderDetailResponse>> updatePaymentMethod(
+            @PathVariable String orderId,
+            @Valid @RequestBody UpdatePaymentMethodRequest request
+    ) {
+        String userId = AuthenticationUtil.extractUserId();
+        OrderDetailResponse response = orderService.updatePaymentMethod(userId, orderId, request);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Payment method updated successfully", response));
     }
 
     @PutMapping("/{orderId}/cancel")

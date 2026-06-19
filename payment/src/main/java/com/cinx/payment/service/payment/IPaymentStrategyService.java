@@ -10,7 +10,8 @@ import java.util.Map;
 public interface IPaymentStrategyService {
     PaymentResponse getPaymentByOrderId(String orderId);
     Payment createPayment(OrderResponse order);
-    String getPaymentUrl(String userId, String orderId);
+    void deletePayment(String orderId);
+    String getCheckoutLink(String userId, String paymentId);
     boolean handleCallback(Map<String, String> callbackData);
     Payment validateCallback(Map<String, String> callbackData);
     List<PaymentResponse> getPaymentByIds(List<String> orderIds);

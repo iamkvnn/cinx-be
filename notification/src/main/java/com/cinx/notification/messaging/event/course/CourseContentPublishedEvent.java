@@ -10,4 +10,10 @@ import lombok.NoArgsConstructor;
 public class CourseContentPublishedEvent {
     private String courseId;
     private String courseTitle;
+    private String instructorId;
+
+    public CourseContentPublishedEvent(String courseId, String courseTitle) {
+        this.courseId = courseId;
+        this.courseTitle = courseTitle;
+    }
 }

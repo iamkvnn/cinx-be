@@ -30,5 +30,11 @@ MoMo:
   partnerCode: ${MOMO_PARTNER_CODE}
   accessKey: ${MOMO_ACCESS_KEY}
   secret: ${MOMO_SECRET}
+stripe:
+  secret-key: ${STRIPE_SECRET_KEY}
+  webhook-secret: ${STRIPE_WEBHOOK_SECRET}
+  success-url: ${STRIPE_SUCCESS_URL}
+  cancel-url: ${STRIPE_CANCEL_URL}
+  currency: ${STRIPE_CURRENCY}
 feBaseUrl: ${FE_BASE_URL}
 gateway.url: ${GATEWAY_URL}

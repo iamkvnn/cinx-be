@@ -5,8 +5,10 @@ import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.enrollment.consts.OrderStatus;
+import com.cinx.enrollment.consts.PaymentMethod;
 import com.cinx.enrollment.dto.request.CartItemDto;
 import com.cinx.enrollment.dto.request.CreateOrderRequest;
+import com.cinx.enrollment.dto.request.UpdatePaymentMethodRequest;
 import com.cinx.enrollment.dto.response.*;
 import com.cinx.enrollment.mapper.OrderMapper;
 import com.cinx.enrollment.messaging.OrderEventProducer;
@@ -95,7 +97,7 @@ public class OrderService implements IOrderService {
 
     @Transactional
     @Override
-    public OrderResponse createOrder(String userId, CreateOrderRequest request) {
+    public OrderDetailResponse createOrder(String userId, CreateOrderRequest request) {
         validateCreateOrderRequest(request);
         List<OrderItem> orderItems = createOrderItems(request);
         List<String> alreadyEnrolledCourseIds = orderItems.stream()
@@ -128,8 +130,28 @@ public class OrderService implements IOrderService {
         order.setItems(orderItems);
         orderItemRepository.saveAll(orderItems);
         cartService.removeAllFromCartByIds(userId, request.cartItems().stream().map(CartItemDto::id).toList());
+        PaymentResponse payment = paymentService.createPayment(orderMapper.toDto(order)).data();
         orderEventProducer.publishOrderCreatedEvent(orderMapper.toEvent(order));
-        return orderMapper.toDto(order);
+        return orderMapper.toDetailDto(new OrderAggregate(order, payment));
+    }
+
+    @Transactional
+    @Override
+    public OrderDetailResponse updatePaymentMethod(String userId, String orderId, UpdatePaymentMethodRequest request) {
+        Order order = getOrderEntity(orderId);
+        ensureCurrentUserOwns(userId, order);
+        if (order.getStatus() != OrderStatus.PENDING) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Only PENDING orders can change payment method");
+        }
+        PaymentMethod oldPaymentMethod = order.getPaymentMethod();
+        if (oldPaymentMethod == request.paymentMethod()) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Payment method is already " + request.paymentMethod());
+        }
+
+        order.setPaymentMethod(request.paymentMethod());
+        Order savedOrder = orderRepository.save(order);
+        PaymentResponse payment = paymentService.updatePaymentMethod(orderMapper.toDto(savedOrder), oldPaymentMethod).data();
+        return orderMapper.toDetailDto(new OrderAggregate(savedOrder, payment));
     }
 
     @Transactional

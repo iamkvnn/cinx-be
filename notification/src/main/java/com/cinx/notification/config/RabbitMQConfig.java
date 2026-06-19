@@ -23,6 +23,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public TopicExchange socialExchange() {
+        return ExchangeBuilder.topicExchange("social.events.exchange").durable(true).build();
+    }
+
+    @Bean
     public TopicExchange learningExchange() {
         return ExchangeBuilder.topicExchange("learning.events.exchange").durable(true).build();
     }
@@ -137,6 +142,13 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding socialReviewCreatedBinding() {
+        return BindingBuilder.bind(socialQueue())
+                .to(socialExchange())
+                .with("social.review.created");
+    }
+
+    @Bean
     public Binding learningCourseCompletedBinding() {
         return BindingBuilder.bind(learningQueue())
                 .to(learningExchange())
@@ -151,10 +163,31 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Binding learningCertificateRequestedBinding() {
+        return BindingBuilder.bind(learningQueue())
+                .to(learningExchange())
+                .with("learning.certificate.requested");
+    }
+
+    @Bean
+    public Binding learningCertificateApprovedBinding() {
+        return BindingBuilder.bind(learningQueue())
+                .to(learningExchange())
+                .with("learning.certificate.approved");
+    }
+
+    @Bean
     public Binding orderCreatedBinding() {
         return BindingBuilder.bind(orderQueue())
                 .to(orderExchange())
                 .with("order.order.created");
+    }
+
+    @Bean
+    public Binding orderCancelledBinding() {
+        return BindingBuilder.bind(orderQueue())
+                .to(orderExchange())
+                .with("order.order.cancelled");
     }
 
     // auth.events.exchange — wildcard catches all OTP and account lifecycle events

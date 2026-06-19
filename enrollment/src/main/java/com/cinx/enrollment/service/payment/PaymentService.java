@@ -3,9 +3,12 @@ package com.cinx.enrollment.service.payment;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.enrollment.config.FeignConfig;
 import com.cinx.enrollment.consts.PaymentMethod;
+import com.cinx.enrollment.dto.response.OrderResponse;
 import com.cinx.enrollment.dto.response.PaymentResponse;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
@@ -13,6 +16,12 @@ import java.util.List;
 
 @FeignClient(name = "payment", path = "/internal/payments", configuration = FeignConfig.class)
 public interface PaymentService {
+    @PostMapping
+    ApiResponse<PaymentResponse> createPayment(@RequestBody OrderResponse order);
+
+    @PutMapping("/payment-method")
+    ApiResponse<PaymentResponse> updatePaymentMethod(@RequestBody OrderResponse order, @RequestParam PaymentMethod oldPaymentMethod);
+
     @GetMapping
     ApiResponse<PaymentResponse> getPaymentByOrderId(@RequestParam String orderId, @RequestParam PaymentMethod paymentMethod);
 

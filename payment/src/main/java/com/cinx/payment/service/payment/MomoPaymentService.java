@@ -1,5 +1,6 @@
 package com.cinx.payment.service.payment;
 
+import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
@@ -65,6 +66,10 @@ public class MomoPaymentService extends PaymentTemplate {
 
     @Override
     public MomoPayment createPayment(OrderResponse order) {
+        Optional<MomoPayment> existingPayment = momoPaymentRepository.findByOrderId(order.id());
+        if (existingPayment.isPresent()) {
+            throw new AlreadyExistException("Payment already exists for orderId: " + order.id());
+        }
         MomoPayment payment = MomoPayment.builder()
                 .orderId(order.id())
                 .requestId("REQ" + order.id())
@@ -76,13 +81,24 @@ public class MomoPaymentService extends PaymentTemplate {
     }
 
     @Override
-    public String getPaymentUrl(String userId, String orderId) {
-        OrderResponse order = enrollmentService.getOrderById(orderId).data();
+    public void deletePayment(String orderId) {
+        MomoPayment payment = momoPaymentRepository.findByOrderId(orderId)
+                .orElseThrow(() -> new NotFoundException("Payment not found for orderId: " + orderId));
+        if (payment.getStatus() == PaymentStatus.PAID) {
+            throw new BadRequestException(ErrorCode.PAYMENT_ALREADY_PAID, "Cannot delete a paid payment");
+        }
+        momoPaymentRepository.delete(payment);
+    }
+
+    @Override
+    public String getCheckoutLink(String userId, String paymentId) {
+        MomoPayment momoPayment = momoPaymentRepository.findById(paymentId)
+                .orElseThrow(() -> new NotFoundException("Payment not found for id: " + paymentId));
+        OrderResponse order = enrollmentService.getOrderById(momoPayment.getOrderId()).data();
         ensureOrderPayableByCurrentUser(order, userId);
-        MomoPayment momoPayment = momoPaymentRepository
-                .findByOrderId(orderId)
-                .orElseGet(() -> createPayment(order));
-        if (momoPayment.getPaymentUrl() != null && momoPayment.getUrlExpireTime().isAfter(LocalDateTime.now())) {
+        if (momoPayment.getPaymentUrl() != null
+                && momoPayment.getUrlExpireTime() != null
+                && momoPayment.getUrlExpireTime().isAfter(LocalDateTime.now())) {
             return momoPayment.getPaymentUrl();
         }
         
@@ -91,7 +107,7 @@ public class MomoPaymentService extends PaymentTemplate {
         
         MomoPaymentRequest request;
         try {
-            request = momoConfig.createPaymentRequest(orderId, momoPayment.getAmount().toString(),
+            request = momoConfig.createPaymentRequest(momoPayment.getOrderId(), momoPayment.getAmount().toString(),
                         momoPayment.getPaymentMessage(), returnUrl, notifyUrl, "", MomoPaymentConfig.ERequestType.PAY_WITH_ATM, momoPayment.getRequestId());
         } catch (NoSuchAlgorithmException | InvalidKeyException e) {
             throw new RuntimeException(e);
