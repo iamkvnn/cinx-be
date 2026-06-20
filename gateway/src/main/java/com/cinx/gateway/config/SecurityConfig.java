@@ -47,11 +47,12 @@ public class SecurityConfig {
                         "/api/v1/courses/*/lessons/*/articles",
                         "/api/v1/courses/*/lessons/*/videos",
                         "/api/v1/categories/**",
-                        "/api/v1/reviews/**",
+                        "/api/v1/reviews/**").permitAll()
+                .pathMatchers("/api/v1/auth/**",
                         "/api/v1/payments/IPN",
                         "/api/v1/payments/momo-callback",
-                        "/api/v1/payments/stripe-webhook").permitAll()
-                .pathMatchers("/api/v1/auth/**", "/ws/**", "/sockjs/**").permitAll()
+                        "/api/v1/payments/stripe-webhook",
+                        "/ws/**", "/sockjs/**").permitAll()
                 .anyExchange().authenticated()
             )
             .oauth2ResourceServer(oauth2 -> oauth2
