@@ -25,6 +25,7 @@ public abstract class Payment {
     protected String paymentMessage;
     @Column(unique = true)
     protected String orderId;
+    @Column(length = 2048)
     protected String paymentUrl;
     protected LocalDateTime urlExpireTime;
 }

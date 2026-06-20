@@ -1,5 +1,10 @@
 package com.cinx.gateway.config;
 
+import java.util.List;
+
+import javax.crypto.SecretKey;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -10,15 +15,9 @@ import org.springframework.security.oauth2.jose.jws.MacAlgorithm;
 import org.springframework.security.oauth2.jwt.NimbusReactiveJwtDecoder;
 import org.springframework.security.oauth2.jwt.ReactiveJwtDecoder;
 import org.springframework.security.web.server.SecurityWebFilterChain;
-import org.springframework.security.web.server.util.matcher.ServerWebExchangeMatcher;
-import org.springframework.security.web.util.matcher.RegexRequestMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.reactive.CorsConfigurationSource;
 import org.springframework.web.cors.reactive.UrlBasedCorsConfigurationSource;
-
-import javax.crypto.SecretKey;
-import javax.crypto.spec.SecretKeySpec;
-import java.util.List;
 
 @Configuration
 @EnableWebFluxSecurity
@@ -48,7 +47,10 @@ public class SecurityConfig {
                         "/api/v1/courses/*/lessons/*/articles",
                         "/api/v1/courses/*/lessons/*/videos",
                         "/api/v1/categories/**",
-                        "/api/v1/reviews/**").permitAll()
+                        "/api/v1/reviews/**",
+                        "/api/v1/payments/IPN",
+                        "/api/v1/payments/momo-callback",
+                        "/api/v1/payments/stripe-webhook").permitAll()
                 .pathMatchers("/api/v1/auth/**", "/ws/**", "/sockjs/**").permitAll()
                 .anyExchange().authenticated()
             )
