@@ -24,6 +24,7 @@ public record UserDto(
         @Schema(example = "2025-01-01T10:00:00") LocalDateTime createdAt,
         @Schema(example = "2025-01-01T10:00:00") LocalDateTime updatedAt,
         @Schema(example = "2025-01-01T10:00:00") LocalDateTime lastAccessAt,
-        @Schema(example = "2025-01-01T10:00:00") LocalDateTime instructorVerifiedAt
+        @Schema(example = "2025-01-01T10:00:00") LocalDateTime instructorVerifiedAt,
+        @Schema(example = "false") Boolean isPartnershipTerminated
 ) {
 }

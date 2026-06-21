@@ -74,6 +74,15 @@ public interface LessonRepository extends JpaRepository<Lesson, String> {
     """)
     List<Lesson> findByDraft(@Param("draftId") String draftId);
 
+    @Query("""
+        SELECT CASE WHEN COUNT(l) > 0 THEN true ELSE false END
+        FROM Lesson l
+        JOIN l.section s
+        JOIN s.draft d
+        WHERE d.id = :draftId
+    """)
+    boolean existsByDraft(@Param("draftId") String draftId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT l

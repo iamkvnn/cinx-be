@@ -67,6 +67,14 @@ public class UserController {
         return ResponseEntity.ok(new ApiResponse<>(true, "Instructor rejected successfully", null));
     }
 
+    @Operation(summary = "Terminate partnership with instructor (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/{id}/terminate-partnership")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<?>> terminatePartnership(@PathVariable String id) {
+        userService.terminatePartnership(id);
+        return ResponseEntity.ok(new ApiResponse<>(true, "Instructor partnership terminated successfully", null));
+    }
+
     @Operation(summary = "Get current user profile", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping("/me")
     public ResponseEntity<ApiResponse<UserDto>> getCurrentUser() {

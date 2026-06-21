@@ -1,5 +1,7 @@
 package com.cinx.course.service.course;
 
+import com.cinx.common.exception.BadRequestException;
+import com.cinx.common.exception.ErrorCode;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.mapper.CourseMapper;
@@ -56,6 +58,17 @@ public class CourseDraftService implements ICourseDraftService {
         draft.setCategory(category);
         draft.setDiscountRate(discountRate);
         return courseDraftRepository.save(draft);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public void ensureDraftReadyForSubmission(CourseDraft draft) {
+        if (!sectionRepository.existsByDraft(draft.getId())) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Course must have at least one section before submission");
+        }
+        if (!lessonRepository.existsByDraft(draft.getId())) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "Course must have at least one lesson before submission");
+        }
     }
 
     @Override

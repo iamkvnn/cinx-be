@@ -185,6 +185,7 @@ public class CourseService implements ICourseService {
         if (draft.isEmpty()) {
             throw new BadRequestException(ErrorCode.COURSE_DRAFT_MISSING, "Course draft not found for course id: " + courseId);
         }
+        courseDraftService.ensureDraftReadyForSubmission(draft.get());
         course.setPublishStatus(CoursePublishStatus.WAITING_APPROVAL);
         Course savedCourse = courseRepository.save(course);
         courseEventProducer.publishCourseApprovalRequestedEvent(new CourseApprovalRequestedEvent(

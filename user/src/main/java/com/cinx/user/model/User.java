@@ -35,6 +35,10 @@ public class User extends AuditableEntity {
     private Boolean isReceivePushNotification = false;
 
     @Builder.Default
+    @Column(columnDefinition = "boolean default false")
+    private Boolean isPartnershipTerminated = false;
+
+    @Builder.Default
     private Integer xp = 0;
 
     private String userId;

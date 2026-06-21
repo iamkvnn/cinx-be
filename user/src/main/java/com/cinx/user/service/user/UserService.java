@@ -6,6 +6,7 @@ import com.cinx.user.consts.UserStatus;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.common.exception.AlreadyExistException;
+import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.user.dto.UserDto;
@@ -67,7 +68,11 @@ public class UserService implements IUserService {
 
     @Override
     public Boolean checkInstructorVerified(String id) {
-        return getOrThrowByUserId(id).getIsInstructorVerified();
+        User user = getOrThrowByUserId(id);
+        if (Boolean.TRUE.equals(user.getIsPartnershipTerminated())) {
+            return false;
+        }
+        return user.getIsInstructorVerified();
     }
 
     @Override
@@ -115,6 +120,20 @@ public class UserService implements IUserService {
         user.setIsInstructorVerified(false);
         userRepository.save(user);
         userEventProducer.sendInstructorRejectedEmail(user);
+    }
+
+    @Override
+    @Transactional
+    public void terminatePartnership(String id) {
+        User user = getOrThrowByUserId(id);
+        if (user.getRole() != Role.INSTRUCTOR) {
+            throw new BadRequestException(ErrorCode.BAD_REQUEST, "User is not an instructor");
+        }
+        user.setIsInstructorVerified(false);
+        user.setIsPartnershipTerminated(true);
+        user.setStatus(UserStatus.BANNED);
+        userRepository.save(user);
+        userEventProducer.sendPartnershipTerminatedEmail(user);
     }
 
     @Override

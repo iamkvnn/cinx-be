@@ -14,5 +14,6 @@ public interface ICourseDraftService {
     CourseDraft getOrCreateDraft(Course course);
     CourseDraft createDraftFromCourse(Course course);
     CourseDraft updateDraft(Course course, UpdateCourseRequest request, Category category, Long discountRate);
+    void ensureDraftReadyForSubmission(CourseDraft draft);
     List<LessonChangedEvent> approveDraft(Course course);
 }
