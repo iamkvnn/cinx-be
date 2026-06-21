@@ -88,17 +88,17 @@ public interface OrderItemRepository extends JpaRepository<OrderItem, String> {
            "ORDER BY FUNCTION('DATE_FORMAT', o.orderDate, '%Y-%m') ASC")
     List<Object[]> aggregatePlatformRevenueByMonth(LocalDateTime startDate, LocalDateTime endDate);
 
-    @Query("SELECT new com.cinx.enrollment.dto.response.CourseStats(oi.courseId, oi.title, SUM(oi.discountedPrice)) " +
+    @Query("SELECT new com.cinx.enrollment.dto.response.CourseRevenueStats(oi.courseId, oi.title, SUM(oi.discountedPrice)) " +
            "FROM OrderItem oi JOIN Order o ON oi.orderId = o.id " +
            "WHERE o.status = 1 AND oi.instructorId = :instructorId AND o.orderDate BETWEEN :startDate AND :endDate " +
            "GROUP BY oi.courseId, oi.title " +
            "ORDER BY SUM(oi.discountedPrice) DESC")
-    Page<com.cinx.enrollment.dto.response.CourseStats> findTopCoursesByRevenueForInstructor(String instructorId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    Page<com.cinx.enrollment.dto.response.CourseRevenueStats> findTopCoursesByRevenueForInstructor(String instructorId, LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 
-    @Query("SELECT new com.cinx.enrollment.dto.response.CourseStats(oi.courseId, oi.title, SUM(oi.discountedPrice)) " +
+    @Query("SELECT new com.cinx.enrollment.dto.response.CourseRevenueStats(oi.courseId, oi.title, SUM(oi.discountedPrice)) " +
            "FROM OrderItem oi JOIN Order o ON oi.orderId = o.id " +
            "WHERE o.status = 1 AND o.orderDate BETWEEN :startDate AND :endDate " +
            "GROUP BY oi.courseId, oi.title " +
            "ORDER BY SUM(oi.discountedPrice) DESC")
-    Page<com.cinx.enrollment.dto.response.CourseStats> findTopCoursesByRevenue(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
+    Page<com.cinx.enrollment.dto.response.CourseRevenueStats> findTopCoursesByRevenue(LocalDateTime startDate, LocalDateTime endDate, Pageable pageable);
 }

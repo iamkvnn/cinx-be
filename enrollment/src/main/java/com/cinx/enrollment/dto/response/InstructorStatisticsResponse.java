@@ -14,7 +14,7 @@ public record InstructorStatisticsResponse(
         Long distinctLearnersInRange,
         List<RevenueByTimeResponse> revenueByTime,
         List<EnrollmentByTimeResponse> enrollmentsByTime,
-        List<CourseStats> topCoursesByRevenue,
+        List<CourseRevenueStats> topCoursesByRevenue,
         List<CourseStats> topCoursesByEnrollment
 ) {
 }
