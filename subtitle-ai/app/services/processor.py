@@ -6,6 +6,7 @@ from pathlib import Path
 from app.core.config import settings
 from app.models import SentenceItem, to_jsonable
 from app.services.asr import extract_audio, transcribe_with_faster_whisper, word_confidence_items
+from app.services.alignment import align_sentence_items_to_words
 from app.services.llm import DigitalOceanLLM
 from app.services.segmentation import refine_long_sentences_with_llm, split_segments_to_sentences
 from app.services.storage import S3Storage
@@ -94,6 +95,7 @@ class SubtitleJobProcessor:
                 len(sentences),
             )
             refined = refine_long_sentences_with_llm(sentences, self.llm, work_dir)
+            refined = align_sentence_items_to_words(refined, asr_result["segments"])
             write_json_artifact(work_dir, "06_refined_sentences.json", refined)
             logger.info(
                 "Sentence refinement completed job_id=%s refined_items=%s",
@@ -112,7 +114,7 @@ class SubtitleJobProcessor:
                 job_id,
                 output_language,
             )
-            subtitles = build_final_subtitles(refined, self.llm, output_language, work_dir)
+            subtitles = build_final_subtitles(refined, self.llm, output_language, work_dir, asr_result["segments"])
             write_json_artifact(work_dir, "09_final_subtitles.json", subtitles)
             validate_subtitles(subtitles)
             vtt_content = write_webvtt(subtitles)

@@ -4,7 +4,8 @@ import re
 from pathlib import Path
 
 from app.core.config import settings
-from app.models import SentenceItem, SubtitleItem, to_jsonable
+from app.models import ASRSegment, SentenceItem, SubtitleItem, to_jsonable
+from app.services.alignment import distribute_chunks_with_word_alignment
 
 
 VTT_TIMESTAMP = re.compile(
@@ -45,15 +46,29 @@ def build_final_subtitles(
     llm,
     target_language: str,
     artifact_dir: Path | None = None,
+    source_segments: list[ASRSegment] | None = None,
 ) -> list[SubtitleItem]:
     output: list[SubtitleItem] = []
     candidates = [item for item in items if item.text.strip()]
     split_map = split_translated_items_for_subtitles(candidates, llm, target_language, artifact_dir)
     write_json_artifact(artifact_dir, "08_final_subtitle_split_map.json", split_map)
+    words_by_segment = {
+        segment.id: sorted(
+            [word for word in segment.words if word.word.strip()],
+            key=lambda word: (word.start, word.end),
+        )
+        for segment in (source_segments or [])
+    }
 
     for item in candidates:
         chunks = split_map.get(item.id) or smart_rule_subtitle_split(item.text)
-        for cue in distribute_time(item.start, item.end, chunks):
+        aligned_cues = distribute_chunks_with_word_alignment(
+            item.start,
+            item.end,
+            chunks,
+            words_by_segment.get(item.source_segment_id, []),
+        )
+        for cue in aligned_cues or distribute_time(item.start, item.end, chunks):
             if cue["end"] - cue["start"] < 0.25:
                 cue["end"] = cue["start"] + 0.25
             output.append(

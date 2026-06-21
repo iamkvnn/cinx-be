@@ -4,7 +4,8 @@ import unittest
 
 os.environ.setdefault("AWS_S3_BUCKET", "test-bucket")
 
-from app.models import SentenceItem
+from app.models import ASRSegment, SentenceItem, WordTimestamp
+from app.services.alignment import align_sentence_items_to_words
 from app.services.subtitle import (
     build_final_subtitles,
     distribute_time,
@@ -52,6 +53,44 @@ class SubtitleTest(unittest.TestCase):
         subtitles = build_final_subtitles([item], NoopLlm(), "en")
         validate_subtitles(subtitles)
         self.assertGreater(len(subtitles), 1)
+
+    def test_align_sentence_items_to_word_timestamps(self):
+        segment = ASRSegment(
+            id=7,
+            start=0.0,
+            end=5.0,
+            text="hello world again",
+            words=[
+                WordTimestamp("hello", 0.4, 0.8),
+                WordTimestamp("world", 1.0, 1.4),
+                WordTimestamp("again", 2.0, 2.5),
+            ],
+        )
+        item = SentenceItem(id=1, source_segment_id=7, start=0.0, end=5.0, text="world again")
+
+        result = align_sentence_items_to_words([item], [segment])
+
+        self.assertEqual(1.0, result[0].start)
+        self.assertEqual(2.5, result[0].end)
+
+    def test_build_final_subtitles_uses_word_timestamps_for_generate(self):
+        segment = ASRSegment(
+            id=3,
+            start=0.0,
+            end=4.0,
+            text="hello world again",
+            words=[
+                WordTimestamp("hello", 0.2, 0.6),
+                WordTimestamp("world", 1.0, 1.5),
+                WordTimestamp("again", 2.5, 3.0),
+            ],
+        )
+        item = SentenceItem(id=1, source_segment_id=3, start=0.0, end=4.0, text="hello world again")
+
+        subtitles = build_final_subtitles([item], NoopLlm(), "en", source_segments=[segment])
+
+        self.assertEqual(0.2, subtitles[0].start)
+        self.assertEqual(3.0, subtitles[0].end)
 
 
 if __name__ == "__main__":
