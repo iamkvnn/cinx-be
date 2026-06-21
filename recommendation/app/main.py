@@ -15,7 +15,6 @@ from app.core.problem import (
     validation_exception_handler,
 )
 from app.api.recommendation import router as recommendation_router
-from app.api.agent import internal_router as agent_internal_router
 from app.api.agent import router as agent_router
 from app.messaging.rabbitmq_consumer import start_consumer
 from app.services.rag_index import rebuild_rag_index
@@ -64,4 +63,3 @@ app.add_exception_handler(HTTPException, http_exception_handler)
 app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.include_router(recommendation_router)
 app.include_router(agent_router)
-app.include_router(agent_internal_router)
