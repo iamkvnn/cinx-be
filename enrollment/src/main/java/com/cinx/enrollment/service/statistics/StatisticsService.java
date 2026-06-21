@@ -253,8 +253,30 @@ public class StatisticsService implements IStatisticsService {
     }
 
     private List<CourseStats> toCourseStats(List<Object[]> rows) {
+        Map<String, String> courseTitles = getCourseTitles(rows.stream()
+                .map(row -> (String) row[0])
+                .toList());
         return rows.stream()
-                .map(row -> new CourseStats((String) row[0], null, ((Number) row[1]).longValue()))
+                .map(row -> {
+                    String courseId = (String) row[0];
+                    return new CourseStats(
+                            courseId,
+                            courseTitles.getOrDefault(courseId, "Unknown Course"),
+                            ((Number) row[1]).longValue()
+                    );
+                })
                 .toList();
+    }
+
+    private Map<String, String> getCourseTitles(List<String> courseIds) {
+        if (courseIds.isEmpty()) {
+            return Map.of();
+        }
+        try {
+            return courseService.getCoursesByIds(courseIds).data().stream()
+                    .collect(Collectors.toMap(CourseResponse::id, CourseResponse::title, (existing, replacement) -> existing));
+        } catch (Exception e) {
+            return Map.of();
+        }
     }
 }
