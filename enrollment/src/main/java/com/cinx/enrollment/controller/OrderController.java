@@ -14,6 +14,7 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 @RestController
@@ -31,6 +32,20 @@ public class OrderController {
             @RequestParam(required = false) String sort
     ) {
         String userId = AuthenticationUtil.extractUserId();
+        Page<OrderDetailResponse> orders = orderService.getOrdersByUserId(userId, page, size, query, sort);
+        return ResponseEntity.ok(PaginationWrapper.wrap(orders));
+    }
+
+    @Operation(summary = "Get orders by user id for admin", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PreAuthorize("hasRole('ADMIN')")
+    @GetMapping("/admin/users/{userId}")
+    public ResponseEntity<PaginatedApiResponse<OrderDetailResponse>> getOrdersByUserIdForAdmin(
+            @PathVariable String userId,
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
+    ) {
         Page<OrderDetailResponse> orders = orderService.getOrdersByUserId(userId, page, size, query, sort);
         return ResponseEntity.ok(PaginationWrapper.wrap(orders));
     }
