@@ -1,4 +1,4 @@
-from sqlalchemy import String, Text, Integer, Float, DateTime, Index
+from sqlalchemy import String, Text, Integer, Float, DateTime, Index, Boolean
 from sqlalchemy.orm import Mapped, mapped_column
 from sqlalchemy.dialects.mysql import JSON
 from datetime import datetime
@@ -18,9 +18,18 @@ class Course(Base):
 
     # Instructor (stored flat)
     instructor_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
+    instructor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
     rating: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
     enrollment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
+    price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    discounted_price: Mapped[float | None] = mapped_column(Float, nullable=True)
+    discount_rate: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    duration: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    is_in_subscription: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    has_certificate: Mapped[bool] = mapped_column(Boolean, nullable=False, default=False)
+    certificate_title: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    image_urls: Mapped[list | None] = mapped_column(JSON, nullable=True)
 
     status: Mapped[str] = mapped_column(String(50), nullable=False, default="DRAFT")  # "DRAFT", "PUBLISHED", "ARCHIVED"
     publish_status: Mapped[str | None] = mapped_column(String(50), nullable=True)
@@ -34,4 +43,6 @@ class Course(Base):
         Index("idx_course_status", "status"),
         Index("idx_course_rating", "rating"),
         Index("idx_course_enrollment", "enrollment_count"),
+        Index("idx_course_price", "price"),
+        Index("idx_course_certificate", "has_certificate"),
     )

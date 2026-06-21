@@ -41,7 +41,13 @@ class Settings(BaseSettings):
     DIGITALOCEAN_INFERENCE_BASE_URL: str
     DIGITALOCEAN_LLM_MODEL: str
     DIGITALOCEAN_LLM_TIMEOUT_SECONDS: float
-    DIGITALOCEAN_LLM_MAX_COMPLETION_TOKENS: int = 12000
+    DIGITALOCEAN_LLM_MAX_COMPLETION_TOKENS: int = 4096
+    EMBEDDING_MODEL_NAME: str = "microsoft/harrier-oss-v1-270m"
+    EMBEDDING_QUERY_PROMPT_NAME: str = "web_search_query"
+    JWT_ACCESS_SECRET: str = ""
+    LEARNING_SERVICE_BASE_URL: str = "http://learning:8084"
+    COURSE_SERVICE_BASE_URL: str = "http://course:8081"
+    AGENT_MAX_SEARCH_RESULTS: int = 8
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
