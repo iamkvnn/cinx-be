@@ -76,9 +76,16 @@ class LearningPathContextService:
                     "duration": course.duration,
                     "hasCertificate": course.has_certificate,
                     "score": score,
+                    "url": f"https://shiny.id.vn/courses/{course.id}",
                 }
             )
-            citations.append({"sourceType": "course", "title": course.title, "courseId": course.id, "score": score})
+            citations.append({
+                "sourceType": "course",
+                "title": course.title,
+                "courseId": course.id,
+                "sourceUrl": f"https://shiny.id.vn/courses/{course.id}",
+                "score": score
+            })
 
             selected_lesson_ids = {
                 lesson_id
@@ -150,6 +157,7 @@ class LearningPathProposalService:
                     items.append({
                         "courseId": course_id,
                         "courseTitle": course.title,
+                        "courseUrl": f"https://shiny.id.vn/courses/{course_id}",
                         "lessonId": lesson_id,
                         "lessonTitle": lesson.get("lessonTitle"),
                         "orderIndex": len(items),
@@ -458,6 +466,7 @@ Return strict JSON only (no preamble, no markdown fences):
                 {
                     "courseId": course_id,
                     "courseTitle": lesson.get("courseTitle"),
+                    "courseUrl": f"https://shiny.id.vn/courses/{course_id}",
                     "lessonId": lesson_id,
                     "lessonTitle": lesson.get("lessonTitle"),
                     "orderIndex": len(existing_items) + len(additions),
@@ -518,6 +527,7 @@ Return strict JSON only (no preamble, no markdown fences):
                 {
                     "courseId": lesson["courseId"],
                     "courseTitle": lesson.get("courseTitle"),
+                    "courseUrl": f"https://shiny.id.vn/courses/{lesson['courseId']}",
                     "lessonId": lesson_id,
                     "lessonTitle": lesson.get("lessonTitle"),
                     "orderIndex": len(items),

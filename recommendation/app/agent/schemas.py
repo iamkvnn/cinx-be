@@ -57,6 +57,7 @@ class ToolCallInfo(BaseModel):
 class LearningPathProposalItem(BaseModel):
     courseId: str
     courseTitle: str | None = None
+    courseUrl: str | None = None
     lessonId: str
     lessonTitle: str | None = None
     orderIndex: int
@@ -115,8 +116,4 @@ class CreateLearningPathFromProposalRequest(BaseModel):
     confirmed: bool = True
 
 
-class KnowledgeImportRequest(BaseModel):
-    title: str
-    content: str
-    sourceType: str = "CMS"
-    sourceUrl: str | None = None
+
