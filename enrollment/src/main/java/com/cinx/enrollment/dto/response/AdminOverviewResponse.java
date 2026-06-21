@@ -18,7 +18,7 @@ public record AdminOverviewResponse(
         Long distinctLearnersInRange,
         List<RevenueByTimeResponse> platformRevenueByTime,
         List<EnrollmentByTimeResponse> enrollmentsByTime,
-        List<CourseStats> topCoursesByRevenue,
+        List<CourseRevenueStats> topCoursesByRevenue,
         List<CourseStats> topCoursesByEnrollment
 ) {
 }

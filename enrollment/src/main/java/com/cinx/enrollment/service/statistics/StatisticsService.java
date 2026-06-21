@@ -97,7 +97,7 @@ public class StatisticsService implements IStatisticsService {
         if (totalGross == null) totalGross = 0L;
         Long totalNet = calculateNetRevenue(totalGross);
 
-        List<CourseStats> topCoursesByRevenue = orderItemRepository.findTopCoursesByRevenueForInstructor(
+        List<CourseRevenueStats> topCoursesByRevenue = orderItemRepository.findTopCoursesByRevenueForInstructor(
                 instructorId, range.start(), range.end(), PageRequest.of(0, 5)).getContent();
         List<String> courseIds = orderItemRepository.aggregateCourseRevenueByInstructor(OrderStatus.PAID, instructorId, range.start(), range.end())
                 .stream()
@@ -196,7 +196,7 @@ public class StatisticsService implements IStatisticsService {
         Long enrollmentsInRange = enrolledCourseRepository.countEnrollmentsBetween(range.start(), range.end());
         Long distinctLearnersInRange = enrolledCourseRepository.countDistinctLearnersBetween(range.start(), range.end());
 
-        List<CourseStats> topCoursesByRevenue = orderItemRepository.findTopCoursesByRevenue(
+        List<CourseRevenueStats> topCoursesByRevenue = orderItemRepository.findTopCoursesByRevenue(
                 range.start(), range.end(), PageRequest.of(0, 5)).getContent();
         List<CourseStats> topCoursesByEnrollment = toCourseStats(
                 enrolledCourseRepository.findTopEnrolledCourses(range.start(), range.end(), PageRequest.of(0, 5)));

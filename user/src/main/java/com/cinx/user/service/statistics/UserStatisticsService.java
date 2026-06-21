@@ -29,7 +29,7 @@ public class UserStatisticsService implements IUserStatisticsService {
         return new UserStatisticsOverviewResponse(
                 userRepository.countUsersBetween(range.start(), range.end()),
                 toStringLongMap(userRepository.countUsersByRoleBetween(range.start(), range.end())),
-                toStringLongMap(userRepository.countInstructorsByVerificationStatusBetween(range.start(), range.end())),
+                toInstructorVerificationStatusMap(userRepository.countInstructorsByVerificationStatusBetween(range.start(), range.end())),
                 fillByTime(range, userRows),
                 userRepository.countTotalUsers()
         );
@@ -47,6 +47,18 @@ public class UserStatisticsService implements IUserStatisticsService {
     private Map<String, Long> toStringLongMap(List<Object[]> rows) {
         Map<String, Long> values = new LinkedHashMap<>();
         rows.forEach(row -> values.put(String.valueOf(row[0]), ((Number) row[1]).longValue()));
+        return values;
+    }
+
+    private Map<String, Long> toInstructorVerificationStatusMap(List<Object[]> rows) {
+        Map<String, Long> values = new LinkedHashMap<>();
+        values.put("verified", 0L);
+        values.put("unverified", 0L);
+        rows.forEach(row -> {
+            Boolean verified = (Boolean) row[0];
+            String status = Boolean.TRUE.equals(verified) ? "verified" : "unverified";
+            values.put(status, ((Number) row[1]).longValue());
+        });
         return values;
     }
 }
