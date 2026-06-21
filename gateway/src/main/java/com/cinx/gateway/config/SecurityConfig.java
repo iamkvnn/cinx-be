@@ -38,7 +38,8 @@ public class SecurityConfig {
                 .pathMatchers(HttpMethod.GET,
                         "/api/v1/courses/mine",
                         "/api/v1/courses/upload",
-                        "/api/v1/courses/mine").authenticated()
+                        "/api/v1/courses/mine",
+                        "/api/v1/policies/versions").authenticated()
                 .pathMatchers(HttpMethod.GET,
                         "/api/v1/courses",
                         "/api/v1/courses/{courseId}",
@@ -47,7 +48,9 @@ public class SecurityConfig {
                         "/api/v1/courses/*/lessons/*/articles",
                         "/api/v1/courses/*/lessons/*/videos",
                         "/api/v1/categories/**",
-                        "/api/v1/reviews/**").permitAll()
+                        "/api/v1/reviews/**",
+                        "/api/v1/policies",
+                        "/api/v1/policies/*").permitAll()
                 .pathMatchers("/api/v1/auth/**",
                         "/api/v1/payments/IPN",
                         "/api/v1/payments/momo-callback",
