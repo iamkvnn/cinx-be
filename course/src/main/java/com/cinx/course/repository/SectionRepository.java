@@ -30,6 +30,14 @@ public interface SectionRepository extends JpaRepository<Section, String> {
     """)
     List<Section> findDraftByDraft(@Param("draftId") String draftId);
 
+    @Query("""
+        SELECT CASE WHEN COUNT(s) > 0 THEN true ELSE false END
+        FROM Section s
+        JOIN s.draft d
+        WHERE d.id = :draftId
+    """)
+    boolean existsByDraft(@Param("draftId") String draftId);
+
     @Lock(LockModeType.PESSIMISTIC_WRITE)
     @Query("""
         SELECT s
