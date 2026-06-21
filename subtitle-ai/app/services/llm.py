@@ -42,7 +42,7 @@ Output format:
             "split_long_sentence",
             "You are a subtitle segmentation assistant. Return valid JSON only.",
             prompt,
-            max_tokens=800,
+            max_tokens=1000,
             temperature=0.1,
         )
         chunks = _clean_string_list(payload.get("sentences"), "")

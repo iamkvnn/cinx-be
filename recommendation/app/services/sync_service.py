@@ -21,6 +21,7 @@ class SyncService:
 
         category = payload.category or {}
         instructor = payload.instructor or {}
+        images = payload.images or []
 
         data = {
             "id": payload.id,
@@ -29,8 +30,21 @@ class SyncService:
             "category_id": category.get("id") if isinstance(category, dict) else getattr(category, "id", None),
             "category_name": category.get("name") if isinstance(category, dict) else getattr(category, "name", None),
             "instructor_id": instructor.get("id") if isinstance(instructor, dict) else getattr(instructor, "id", None),
+            "instructor_name": instructor.get("name") if isinstance(instructor, dict) else getattr(instructor, "name", None),
             "rating": payload.rating if payload.rating is not None else 0.0,
             "enrollment_count": payload.enrollmentCount if payload.enrollmentCount is not None else 0,
+            "price": payload.price,
+            "discounted_price": payload.discountedPrice,
+            "discount_rate": payload.discountRate,
+            "duration": payload.duration,
+            "is_in_subscription": bool(payload.isInSubscription),
+            "has_certificate": bool(payload.hasCertificate),
+            "certificate_title": payload.certificateTitle,
+            "image_urls": [
+                image.get("imageUrl") if isinstance(image, dict) else getattr(image, "imageUrl", None)
+                for image in images
+                if (image.get("imageUrl") if isinstance(image, dict) else getattr(image, "imageUrl", None))
+            ],
             "status": status,
             "publish_status": publish_status,
             "created_at": payload.createdAt,

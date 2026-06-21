@@ -42,13 +42,13 @@ class Settings(BaseSettings):
     AUDIO_NORMALIZE_ENABLED: bool = True
     SOURCE_LANGUAGE_HINT: str = ""
 
-    MAX_SENTENCE_CHARS_BEFORE_LLM: int = 220
-    MAX_SUBTITLE_LINE_CHARS: int = 42
+    MAX_SENTENCE_CHARS_BEFORE_LLM: int = 52
+    MAX_SUBTITLE_LINE_CHARS: int = 52
     MAX_SUBTITLE_LINES: int = 1
     MAX_SUBTITLE_CPS: int = 20
     FINAL_SPLIT_BATCH_SIZE: int = 20
     TRANSLATE_BATCH_SIZE: int = 20
-    USE_LLM_FOR_FINAL_SUBTITLE_SPLIT: bool = True
+    USE_LLM_FOR_FINAL_SUBTITLE_SPLIT: bool = False
     WORK_DIR: str = "/tmp/cinx-subtitle-ai"
 
     model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")

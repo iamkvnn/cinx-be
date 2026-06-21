@@ -38,6 +38,14 @@ def create_tables():
 
 
 def ensure_schema():
+    # Import all entities so SQLAlchemy metadata is complete before create_all.
+    import app.entities.course  # noqa: F401
+    import app.entities.course_chunk  # noqa: F401
+    import app.entities.knowledge  # noqa: F401
+    import app.entities.agent_session  # noqa: F401
+    import app.entities.user_interaction  # noqa: F401
+    import app.entities.user_preference  # noqa: F401
+
     Base.metadata.create_all(bind=engine)
     inspector = inspect(engine)
     if "courses" not in inspector.get_table_names():
@@ -49,8 +57,17 @@ def ensure_schema():
         "category_id": "ADD COLUMN category_id VARCHAR(50) NULL",
         "category_name": "ADD COLUMN category_name VARCHAR(100) NULL",
         "instructor_id": "ADD COLUMN instructor_id VARCHAR(50) NULL",
+        "instructor_name": "ADD COLUMN instructor_name VARCHAR(255) NULL",
         "rating": "ADD COLUMN rating FLOAT NOT NULL DEFAULT 0",
         "enrollment_count": "ADD COLUMN enrollment_count INT NOT NULL DEFAULT 0",
+        "price": "ADD COLUMN price FLOAT NULL",
+        "discounted_price": "ADD COLUMN discounted_price FLOAT NULL",
+        "discount_rate": "ADD COLUMN discount_rate INT NULL",
+        "duration": "ADD COLUMN duration INT NULL",
+        "is_in_subscription": "ADD COLUMN is_in_subscription BOOL NOT NULL DEFAULT FALSE",
+        "has_certificate": "ADD COLUMN has_certificate BOOL NOT NULL DEFAULT FALSE",
+        "certificate_title": "ADD COLUMN certificate_title VARCHAR(255) NULL",
+        "image_urls": "ADD COLUMN image_urls JSON NULL",
         "status": "ADD COLUMN status VARCHAR(50) NOT NULL DEFAULT 'DRAFT'",
         "publish_status": "ADD COLUMN publish_status VARCHAR(50) NULL",
         "curriculum": "ADD COLUMN curriculum JSON NULL",
@@ -61,6 +78,12 @@ def ensure_schema():
         for column_name, ddl in missing_columns.items():
             if column_name not in course_columns:
                 conn.execute(text(f"ALTER TABLE courses {ddl}"))
+
+    if "agent_sessions" in inspector.get_table_names():
+        agent_session_columns = {column["name"] for column in inspector.get_columns("agent_sessions")}
+        if "state" not in agent_session_columns:
+            with engine.begin() as conn:
+                conn.execute(text("ALTER TABLE agent_sessions ADD COLUMN state JSON NULL"))
 
     if "user_preferences" in inspector.get_table_names():
         user_preference_columns = {column["name"] for column in inspector.get_columns("user_preferences")}

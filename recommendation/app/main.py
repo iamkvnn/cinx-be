@@ -1,13 +1,22 @@
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi import HTTPException
+from fastapi.exceptions import RequestValidationError
 import logging
 
 from app.core.config import settings
 from app.core.database import ensure_schema
 from app.core.database import SessionLocal
 from app.core.logging import CorrelationMiddleware, configure_logging
+from app.core.problem import (
+    ProblemDetailException,
+    http_exception_handler,
+    problem_detail_exception_handler,
+    validation_exception_handler,
+)
 from app.api.recommendation import router as recommendation_router
-from app.api.learning_path import router as learning_path_router
+from app.api.agent import internal_router as agent_internal_router
+from app.api.agent import router as agent_router
 from app.messaging.rabbitmq_consumer import start_consumer
 from app.services.rag_index import rebuild_rag_index
 
@@ -41,6 +50,18 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
+from fastapi.middleware.cors import CORSMiddleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 app.add_middleware(CorrelationMiddleware)
+app.add_exception_handler(ProblemDetailException, problem_detail_exception_handler)
+app.add_exception_handler(HTTPException, http_exception_handler)
+app.add_exception_handler(RequestValidationError, validation_exception_handler)
 app.include_router(recommendation_router)
-app.include_router(learning_path_router)
+app.include_router(agent_router)
+app.include_router(agent_internal_router)
