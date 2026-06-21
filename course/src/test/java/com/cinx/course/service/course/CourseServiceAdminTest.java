@@ -13,6 +13,7 @@ import com.cinx.course.dto.response.InstructorCourseSummaryResponse;
 import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.mapper.CourseMapper;
 import com.cinx.course.messaging.CourseEventProducer;
+import com.cinx.course.messaging.event.CourseApprovalRequestedEvent;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.CourseDraft;
 import com.cinx.course.repository.CategoryRepository;
@@ -28,6 +29,7 @@ import org.springframework.data.domain.PageRequest;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -83,6 +85,30 @@ class CourseServiceAdminTest {
         assertThat(summary.courseCount()).isEqualTo(8L);
         assertThat(summary.publishedCourseCount()).isEqualTo(6L);
         assertThat(summary.averageRating()).isEqualTo(4.75);
+    }
+
+    @Test
+    void submitCoursePublishesApprovalRequestedEvent() {
+        Course course = course("course-1", "inst-1", CourseStatus.DRAFT);
+        course.setTitle("Spring Boot Mastery");
+        CourseDraft draft = new CourseDraft();
+        draft.setId("draft-1");
+        draft.setCourse(course);
+        CourseResponse response = response(course);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
+        when(courseRepository.save(course)).thenReturn(course);
+        when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
+        when(courseMapper.toResponse(eq(course), eq(draft), any(UserDto.class))).thenReturn(response);
+
+        courseService.submitCourse("inst-1", "course-1");
+
+        ArgumentCaptor<CourseApprovalRequestedEvent> captor = ArgumentCaptor.forClass(CourseApprovalRequestedEvent.class);
+        verify(courseEventProducer).publishCourseApprovalRequestedEvent(captor.capture());
+        assertThat(course.getPublishStatus()).isEqualTo(CoursePublishStatus.WAITING_APPROVAL);
+        assertThat(captor.getValue().getCourseId()).isEqualTo("course-1");
+        assertThat(captor.getValue().getCourseTitle()).isEqualTo("Spring Boot Mastery");
+        assertThat(captor.getValue().getInstructorId()).isEqualTo("inst-1");
     }
 
     @Test

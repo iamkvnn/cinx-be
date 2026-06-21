@@ -12,6 +12,7 @@ import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.*;
 import com.cinx.course.mapper.CourseMapper;
 import com.cinx.course.messaging.CourseEventProducer;
+import com.cinx.course.messaging.event.CourseApprovalRequestedEvent;
 import com.cinx.course.messaging.event.CourseContentPublishedEvent;
 import com.cinx.course.messaging.event.CourseRecommendationEvent;
 import com.cinx.course.messaging.event.CourseRecommendationPayload;
@@ -185,7 +186,13 @@ public class CourseService implements ICourseService {
             throw new BadRequestException(ErrorCode.COURSE_DRAFT_MISSING, "Course draft not found for course id: " + courseId);
         }
         course.setPublishStatus(CoursePublishStatus.WAITING_APPROVAL);
-        return toResponse(courseRepository.save(course), draft.get());
+        Course savedCourse = courseRepository.save(course);
+        courseEventProducer.publishCourseApprovalRequestedEvent(new CourseApprovalRequestedEvent(
+                savedCourse.getId(),
+                savedCourse.getTitle(),
+                savedCourse.getInstructorId()
+        ));
+        return toResponse(savedCourse, draft.get());
     }
 
     @Override

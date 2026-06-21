@@ -16,4 +16,7 @@ public interface UserClient {
 
     @GetMapping("/{id}")
     ApiResponse<UserDto> getUserById(@PathVariable("id") String id);
+
+    @GetMapping("/admins/ids")
+    ApiResponse<List<String>> getAdminUserIds();
 }

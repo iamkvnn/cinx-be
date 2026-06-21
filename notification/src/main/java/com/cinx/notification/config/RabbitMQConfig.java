@@ -74,6 +74,14 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public Queue courseApprovalQueue() {
+        return QueueBuilder.durable("notification.course-approval.queue")
+                .withArgument("x-dead-letter-exchange", "dlx.exchange")
+                .withArgument("x-dead-letter-routing-key", "course.dead")
+                .build();
+    }
+
+    @Bean
     public Queue socialQueue() {
         return QueueBuilder.durable("notification.social.queue")
                 .withArgument("x-dead-letter-exchange", "dlx.exchange")
@@ -125,6 +133,13 @@ public class RabbitMQConfig {
         return BindingBuilder.bind(courseQueue())
                 .to(courseExchange())
                 .with("course.content.published");
+    }
+
+    @Bean
+    public Binding courseApprovalRequestedBinding() {
+        return BindingBuilder.bind(courseApprovalQueue())
+                .to(courseExchange())
+                .with("course.approval.requested");
     }
 
     @Bean
