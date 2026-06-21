@@ -86,6 +86,15 @@ class UserPreferencePayload(BaseModel):
 class UserPreferenceEvent(BaseModel):
     payload: UserPreferencePayload
 
+class PolicyKnowledgeEvent(BaseModel):
+    documentId: str
+    title: Optional[str] = None
+    sourceType: str = "POLICY"
+    sourceUrl: Optional[str] = None
+    content: Optional[str] = None
+    versionNumber: Optional[int] = None
+    publishedAt: Optional[datetime] = None
+
 class CourseInteractionPayload(BaseModel):
     userId: str
     courseId: str

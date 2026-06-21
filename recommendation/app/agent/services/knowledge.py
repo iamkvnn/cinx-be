@@ -86,12 +86,25 @@ class KnowledgeService:
         rebuild_rag_index(self.db)
         return document
 
-    def retrieve(self, query: str, top_k: int = 5) -> tuple[list[str], list[Citation]]:
+    def delete_document(self, document_id: str) -> None:
+        document = self.db.get(KnowledgeDocument, document_id)
+        if document is None:
+            return
+        self.db.delete(document)
+        self.db.commit()
+        rebuild_rag_index(self.db)
+
+    def retrieve(
+        self,
+        query: str,
+        top_k: int = 5,
+        source_type: str | None = "CMS",
+    ) -> tuple[list[str], list[Citation]]:
         query_embedding = embed_query(query)
-        results = rag_index.search(query_embedding, top_k, source_type="knowledge")
+        results = rag_index.search(query_embedding, top_k, source_type=source_type)
         if not results:
             rebuild_rag_index(self.db)
-            results = rag_index.search(query_embedding, top_k, source_type="knowledge")
+            results = rag_index.search(query_embedding, top_k, source_type=source_type)
 
         contexts = []
         citations = []
@@ -99,7 +112,7 @@ class KnowledgeService:
             contexts.append(chunk.content)
             citations.append(
                 Citation(
-                    sourceType="knowledge",
+                    sourceType=chunk.source_type,
                     title=chunk.document_title,
                     documentId=chunk.document_id,
                     sourceUrl=chunk.source_url,

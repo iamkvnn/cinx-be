@@ -1,7 +1,8 @@
 import json
 import logging
 from app.core.database import SessionLocal
-from app.models.events import CourseEvent, EnrolledCourseEvent, UserPreferenceEvent, WishlistEvent
+from app.agent.services.knowledge import KnowledgeService
+from app.models.events import CourseEvent, EnrolledCourseEvent, PolicyKnowledgeEvent, UserPreferenceEvent, WishlistEvent
 from app.services.sync_service import SyncService
 from app.services.rag_index import rebuild_rag_index
 
@@ -44,6 +45,28 @@ async def process_message(message_body: bytes, routing_key: str):
                 event.payload.userId,
                 len(event.payload.categoryIds),
             )
+
+        elif routing_key == "user.policy.published":
+            event = PolicyKnowledgeEvent(**raw)
+            if not event.title or not event.content:
+                raise ValueError("Policy published event requires title and content")
+            KnowledgeService(db).replace_document(
+                document_id=event.documentId,
+                title=event.title,
+                content=event.content,
+                source_type=event.sourceType,
+                source_url=event.sourceUrl,
+            )
+            logger.info(
+                "Processed policy published event - document_id=%s version=%s",
+                event.documentId,
+                event.versionNumber,
+            )
+
+        elif routing_key == "user.policy.archived":
+            event = PolicyKnowledgeEvent(**raw)
+            KnowledgeService(db).delete_document(event.documentId)
+            logger.info("Processed policy archived event - document_id=%s", event.documentId)
 
         else:
             logger.warning("Ignored RabbitMQ message with unsupported routing_key=%s", routing_key)
