@@ -6,12 +6,10 @@ from sqlalchemy.orm import Session
 
 from app.agent.agent_service import AgentService
 from app.agent.auth import RequestUser, current_user
-from app.agent.services.knowledge import KnowledgeService
 from app.agent.services.learning_path import LearningPathProposalService
 from app.agent.schemas import (
     AgentChatRequest,
     CreateLearningPathFromProposalRequest,
-    KnowledgeImportRequest,
     ProposalUpdateRequest,
 )
 from app.agent.sse import sse_event
@@ -20,7 +18,6 @@ from app.core.problem import ProblemDetailException, problem_detail_body
 
 
 router = APIRouter(prefix="/api/v1/recommendations/agent", tags=["agent"])
-internal_router = APIRouter(prefix="/internal/recommendations", tags=["internal-recommendations"])
 
 
 @router.post("/chat")
@@ -103,35 +100,6 @@ def create_learning_path_from_proposal(
         )
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-
-
-@router.post("/knowledge/import")
-def import_knowledge(
-    request: KnowledgeImportRequest,
-    db: Session = Depends(get_db),
-    user: RequestUser = Depends(current_user),
-):
-    document = KnowledgeService(db).import_document(
-        title=request.title,
-        content=request.content,
-        source_type=request.sourceType,
-        source_url=request.sourceUrl,
-    )
-    return {"success": True, "documentId": document.id}
-
-
-@internal_router.post("/knowledge/sync")
-def sync_knowledge(
-    request: KnowledgeImportRequest,
-    db: Session = Depends(get_db),
-):
-    document = KnowledgeService(db).import_document(
-        title=request.title,
-        content=request.content,
-        source_type=request.sourceType,
-        source_url=request.sourceUrl,
-    )
-    return {"success": True, "documentId": document.id}
 
 
 def _error_event(session_id: str | None, body: dict) -> dict:

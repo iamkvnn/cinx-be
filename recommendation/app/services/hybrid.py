@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import datetime
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
 from app.repositories.course_repository import CourseRepository

@@ -210,7 +210,7 @@ class ToolRegistry:
 
     def _policy_retrieve(self, input_data: dict[str, Any]) -> dict[str, Any]:
         query = str(input_data.get("query") or "")
-        contexts, citations = KnowledgeService(self.db).retrieve(query)
+        contexts, citations = KnowledgeService(self.db).retrieve(query, source_type="POLICY")
         return {
             "contexts": contexts,
             "citations": [citation.model_dump() for citation in citations],
@@ -292,6 +292,7 @@ class ToolRegistry:
             "discountedPrice": course.discounted_price,
             "duration": course.duration,
             "hasCertificate": course.has_certificate,
+            "url": f"https://shiny.id.vn/courses/{course.id}",
             "lessons": lessons,
         }
 

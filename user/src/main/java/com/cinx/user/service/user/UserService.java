@@ -91,7 +91,11 @@ public class UserService implements IUserService {
                 .build());
         // Only notify admins for new instructor registrations
         if (request.role() == Role.INSTRUCTOR) {
-            userEventProducer.sendNewInstructorNotification(user);
+            List<String> adminUserIds = userRepository.findAllByRole(Role.ADMIN).stream()
+                    .map(User::getUserId)
+                    .filter(Objects::nonNull)
+                    .toList();
+            userEventProducer.sendNewInstructorNotification(user, adminUserIds);
         }
         return userMapper.toDto(user);
     }
@@ -167,6 +171,14 @@ public class UserService implements IUserService {
     @Override
     public List<UserDto> findByIds(List<String> ids) {
         return userRepository.findAllByUserIdIn(ids).stream().map(userMapper::toDto).toList();
+    }
+
+    @Override
+    public List<String> findAdminUserIds() {
+        return userRepository.findAllByRole(Role.ADMIN).stream()
+                .map(User::getUserId)
+                .filter(Objects::nonNull)
+                .toList();
     }
 
     @Override

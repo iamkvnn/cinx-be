@@ -22,6 +22,7 @@ public interface IUserService {
     void updateLastAccess(String userId);
 
     List<UserDto> findByIds(List<String> ids);
+    List<String> findAdminUserIds();
     
     void saveDeviceToken(String userId, com.cinx.user.dto.request.DeviceTokenRequest request);
     List<String> getUserTokens(String userId);

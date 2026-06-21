@@ -39,6 +39,11 @@ public class InternalUserController {
         return new ApiResponse<>(true, "Users fetched successfully", userService.findByIds(ids));
     }
 
+    @GetMapping("/admins/ids")
+    public ApiResponse<List<String>> getAdminUserIds() {
+        return new ApiResponse<>(true, "Admin user ids fetched successfully", userService.findAdminUserIds());
+    }
+
     @GetMapping("/{userId}/instructor-verified")
     public ApiResponse<Boolean> checkInstructorVerified(@PathVariable String userId) {
         return new ApiResponse<>(true, "Instructor verification status fetched successfully",

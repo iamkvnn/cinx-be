@@ -7,6 +7,7 @@ import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -50,18 +51,19 @@ public class UserEventProducer {
         ));
     }
 
-    /**
-     * In-app + push notification to admin when a new instructor registers.
-     * The admin userId is externalized here — consider moving it to application.yml if it changes.
-     */
-    public void sendNewInstructorNotification(User user) {
-        String adminUserId = "a426574e-6f71-4b3a-b7d7-145ed379b3ca";
+    /** In-app + push notification to admins when a new instructor registers. */
+    public void sendNewInstructorNotification(User user, List<String> adminUserIds) {
+        if (adminUserIds == null || adminUserIds.isEmpty()) {
+            log.warn("No admin users found; skipping new instructor notification for userId={}", user.getUserId());
+            return;
+        }
+
         String title = "Có một giảng viên mới cần được xác minh!";
         String message = "Xin chào, có một giảng viên mới đã đăng ký và cần được xác minh. " +
                 "Vui lòng kiểm tra và xác minh hồ sơ của giảng viên này để họ có thể bắt đầu tạo khóa học.";
 
         publish("user.instructor.pending", Map.of(
-                "userIds", List.of(adminUserId),
+                "userIds", adminUserIds,
                 "title", title,
                 "message", message,
                 "instructorEmail", user.getEmail()
@@ -75,6 +77,34 @@ public class UserEventProducer {
                         "categoryIds", categoryIds
                 )
         ));
+    }
+
+    public void publishPolicyPublished(
+            String documentId,
+            String title,
+            String sourceUrl,
+            String content,
+            Integer versionNumber,
+            LocalDateTime publishedAt
+    ) {
+        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        payload.put("documentId", documentId);
+        payload.put("title", title);
+        payload.put("sourceType", "POLICY");
+        payload.put("sourceUrl", sourceUrl);
+        payload.put("content", content);
+        payload.put("versionNumber", versionNumber);
+        payload.put("publishedAt", publishedAt);
+        publish("user.policy.published", payload);
+    }
+
+    public void publishPolicyArchived(String documentId, String sourceUrl, LocalDateTime publishedAt) {
+        Map<String, Object> payload = new java.util.LinkedHashMap<>();
+        payload.put("documentId", documentId);
+        payload.put("sourceType", "POLICY");
+        payload.put("sourceUrl", sourceUrl);
+        payload.put("publishedAt", publishedAt);
+        publish("user.policy.archived", payload);
     }
 
     private void publish(String routingKey, Map<String, Object> payload) {

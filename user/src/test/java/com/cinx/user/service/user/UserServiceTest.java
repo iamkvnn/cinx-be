@@ -19,10 +19,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -70,6 +72,33 @@ class UserServiceTest {
         assertThat(saved.getPhoneNumber()).isEqualTo("0987654321");
         assertThat(saved.getBio()).isEqualTo("Bio");
         assertThat(saved.getCvUrl()).isEqualTo("https://cdn.example.com/cv.pdf");
+        verify(userRepository, never()).findAllByRole(Role.ADMIN);
+    }
+
+    @Test
+    void createInstructorNotifiesAllAdmins() {
+        CreateUserRequest request = new CreateUserRequest(
+                "instructor-1",
+                "Instructor",
+                "instructor@example.com",
+                Role.INSTRUCTOR,
+                Gender.MALE,
+                null,
+                null,
+                null
+        );
+        User admin1 = User.builder().userId("admin-1").role(Role.ADMIN).build();
+        User admin2 = User.builder().userId("admin-2").role(Role.ADMIN).build();
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+        when(userRepository.findAllByRole(Role.ADMIN)).thenReturn(List.of(admin1, admin2));
+        when(userMapper.toDto(any(User.class))).thenReturn(dto());
+
+        userService.createUser(request);
+
+        ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
+        verify(userEventProducer).sendNewInstructorNotification(captor.capture(), org.mockito.ArgumentMatchers.eq(List.of("admin-1", "admin-2")));
+        assertThat(captor.getValue().getUserId()).isEqualTo("instructor-1");
     }
 
     @Test

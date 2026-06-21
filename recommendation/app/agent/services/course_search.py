@@ -69,6 +69,7 @@ class CourseSearchService:
                 sourceType="course",
                 title=result["title"],
                 courseId=result["courseId"],
+                sourceUrl=f"https://shiny.id.vn/courses/{result['courseId']}",
                 score=result["score"],
             )
             for result in results
@@ -226,6 +227,7 @@ User query: {query}
             "isInSubscription": course.is_in_subscription,
             "imageUrls": course.image_urls or [],
             "score": round(score, 4),
+            "url": f"https://shiny.id.vn/courses/{course.id}",
         }
 
 

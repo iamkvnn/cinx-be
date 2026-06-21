@@ -32,7 +32,7 @@ class Settings(BaseSettings):
     USER_QUEUE: str = "recommendation.user.queue"
     ENROLLMENT_ROUTING_KEYS: str = "enrollment.enrollment.created"
     SOCIAL_ROUTING_KEYS: str = "social.wishlist.added,social.wishlist.removed"
-    USER_ROUTING_KEYS: str = "user.preference.updated"
+    USER_ROUTING_KEYS: str = "user.preference.updated,user.policy.published,user.policy.archived"
 
     RECONCILE_BATCH_SIZE: int = 100
     INTERACTION_THRESHOLD_FOR_CONTENT_BASED: int = 3

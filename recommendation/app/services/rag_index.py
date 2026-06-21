@@ -59,7 +59,7 @@ class RAGIndex:
             indexed_chunks.append(
                 IndexedChunk(
                     id=chunk.id,
-                    source_type="knowledge",
+                    source_type=chunk.document.source_type if chunk.document else "knowledge",
                     content=chunk.content,
                     course_id="",
                     lesson_ids=[],

@@ -26,6 +26,8 @@ public interface UserRepository extends JpaRepository<User, String> {
 
     List<User> findAllByUserIdIn(List<String> ids);
 
+    List<User> findAllByRole(Role role);
+
     @Query("SELECT COUNT(u) FROM User u")
     long countTotalUsers();
 
