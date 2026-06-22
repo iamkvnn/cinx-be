@@ -25,6 +25,14 @@ public class InAppNotificationStrategy implements NotificationChannelStrategy {
 
         String title = (String) payload.get("title");
         String message = (String) payload.get("message");
+        String type = (String) payload.get("type");
+        String referenceId = (String) payload.get("referenceId");
+        String actionUrl = (String) payload.get("actionUrl");
+        Map<String, Object> metadata = payload.get("metadata") instanceof Map<?, ?> map
+                ? map.entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                        entry -> String.valueOf(entry.getKey()),
+                        Map.Entry::getValue))
+                : Map.of();
 
         if (userIds == null || title == null || message == null) {
             log.error("InApp payload missing required fields: {}", payload);
@@ -32,10 +40,15 @@ public class InAppNotificationStrategy implements NotificationChannelStrategy {
         }
 
         try {
-            CreateNotificationRequest request = new CreateNotificationRequest(title, message, userIds);
+            CreateNotificationRequest request = new CreateNotificationRequest(
+                    title, message, type, referenceId, actionUrl, metadata, userIds);
             userIds.forEach(userId -> messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", Map.of(
                     "title", title,
-                    "message", message
+                    "message", message,
+                    "type", type == null ? "" : type,
+                    "referenceId", referenceId == null ? "" : referenceId,
+                    "actionUrl", actionUrl == null ? "" : actionUrl,
+                    "metadata", metadata
             )));
             notificationService.sendNotification(request);
             log.info("Saved in-app notification for user {}", userIds);

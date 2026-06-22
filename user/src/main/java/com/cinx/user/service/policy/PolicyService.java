@@ -61,6 +61,12 @@ public class PolicyService implements IPolicyService {
 
     @Override
     @Transactional(readOnly = true)
+    public PolicyDetailResponse findById(String id) {
+        return policyMapper.toDetailResponse(findByIdOrThrow(id));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Page<PolicySummaryResponse> findAllVersions(
             int page,
             int size,

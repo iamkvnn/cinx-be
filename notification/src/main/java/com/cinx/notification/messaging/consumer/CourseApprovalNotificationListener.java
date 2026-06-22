@@ -5,6 +5,8 @@ import com.cinx.notification.client.UserClient;
 import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.course.CourseApprovalRequestedEvent;
+import com.cinx.notification.service.format.NotificationFormatter;
+import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -26,6 +28,7 @@ public class CourseApprovalNotificationListener {
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+    private final NotificationFormatter notificationFormatter;
 
     @RabbitListener(queues = "notification.course-approval.queue", ackMode = "MANUAL")
     public void handleCourseApprovalRequested(CourseApprovalRequestedEvent event, Channel channel,
@@ -51,14 +54,12 @@ public class CourseApprovalNotificationListener {
                     ? "A course"
                     : event.getCourseTitle();
             String instructorName = resolveUserName(event.getInstructorId());
+            NotificationMessage notification = notificationFormatter.courseApprovalRequested(
+                    event.getCourseId(), courseTitle, instructorName);
 
             NotificationContext ctx = NotificationContext.builder()
                     .channels(List.of("IN_APP"))
-                    .inAppPayload(Map.of(
-                            "userIds", adminIdsResponse.data(),
-                            "title", "Course awaiting approval",
-                            "message", instructorName + " submitted \"" + courseTitle + "\" for approval."
-                    ))
+                    .inAppPayload(notification.inAppPayload(adminIdsResponse.data()))
                     .build();
             dispatchService.dispatch(ctx);
 

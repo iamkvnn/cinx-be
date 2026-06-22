@@ -70,6 +70,15 @@ public final class CorrelationContext {
         return traceparent(traceId, spanId);
     }
 
+    public static String outboundTraceparent() {
+        String traceId = MDC.get(TRACE_ID_KEY);
+        if (traceId == null || traceId.isBlank()) {
+            traceId = randomHex(16);
+            MDC.put(TRACE_ID_KEY, traceId);
+        }
+        return traceparent(traceId, randomHex(8));
+    }
+
     public static String currentRequestId() {
         String requestId = MDC.get(REQUEST_ID_KEY);
         if (requestId == null || requestId.isBlank()) {

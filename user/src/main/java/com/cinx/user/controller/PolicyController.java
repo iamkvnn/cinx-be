@@ -67,6 +67,17 @@ public class PolicyController {
         ));
     }
 
+    @Operation(summary = "Get policy detail by ID (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
+    @GetMapping("/detail/{id}")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<ApiResponse<PolicyDetailResponse>> getPolicyDetail(@PathVariable String id) {
+        return ResponseEntity.ok(new ApiResponse<>(
+                true,
+                "Policy details fetched successfully",
+                policyService.findById(id)
+        ));
+    }
+
     @Operation(summary = "Create policy draft", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping
     @PreAuthorize("hasRole('ADMIN')")

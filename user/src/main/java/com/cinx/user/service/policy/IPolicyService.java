@@ -15,6 +15,8 @@ public interface IPolicyService {
 
     PolicyDetailResponse findPublishedPolicyBySlug(String slug);
 
+    PolicyDetailResponse findById(String id);
+
     Page<PolicySummaryResponse> findAllVersions(
             int page,
             int size,

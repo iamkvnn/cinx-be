@@ -10,6 +10,8 @@ import com.cinx.notification.messaging.event.social.CourseAnswerCreatedEvent;
 import com.cinx.notification.messaging.event.social.CourseQuestionCreatedEvent;
 import com.cinx.notification.messaging.event.social.CourseReviewCreatedEvent;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
+import com.cinx.notification.service.format.NotificationFormatter;
+import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
 import lombok.RequiredArgsConstructor;
@@ -33,6 +35,7 @@ public class SocialNotificationListener {
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+    private final NotificationFormatter notificationFormatter;
 
     @RabbitHandler
     public void handleReviewCreated(CourseReviewCreatedEvent event, Channel channel,
@@ -51,21 +54,12 @@ public class SocialNotificationListener {
                 if (course.instructor() != null && course.instructor().id() != null
                         && !course.instructor().id().equals(event.getReviewerUserId())) {
                     String reviewerName = resolveUserName(event.getReviewerUserId());
-                    String ratingText = event.getRating() != null
-                            ? String.format("%.1f-star", event.getRating())
-                            : "new";
-                    String title = "New Review in " + course.title();
-                    String message = String.format(
-                            "%s left a %s review for your course.",
-                            reviewerName, ratingText);
+                    NotificationMessage notification = notificationFormatter.courseReviewCreated(
+                            event.getCourseId(), course.title(), reviewerName, event.getRating());
 
                     NotificationContext ctx = NotificationContext.builder()
                             .channels(List.of("IN_APP"))
-                            .inAppPayload(Map.of(
-                                    "userIds", List.of(course.instructor().id()),
-                                    "title", title,
-                                    "message", message
-                            ))
+                            .inAppPayload(notification.inAppPayload(List.of(course.instructor().id())))
                             .build();
                     dispatchService.dispatch(ctx);
                 }
@@ -96,13 +90,11 @@ public class SocialNotificationListener {
                     String instructorId = course.instructor().id();
 
                     if (!instructorId.equals(event.getAskedByUserId())) {
+                        NotificationMessage notification = notificationFormatter.courseQuestionCreated(
+                                event.getCourseId(), course.title(), event.getQuestionId(), event.getQuestionTitle());
                         NotificationContext ctx = NotificationContext.builder()
                                 .channels(List.of("IN_APP"))
-                                .inAppPayload(Map.of(
-                                        "userIds", List.of(instructorId),
-                                        "title", "New Question in " + course.title(),
-                                        "message", "A student has asked a new question: " + event.getQuestionTitle()
-                                ))
+                                .inAppPayload(notification.inAppPayload(List.of(instructorId)))
                                 .build();
                         dispatchService.dispatch(ctx);
                     }
@@ -128,14 +120,14 @@ public class SocialNotificationListener {
             }
 
             String targetUserId;
-            String message;
+            boolean replyToAnswer;
 
             if (event.getParentAnswerAuthorId() != null) {
                 targetUserId = event.getParentAnswerAuthorId();
-                message = "Someone replied to your answer in a course Q&A.";
+                replyToAnswer = true;
             } else if (event.getQuestionAuthorId() != null) {
                 targetUserId = event.getQuestionAuthorId();
-                message = "Someone answered your question in a course Q&A.";
+                replyToAnswer = false;
             } else {
                 idempotencyService.markSuccess(messageId);
                 channel.basicAck(tag, false);
@@ -143,13 +135,11 @@ public class SocialNotificationListener {
             }
 
             if (!targetUserId.equals(event.getAnsweredByUserId())) {
+                NotificationMessage notification = notificationFormatter.courseAnswerCreated(
+                        event.getCourseId(), event.getQuestionId(), event.getAnswerId(), replyToAnswer);
                 NotificationContext ctx = NotificationContext.builder()
                         .channels(List.of("IN_APP"))
-                        .inAppPayload(Map.of(
-                                "userIds", List.of(targetUserId),
-                                "title", "New Reply to your Q&A",
-                                "message", message
-                        ))
+                        .inAppPayload(notification.inAppPayload(List.of(targetUserId)))
                         .build();
                 dispatchService.dispatch(ctx);
             }

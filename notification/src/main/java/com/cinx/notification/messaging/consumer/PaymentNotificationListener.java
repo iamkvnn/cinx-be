@@ -7,6 +7,8 @@ import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.client.EnrollmentClient;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.payment.PaymentEvent;
+import com.cinx.notification.service.format.NotificationFormatter;
+import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -29,6 +31,7 @@ public class PaymentNotificationListener {
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+    private final NotificationFormatter notificationFormatter;
 
     @RabbitListener(queues = "notification.payment.queue", ackMode = "MANUAL")
     public void handlePaymentSuccess(PaymentEvent event, Channel channel,
@@ -57,29 +60,14 @@ public class PaymentNotificationListener {
             UserDto user = userResponse.data();
             String formattedPrice = order.totalPrice() != null
                     ? String.format("%,d VND", order.totalPrice())
-                    : "Free";
+                    : "0 VND";
+            NotificationMessage notification = notificationFormatter.paymentSucceeded(
+                    event.getOrderId(), formattedPrice, user.name());
 
             NotificationContext ctx = NotificationContext.builder()
                     .channels(List.of("EMAIL", "IN_APP"))
-                    .emailPayload(Map.of(
-                            "to", user.email(),
-                            "subject", "Payment Confirmation - Order " + event.getOrderId(),
-                            "body", String.format(
-                                    "<html><body><h2>Payment Successful</h2>" +
-                                    "<p>Dear %s,</p>" +
-                                    "<p>We have successfully received your payment for order <b>%s</b>.</p>" +
-                                    "<p>Total Amount: <b>%s</b></p>" +
-                                    "<p>Thank you for your purchase!</p>" +
-                                    "</body></html>",
-                                    user.name(), event.getOrderId(), formattedPrice)
-                    ))
-                    .inAppPayload(Map.of(
-                            "userIds", List.of(userId),
-                            "title", "Payment Successful",
-                            "message", String.format(
-                                    "Your payment for order %s (%s) has been successfully processed.",
-                                    event.getOrderId(), formattedPrice)
-                    ))
+                    .emailPayload(notification.emailPayload(user.email()))
+                    .inAppPayload(notification.inAppPayload(List.of(userId)))
                     .build();
 
             dispatchService.dispatch(ctx);

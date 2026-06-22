@@ -49,6 +49,7 @@ services:
   promtail:
     image: grafana/promtail:3.6.11
     container_name: promtail
+    user: root
     command: -config.file=/etc/promtail/config.yml -config.expand-env=true
     environment:
       ENVIRONMENT: ${APP_ENV:-prod}
@@ -68,6 +69,7 @@ services:
     environment:
       GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD:-admin}
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /etc/grafana/dashboards/gateway.json
     networks:
     - cinx-network
     depends_on:
@@ -96,7 +98,10 @@ services:
     image: prom/mysqld-exporter:v0.15.0
     container_name: mysqld-exporter
     environment:
-      DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD}@(mysql:3306)/"
+      MYSQLD_EXPORTER_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    command:
+      - "--mysqld.address=mysql:3306"
+      - "--mysqld.username=root"
     ports:
       - "9104:9104"
     networks:

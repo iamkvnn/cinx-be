@@ -26,28 +26,28 @@ scrape_configs:
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['gateway:9090']
-    labels:
-      application: 'gateway'
+        labels:
+          application: 'gateway'
 
   # Scrape Eureka Server
   - job_name: 'eureka-server'
     metrics_path: '/actuator/prometheus'
     static_configs:
       - targets: ['eureka-server:8761']
-    labels:
-      application: 'eureka'
+        labels:
+          application: 'eureka'
 
   # Scrape RabbitMQ built-in Prometheus metrics
   - job_name: 'rabbitmq'
     metrics_path: '/metrics'
     static_configs:
       - targets: ['rabbitmq:15692']
-    labels:
-      application: 'rabbitmq'
+        labels:
+          application: 'rabbitmq'
 
   # Scrape MySQL metrics via mysqld-exporter
   - job_name: 'mysql'
     static_configs:
       - targets: ['mysqld-exporter:9104']
-    labels:
-      application: 'mysql'
+        labels:
+          application: 'mysql'
