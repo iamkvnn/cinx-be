@@ -54,15 +54,31 @@ public class UserEventProducer {
     public void sendPartnershipTerminatedEmail(User user) {
         publish("user.instructor.terminated", Map.of(
                 "to", user.getEmail(),
-                "subject", "Thông báo ngừng hợp tác giảng viên",
-                "body", "Xin chào " + user.getName() + ",\n\n" +
-                        "Chúng tôi rất tiếc phải thông báo rằng CINX quyết định ngừng hợp tác giảng dạy với bạn kể từ thời điểm này. " +
-                        "Tài khoản giảng viên của bạn đã bị khóa và bạn sẽ không thể đăng nhập vào nền tảng được nữa.\n\n" +
-                        "Toàn bộ số dư hiện tại trong tài khoản giảng viên của bạn sẽ được CINX thanh toán đầy đủ trong vòng 7 ngày làm việc qua thông tin tài khoản đã đăng ký.\n\n" +
-                        "Nếu bạn có bất kỳ thắc mắc hoặc cần thêm thông tin, vui lòng phản hồi qua email này để được hỗ trợ.\n\n" +
-                        "Trân trọng,\n" +
-                        "Ban quản trị CINX"
+                "subject", "Thông báo về việc chấm dứt hợp tác giảng dạy",
+                "body", partnershipTerminatedBody(user)
         ));
+    }
+
+    private String partnershipTerminatedBody(User user) {
+        return "Xin chào " + user.getName() + ",\n\n" +
+                "Chúng tôi rất tiếc phải thông báo rằng CINX quyết định ngưng hợp tác giảng dạy với bạn kể từ thời điểm này. " +
+               "Tài khoản giảng viên của bạn đã bị khóa và bạn sẽ không thể đăng nhập vào nền tảng được nữa.\n\n" +
+                partnershipTerminationReason(user) +
+                "Toàn bộ số dư hiện tại trong tài khoản giảng viên của bạn sẽ được CINX thanh toán đầy đủ trong vòng 7 ngày làm việc qua thông tin tài khoản đã đăng ký.\n\n" +
+                "Nếu bạn có bất kỳ thắc mắc hoặc cần thêm thông tin, vui lòng phản hồi qua email này để được hỗ trợ.\n\n" +
+                "Trân trọng,\n" +
+                "Đội ngũ Cinx";
+    }
+
+    private String partnershipTerminationReason(User user) {
+        if (user.getPartnershipTerminationReasonType() == null) {
+            return "";
+        }
+        String reason = "Ly do: " + user.getPartnershipTerminationReasonType().name();
+        if (user.getPartnershipTerminationReasonDetail() != null) {
+            reason += "\nChi tiet: " + user.getPartnershipTerminationReasonDetail();
+        }
+        return reason + "\n\n";
     }
 
     /** In-app + push notification to admins when a new instructor registers. */
@@ -127,6 +143,6 @@ public class UserEventProducer {
             msg.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
             return msg;
         });
-        log.info("User event published → routingKey={}", routingKey);
+        log.info("User event published -> routingKey={}", routingKey);
     }
 }

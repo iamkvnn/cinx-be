@@ -2,6 +2,7 @@ package com.cinx.user.model;
 
 import com.cinx.common.model.AuditableEntity;
 import com.cinx.user.consts.Gender;
+import com.cinx.user.consts.PartnershipTerminationReasonType;
 import com.cinx.user.consts.Role;
 import com.cinx.user.consts.UserStatus;
 import jakarta.persistence.*;
@@ -31,6 +32,10 @@ public class User extends AuditableEntity {
     private LocalDateTime lastAccessAt;
     private LocalDateTime instructorVerifiedAt;
     private LocalDateTime partnershipTerminatedAt;
+    @Enumerated(EnumType.STRING)
+    private PartnershipTerminationReasonType partnershipTerminationReasonType;
+    @Column(length = 2000)
+    private String partnershipTerminationReasonDetail;
     @Builder.Default
     @Column(columnDefinition = "boolean default false")
     private Boolean isReceivePushNotification = false;

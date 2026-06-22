@@ -10,6 +10,7 @@ import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
 import com.cinx.user.dto.UserDto;
+import com.cinx.user.dto.request.TerminatePartnershipRequest;
 import com.cinx.user.mapper.UserMapper;
 import com.cinx.user.messaging.UserEventProducer;
 import com.cinx.user.model.User;
@@ -124,7 +125,7 @@ public class UserService implements IUserService {
 
     @Override
     @Transactional
-    public void terminatePartnership(String id) {
+    public void terminatePartnership(String id, TerminatePartnershipRequest request) {
         User user = getOrThrowByUserId(id);
         if (user.getRole() != Role.INSTRUCTOR) {
             throw new BadRequestException(ErrorCode.BAD_REQUEST, "User is not an instructor");
@@ -132,9 +133,18 @@ public class UserService implements IUserService {
         user.setIsInstructorVerified(false);
         user.setIsPartnershipTerminated(true);
         user.setPartnershipTerminatedAt(LocalDateTime.now());
+        user.setPartnershipTerminationReasonType(request.reasonType());
+        user.setPartnershipTerminationReasonDetail(normalizeReasonDetail(request.reasonDetail()));
         user.setStatus(UserStatus.BANNED);
         userRepository.save(user);
         userEventProducer.sendPartnershipTerminatedEmail(user);
+    }
+
+    private String normalizeReasonDetail(String reasonDetail) {
+        if (reasonDetail == null || reasonDetail.isBlank()) {
+            return null;
+        }
+        return reasonDetail.trim();
     }
 
     @Override

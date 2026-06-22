@@ -8,6 +8,7 @@ import com.cinx.user.consts.Role;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.dto.request.DeviceTokenRequest;
+import com.cinx.user.dto.request.TerminatePartnershipRequest;
 import com.cinx.user.dto.request.UpdatePreferredCategoriesRequest;
 import com.cinx.user.service.user.IUserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -70,8 +71,11 @@ public class UserController {
     @Operation(summary = "Terminate partnership with instructor (admin)", security = @SecurityRequirement(name = "bearer-jwt"))
     @PostMapping("/{id}/terminate-partnership")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<ApiResponse<?>> terminatePartnership(@PathVariable String id) {
-        userService.terminatePartnership(id);
+    public ResponseEntity<ApiResponse<?>> terminatePartnership(
+            @PathVariable String id,
+            @Valid @RequestBody TerminatePartnershipRequest request
+    ) {
+        userService.terminatePartnership(id, request);
         return ResponseEntity.ok(new ApiResponse<>(true, "Instructor partnership terminated successfully", null));
     }
 
