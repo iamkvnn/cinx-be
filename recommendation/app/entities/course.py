@@ -20,7 +20,7 @@ class Course(Base):
     instructor_id: Mapped[str | None] = mapped_column(String(50), nullable=True)
     instructor_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
 
-    rating: Mapped[float] = mapped_column(Float, nullable=False, default=0.0)
+    rating: Mapped[float | None] = mapped_column(Float, nullable=True)
     enrollment_count: Mapped[int] = mapped_column(Integer, nullable=False, default=0)
     price: Mapped[float | None] = mapped_column(Float, nullable=True)
     discounted_price: Mapped[float | None] = mapped_column(Float, nullable=True)

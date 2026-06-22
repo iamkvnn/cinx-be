@@ -58,7 +58,7 @@ def ensure_schema():
         "category_name": "ADD COLUMN category_name VARCHAR(100) NULL",
         "instructor_id": "ADD COLUMN instructor_id VARCHAR(50) NULL",
         "instructor_name": "ADD COLUMN instructor_name VARCHAR(255) NULL",
-        "rating": "ADD COLUMN rating FLOAT NOT NULL DEFAULT 0",
+        "rating": "ADD COLUMN rating FLOAT NULL",
         "enrollment_count": "ADD COLUMN enrollment_count INT NOT NULL DEFAULT 0",
         "price": "ADD COLUMN price FLOAT NULL",
         "discounted_price": "ADD COLUMN discounted_price FLOAT NULL",
@@ -78,6 +78,9 @@ def ensure_schema():
         for column_name, ddl in missing_columns.items():
             if column_name not in course_columns:
                 conn.execute(text(f"ALTER TABLE courses {ddl}"))
+        rating_column = next((column for column in inspector.get_columns("courses") if column["name"] == "rating"), None)
+        if rating_column is not None and not rating_column.get("nullable", True):
+            conn.execute(text("ALTER TABLE courses MODIFY COLUMN rating FLOAT NULL"))
 
     if "agent_sessions" in inspector.get_table_names():
         agent_session_columns = {column["name"] for column in inspector.get_columns("agent_sessions")}

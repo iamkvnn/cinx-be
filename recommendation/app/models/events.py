@@ -47,7 +47,7 @@ class CoursePayload(BaseModel):
     price: Optional[float] = None
     discountedPrice: Optional[float] = None
     discountRate: Optional[int] = None
-    rating: Optional[float] = 0.0
+    rating: Optional[float] = None
     enrollmentCount: int = 0
     isInSubscription: bool = False
     duration: Optional[int] = None

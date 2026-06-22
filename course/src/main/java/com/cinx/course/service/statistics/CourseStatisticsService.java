@@ -50,7 +50,7 @@ public class CourseStatisticsService implements ICourseStatisticsService {
                 fillByTime(range, timeRows),
                 courseRepository.countByInstructorId(instructorId),
                 courseRepository.countByInstructorIdAndStatus(instructorId, CourseStatus.PUBLISHED),
-                averageRating != null ? averageRating : 0.0,
+                averageRating,
                 enrollmentSnapshot != null ? enrollmentSnapshot : 0L
         );
     }

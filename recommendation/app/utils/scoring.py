@@ -8,7 +8,9 @@ def safe_float(value, default=0.0):
         return default
 
 
-def normalize_rating(rating: float) -> float:
+def normalize_rating(rating: float | None) -> float:
+    if rating is None:
+        return 0.0
     # rating 0..5 => 0..1
     return min(max(rating / 5.0, 0.0), 1.0)
 

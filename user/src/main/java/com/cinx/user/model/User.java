@@ -30,6 +30,7 @@ public class User extends AuditableEntity {
     private String bio;
     private LocalDateTime lastAccessAt;
     private LocalDateTime instructorVerifiedAt;
+    private LocalDateTime partnershipTerminatedAt;
     @Builder.Default
     @Column(columnDefinition = "boolean default false")
     private Boolean isReceivePushNotification = false;

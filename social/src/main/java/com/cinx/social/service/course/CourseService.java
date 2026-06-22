@@ -19,5 +19,5 @@ public interface CourseService {
     ApiResponse<List<CourseResponse>> getCoursesByIds(@RequestParam List<String> ids);
 
     @PostMapping("/courses/{id}/update-rating")
-    ApiResponse<Void> updateCourseRating(@PathVariable("id") String id, @RequestParam("rating") Double rating);
+    ApiResponse<Void> updateCourseRating(@PathVariable("id") String id, @RequestParam(value = "rating", required = false) Double rating);
 }

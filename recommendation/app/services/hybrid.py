@@ -38,7 +38,7 @@ class RecommendationService:
             score = 0.0
             if c.category_id in categories:
                 score += 50
-            score += min(c.rating / 5.0, 1.0) * 30
+            score += min((c.rating or 0.0) / 5.0, 1.0) * 30
             score += min(c.enrollment_count / 1000.0, 1.0) * 20
             scored.append((c, score))
 
@@ -80,7 +80,7 @@ class RecommendationService:
         scored = []
         for i, sim in enumerate(sims):
             c = candidate_courses[i]
-            score = sim * 80 + min(c.rating / 5.0, 1.0) * 10 + min(c.enrollment_count / 1000.0, 1.0) * 10
+            score = sim * 80 + min((c.rating or 0.0) / 5.0, 1.0) * 10 + min(c.enrollment_count / 1000.0, 1.0) * 10
             scored.append((c, float(score)))
 
         scored.sort(key=lambda x: x[1], reverse=True)
@@ -95,7 +95,7 @@ class RecommendationService:
                 age_days = max((datetime.now() - c.created_at).days, 0)
                 freshness = max(0, 30 - min(age_days, 30)) / 30 * 10
 
-            return min(c.rating / 5.0, 1.0) * 60 + min(c.enrollment_count / 1000.0, 1.0) * 30 + freshness
+            return min((c.rating or 0.0) / 5.0, 1.0) * 60 + min(c.enrollment_count / 1000.0, 1.0) * 30 + freshness
 
         ranked = sorted(courses, key=score, reverse=True)
         return [self._to_dict(c, score(c), "POPULAR_FALLBACK") for c in ranked[:top_k]]

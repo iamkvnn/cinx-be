@@ -1,9 +1,14 @@
 package com.cinx.course.service.course;
 
+import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.course.consts.CourseStatus;
+import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.response.CourseResponse;
+import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.mapper.CourseMapper;
 import com.cinx.course.messaging.CourseEventProducer;
+import com.cinx.course.model.Category;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.CourseDraft;
 import com.cinx.course.repository.CategoryRepository;
@@ -17,11 +22,13 @@ import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.doThrow;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -49,6 +56,40 @@ class CourseServiceSubmitTest {
     private CourseEventProducer courseEventProducer;
     @InjectMocks
     private CourseService courseService;
+
+    @Test
+    void createCourseKeepsRatingNullUntilFirstReview() {
+        CreateCourseRequest request = new CreateCourseRequest(
+                "Spring Boot Mastery",
+                "Learn Spring Boot from basics to production",
+                "cat-1",
+                100_000L,
+                null,
+                false,
+                120L,
+                false,
+                null
+        );
+        Category category = new Category();
+        category.setId("cat-1");
+        Course mappedCourse = new Course();
+        CourseDraft draft = new CourseDraft();
+        CourseResponse response = response(mappedCourse);
+        when(courseMapper.toModel(request)).thenReturn(mappedCourse);
+        when(categoryRepository.findById("cat-1")).thenReturn(Optional.of(category));
+        when(courseRepository.save(mappedCourse)).thenReturn(mappedCourse);
+        when(courseDraftService.createDraftFromCourse(mappedCourse)).thenReturn(draft);
+        when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
+        when(courseMapper.toResponse(eq(mappedCourse), eq(draft), any(UserDto.class))).thenReturn(response);
+
+        courseService.createCourse("inst-1", request);
+
+        assertThat(mappedCourse.getInstructorId()).isEqualTo("inst-1");
+        assertThat(mappedCourse.getEnrollmentCount()).isZero();
+        assertThat(mappedCourse.getRating()).isNull();
+        assertThat(mappedCourse.getStatus()).isEqualTo(CourseStatus.DRAFT);
+        verify(courseRepository).save(mappedCourse);
+    }
 
     @Test
     void submitCourseRejectsDraftWithoutRequiredCurriculum() {
@@ -81,5 +122,33 @@ class CourseServiceSubmitTest {
         draft.setId(draftId);
         draft.setCourse(course);
         return draft;
+    }
+
+    private UserDto instructor(String instructorId) {
+        return new UserDto(instructorId, "Instructor", "instructor@example.com", null, null);
+    }
+
+    private CourseResponse response(Course course) {
+        return new CourseResponse(
+                course.getId(),
+                null,
+                null,
+                null,
+                null,
+                List.of(),
+                null,
+                null,
+                null,
+                course.getRating(),
+                course.getEnrollmentCount(),
+                null,
+                null,
+                null,
+                null,
+                course.getStatus(),
+                course.getPublishStatus(),
+                null,
+                null
+        );
     }
 }

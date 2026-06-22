@@ -131,6 +131,7 @@ public class UserService implements IUserService {
         }
         user.setIsInstructorVerified(false);
         user.setIsPartnershipTerminated(true);
+        user.setPartnershipTerminatedAt(LocalDateTime.now());
         user.setStatus(UserStatus.BANNED);
         userRepository.save(user);
         userEventProducer.sendPartnershipTerminatedEmail(user);

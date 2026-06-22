@@ -26,6 +26,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.security.authentication.TestingAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -85,6 +87,19 @@ class CourseServiceAdminTest {
         assertThat(summary.courseCount()).isEqualTo(8L);
         assertThat(summary.publishedCourseCount()).isEqualTo(6L);
         assertThat(summary.averageRating()).isEqualTo(4.75);
+    }
+
+    @Test
+    void getInstructorCourseSummaryKeepsAverageRatingNullWhenUnrated() {
+        when(courseRepository.countByInstructorId("inst-1")).thenReturn(8L);
+        when(courseRepository.countByInstructorIdAndStatus("inst-1", CourseStatus.PUBLISHED)).thenReturn(6L);
+        when(courseRepository.averageRatingByInstructorId("inst-1")).thenReturn(null);
+
+        InstructorCourseSummaryResponse summary = courseService.getInstructorCourseSummary("inst-1");
+
+        assertThat(summary.courseCount()).isEqualTo(8L);
+        assertThat(summary.publishedCourseCount()).isEqualTo(6L);
+        assertThat(summary.averageRating()).isNull();
     }
 
     @Test
@@ -252,6 +267,31 @@ class CourseServiceAdminTest {
         );
 
         assertThat(result.getContent()).extracting(CourseResponse::status).containsExactly(CourseStatus.ARCHIVED);
+    }
+
+    @Test
+    void getAllCoursesSortsRatingWithNullsLast() {
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(courseRepository.searchAll(
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                eq(null),
+                pageableCaptor.capture()
+        )).thenReturn(new PageImpl<>(List.of()));
+        when(userService.getInstructorsByIds(List.of()))
+                .thenReturn(new ApiResponse<>(true, "ok", List.of()));
+
+        courseService.getAllCourses(null, null, null, null, null, null, null, null, 1, 10, "{\"rating\":\"ASC\"}");
+
+        Sort.Order ratingOrder = pageableCaptor.getValue().getSort().getOrderFor("rating");
+        assertThat(ratingOrder).isNotNull();
+        assertThat(ratingOrder.getDirection()).isEqualTo(Sort.Direction.ASC);
+        assertThat(ratingOrder.getNullHandling()).isEqualTo(Sort.NullHandling.NULLS_LAST);
     }
 
     @Test
