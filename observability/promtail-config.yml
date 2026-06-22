@@ -21,6 +21,10 @@ scrape_configs:
       - source_labels: ['__meta_docker_container_label_com_docker_compose_project']
         regex: '.+'
         action: keep
+      # Exclude logs from the monitoring infrastructure itself (loki, promtail, prometheus, grafana)
+      - source_labels: ['__meta_docker_container_label_com_docker_compose_service']
+        regex: 'loki|promtail|prometheus|grafana'
+        action: drop
       - source_labels: ['__meta_docker_container_name']
         target_label: container
         regex: '/(.*)'
