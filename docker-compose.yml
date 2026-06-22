@@ -75,6 +75,35 @@ services:
     volumes:
       - grafana-data:/var/lib/grafana
       - ./observability/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./observability/grafana/dashboards:/etc/grafana/dashboards:ro
+  prometheus:
+    image: prom/prometheus:v2.51.2
+    container_name: prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention.time=15d'
+    ports:
+      - "9091:9090"
+    networks:
+      - cinx-network
+    depends_on:
+      - eureka-server
+    volumes:
+      - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.15.0
+    container_name: mysqld-exporter
+    environment:
+      DATA_SOURCE_NAME: "root:${MYSQL_ROOT_PASSWORD}@(mysql:3306)/"
+    ports:
+      - "9104:9104"
+    networks:
+      - cinx-network
+    depends_on:
+      mysql:
+        condition: service_healthy
   eureka-server:
     container_name: eureka-server
     ports:
@@ -326,3 +355,4 @@ volumes:
   loki-data:
   promtail-positions:
   grafana-data:
+  prometheus-data:

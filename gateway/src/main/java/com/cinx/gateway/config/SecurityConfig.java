@@ -34,6 +34,7 @@ public class SecurityConfig {
             .csrf(ServerHttpSecurity.CsrfSpec::disable)
             .authorizeExchange(exchanges -> exchanges
                 .pathMatchers("/internal/**").denyAll()
+                .pathMatchers("/actuator/**").permitAll()
                 .pathMatchers("/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html", "/webjars/**").permitAll()
                 .pathMatchers(HttpMethod.GET,
                         "/api/v1/courses/mine",
@@ -61,17 +62,17 @@ public class SecurityConfig {
             .oauth2ResourceServer(oauth2 -> oauth2
                 .jwt(jwt -> jwt.jwtDecoder(reactiveJwtDecoder()))
                 .authenticationEntryPoint((exchange, ex) -> GatewayProblemDetailWriter.write(
-                        exchange,
-                        org.springframework.http.HttpStatus.UNAUTHORIZED,
-                        "UNAUTHORIZED",
-                        "Unauthorized",
-                        "Please login and try again"))
+                         exchange,
+                         org.springframework.http.HttpStatus.UNAUTHORIZED,
+                         "UNAUTHORIZED",
+                         "Unauthorized",
+                         "Please login and try again"))
                 .accessDeniedHandler((exchange, ex) -> GatewayProblemDetailWriter.write(
-                        exchange,
-                        org.springframework.http.HttpStatus.FORBIDDEN,
-                        "FORBIDDEN",
-                        "Forbidden",
-                        "Access denied"))
+                         exchange,
+                         org.springframework.http.HttpStatus.FORBIDDEN,
+                         "FORBIDDEN",
+                         "Forbidden",
+                         "Access denied"))
             ).cors(cors -> cors.configurationSource(corsConfigurationSource()));
         return http.build();
     }
