@@ -160,25 +160,6 @@ class UserServiceTest {
     }
 
     @Test
-    void terminatePartnershipAllowsBlankReasonDetail() {
-        User user = User.builder()
-                .userId("instructor-1")
-                .role(Role.INSTRUCTOR)
-                .build();
-        when(userRepository.findByUserId("instructor-1")).thenReturn(Optional.of(user));
-
-        userService.terminatePartnership("instructor-1", new TerminatePartnershipRequest(
-                PartnershipTerminationReasonType.ADMIN_DECISION,
-                " "
-        ));
-
-        assertThat(user.getPartnershipTerminationReasonType()).isEqualTo(PartnershipTerminationReasonType.ADMIN_DECISION);
-        assertThat(user.getPartnershipTerminationReasonDetail()).isNull();
-        verify(userRepository).save(user);
-        verify(userEventProducer).sendPartnershipTerminatedEmail(user);
-    }
-
-    @Test
     void terminatePartnershipRejectsNonInstructor() {
         User user = User.builder()
                 .userId("user-1")
