@@ -31,7 +31,7 @@ class SyncService:
             "category_name": category.get("name") if isinstance(category, dict) else getattr(category, "name", None),
             "instructor_id": instructor.get("id") if isinstance(instructor, dict) else getattr(instructor, "id", None),
             "instructor_name": instructor.get("name") if isinstance(instructor, dict) else getattr(instructor, "name", None),
-            "rating": payload.rating if payload.rating is not None else 0.0,
+            "rating": payload.rating,
             "enrollment_count": payload.enrollmentCount if payload.enrollmentCount is not None else 0,
             "price": payload.price,
             "discounted_price": payload.discountedPrice,

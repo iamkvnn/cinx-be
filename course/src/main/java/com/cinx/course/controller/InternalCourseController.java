@@ -77,7 +77,7 @@ public class InternalCourseController {
     }
 
     @PostMapping("/courses/{id}/update-rating")
-    public ApiResponse<Void> updateCourseRating(@PathVariable String id, @RequestParam Double rating) {
+    public ApiResponse<Void> updateCourseRating(@PathVariable String id, @RequestParam(required = false) Double rating) {
         courseService.updateCourseRating(id, rating);
         return new ApiResponse<>(true, "Rating updated successfully", null);
     }

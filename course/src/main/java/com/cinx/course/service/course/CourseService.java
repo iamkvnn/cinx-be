@@ -29,6 +29,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -94,7 +95,7 @@ public class CourseService implements ICourseService {
         return new InstructorCourseSummaryResponse(
                 courseCount,
                 publishedCourseCount,
-                averageRating != null ? averageRating : 0.0
+                averageRating
         );
     }
 
@@ -108,7 +109,7 @@ public class CourseService implements ICourseService {
             Integer priceFrom,
             Integer priceTo,
             int page, int size, String sort) {
-        Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
+        Pageable pageable = PageRequest.of(page - 1, size, courseSort(sort));
         Page<Course> courses = courseRepository.searchPublished(query, categoryId, instructorId, rating, priceFrom, priceTo, pageable);
         return toResponse(courses);
     }
@@ -125,7 +126,7 @@ public class CourseService implements ICourseService {
             CourseStatus status,
             CoursePublishStatus publishStatus,
             int page, int size, String sort) {
-        Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
+        Pageable pageable = PageRequest.of(page - 1, size, courseSort(sort));
         Page<Course> courses = courseRepository.searchAll(query, categoryId, instructorId, rating, priceFrom, priceTo, status, publishStatus, pageable);
         return toResponse(courses);
     }
@@ -142,7 +143,7 @@ public class CourseService implements ICourseService {
         Course course = courseMapper.toModel(request);
         course.setInstructorId(currentUserId);
         course.setEnrollmentCount(0L);
-        course.setRating(0.0);
+        course.setRating(null);
         course.setStatus(CourseStatus.DRAFT);
         course.setPublishStatus(null);
         course.setDiscountRate(calculateDiscountRate(request.price(), request.discountedPrice()));
@@ -257,6 +258,9 @@ public class CourseService implements ICourseService {
     public CourseResponse rejectCourse(String courseId, RejectCourseRequest request) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (course.getStatus() == CourseStatus.ARCHIVED) {
+            throw new BadRequestException(ErrorCode.COURSE_ARCHIVED, "Archived courses cannot be rejected");
+        }
         if (course.getPublishStatus() != CoursePublishStatus.WAITING_APPROVAL) {
             throw new BadRequestException(ErrorCode.COURSE_STATUS_INVALID, "Only courses waiting for approval can be rejected");
         }
@@ -324,6 +328,9 @@ public class CourseService implements ICourseService {
         if (draft != null) {
             return toResponse(course, draft);
         }
+        if (course.getStatus() == CourseStatus.DRAFT) {
+            return toResponse(course);
+        }
         throw new NotFoundException("Course draft not found for course id: " + course.getId());
     }
 
@@ -358,6 +365,14 @@ public class CourseService implements ICourseService {
             return 0L;
         }
         return (long) ((price - discountedPrice) / (double) price * 100);
+    }
+
+    private Sort courseSort(String sort) {
+        return SortConverter.toSort(sort).stream()
+                .map(order -> "rating".equals(order.getProperty())
+                        ? order.with(Sort.NullHandling.NULLS_LAST)
+                        : order)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), Sort::by));
     }
 
     private void publishRecommendationEvent(Course course, String routingKey, String eventType, boolean includeCurriculum) {

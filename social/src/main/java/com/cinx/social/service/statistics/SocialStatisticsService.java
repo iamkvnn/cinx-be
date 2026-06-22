@@ -38,7 +38,7 @@ public class SocialStatisticsService implements ISocialStatisticsService {
         Double averageRating = reviewRepository.getAverageRatingByCourseId(courseId);
         return new ReviewStatisticsResponse(
                 reviewCount,
-                averageRating != null ? averageRating : 0.0,
+                averageRating,
                 toStringLongMap(reviewRepository.countRatingsByCourseId(courseId)),
                 reviewCount > 0 ? replyCount * 100.0 / reviewCount : 0.0
         );

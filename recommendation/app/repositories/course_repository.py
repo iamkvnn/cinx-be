@@ -189,5 +189,5 @@ class CourseRepository:
             stmt = stmt.where(Course.is_in_subscription == filters.is_in_subscription)
         if filters.max_duration is not None:
             stmt = stmt.where(Course.duration <= filters.max_duration)
-        stmt = stmt.order_by(Course.rating.desc(), Course.enrollment_count.desc()).limit(limit)
+        stmt = stmt.order_by(Course.rating.desc().nullslast(), Course.enrollment_count.desc()).limit(limit)
         return self.db.execute(stmt).scalars().all()

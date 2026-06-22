@@ -2,6 +2,7 @@ package com.cinx.user.service.user;
 
 import com.cinx.user.consts.Gender;
 import com.cinx.user.consts.Role;
+import com.cinx.user.consts.UserStatus;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UserDto;
 import com.cinx.user.mapper.UserMapper;
@@ -23,6 +24,7 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -129,6 +131,42 @@ class UserServiceTest {
         verify(userRepository).save(user);
     }
 
+    @Test
+    void terminatePartnershipStoresTerminationTime() {
+        User user = User.builder()
+                .userId("instructor-1")
+                .role(Role.INSTRUCTOR)
+                .isInstructorVerified(true)
+                .isPartnershipTerminated(false)
+                .status(UserStatus.ACTIVE)
+                .build();
+        when(userRepository.findByUserId("instructor-1")).thenReturn(Optional.of(user));
+
+        userService.terminatePartnership("instructor-1");
+
+        assertThat(user.getIsInstructorVerified()).isFalse();
+        assertThat(user.getIsPartnershipTerminated()).isTrue();
+        assertThat(user.getPartnershipTerminatedAt()).isNotNull();
+        assertThat(user.getStatus()).isEqualTo(UserStatus.BANNED);
+        verify(userRepository).save(user);
+        verify(userEventProducer).sendPartnershipTerminatedEmail(user);
+    }
+
+    @Test
+    void terminatePartnershipRejectsNonInstructor() {
+        User user = User.builder()
+                .userId("user-1")
+                .role(Role.USER)
+                .build();
+        when(userRepository.findByUserId("user-1")).thenReturn(Optional.of(user));
+
+        assertThatThrownBy(() -> userService.terminatePartnership("user-1"))
+                .hasMessage("User is not an instructor");
+
+        verify(userRepository, never()).save(any(User.class));
+        verify(userEventProducer, never()).sendPartnershipTerminatedEmail(any(User.class));
+    }
+
     private UserDto dto() {
         return new UserDto(
                 "user-1",
@@ -143,6 +181,7 @@ class UserServiceTest {
                 "0987654321",
                 "Bio",
                 0,
+                null,
                 null,
                 null,
                 null,

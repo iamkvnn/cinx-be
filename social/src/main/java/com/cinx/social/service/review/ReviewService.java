@@ -120,7 +120,6 @@ public class ReviewService implements IReviewService {
 
     private void updateCourseRatingInCourseService(String courseId) {
         Double averageRating = reviewRepository.getAverageRatingByCourseId(courseId);
-        if (averageRating == null) return;
         try {
             courseService.updateCourseRating(courseId, averageRating);
         } catch (Exception e) {
