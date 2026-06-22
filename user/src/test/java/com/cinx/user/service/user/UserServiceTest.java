@@ -1,10 +1,12 @@
 package com.cinx.user.service.user;
 
 import com.cinx.user.consts.Gender;
+import com.cinx.user.consts.PartnershipTerminationReasonType;
 import com.cinx.user.consts.Role;
 import com.cinx.user.consts.UserStatus;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UserDto;
+import com.cinx.user.dto.request.TerminatePartnershipRequest;
 import com.cinx.user.mapper.UserMapper;
 import com.cinx.user.messaging.UserEventProducer;
 import com.cinx.user.model.User;
@@ -132,7 +134,7 @@ class UserServiceTest {
     }
 
     @Test
-    void terminatePartnershipStoresTerminationTime() {
+    void terminatePartnershipStoresTerminationReasonAndTime() {
         User user = User.builder()
                 .userId("instructor-1")
                 .role(Role.INSTRUCTOR)
@@ -142,11 +144,16 @@ class UserServiceTest {
                 .build();
         when(userRepository.findByUserId("instructor-1")).thenReturn(Optional.of(user));
 
-        userService.terminatePartnership("instructor-1");
+        userService.terminatePartnership("instructor-1", new TerminatePartnershipRequest(
+                PartnershipTerminationReasonType.POLICY_VIOLATION,
+                " Repeated violations "
+        ));
 
         assertThat(user.getIsInstructorVerified()).isFalse();
         assertThat(user.getIsPartnershipTerminated()).isTrue();
         assertThat(user.getPartnershipTerminatedAt()).isNotNull();
+        assertThat(user.getPartnershipTerminationReasonType()).isEqualTo(PartnershipTerminationReasonType.POLICY_VIOLATION);
+        assertThat(user.getPartnershipTerminationReasonDetail()).isEqualTo("Repeated violations");
         assertThat(user.getStatus()).isEqualTo(UserStatus.BANNED);
         verify(userRepository).save(user);
         verify(userEventProducer).sendPartnershipTerminatedEmail(user);
@@ -160,7 +167,10 @@ class UserServiceTest {
                 .build();
         when(userRepository.findByUserId("user-1")).thenReturn(Optional.of(user));
 
-        assertThatThrownBy(() -> userService.terminatePartnership("user-1"))
+        assertThatThrownBy(() -> userService.terminatePartnership("user-1", new TerminatePartnershipRequest(
+                PartnershipTerminationReasonType.OTHER,
+                null
+        )))
                 .hasMessage("User is not an instructor");
 
         verify(userRepository, never()).save(any(User.class));
@@ -181,6 +191,8 @@ class UserServiceTest {
                 "0987654321",
                 "Bio",
                 0,
+                null,
+                null,
                 null,
                 null,
                 null,

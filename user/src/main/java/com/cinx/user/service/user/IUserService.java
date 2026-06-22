@@ -4,6 +4,7 @@ import com.cinx.user.consts.Role;
 import com.cinx.user.dto.CreateUserRequest;
 import com.cinx.user.dto.UpdateProfileRequest;
 import com.cinx.user.dto.UserDto;
+import com.cinx.user.dto.request.TerminatePartnershipRequest;
 import org.springframework.data.domain.Page;
 
 import java.util.List;
@@ -16,7 +17,7 @@ public interface IUserService {
     UserDto createUser(CreateUserRequest user);
     void verifyInstructor(String id);
     void rejectInstructor(String id, String reason);
-    void terminatePartnership(String id);
+    void terminatePartnership(String id, TerminatePartnershipRequest request);
     void toggleBan(String id);
     UserDto updateProfile(String id, UpdateProfileRequest dto);
     void updateLastAccess(String userId);

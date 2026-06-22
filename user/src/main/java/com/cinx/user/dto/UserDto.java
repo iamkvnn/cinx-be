@@ -1,6 +1,7 @@
 package com.cinx.user.dto;
 
 import com.cinx.user.consts.Gender;
+import com.cinx.user.consts.PartnershipTerminationReasonType;
 import com.cinx.user.consts.Role;
 import com.cinx.user.consts.UserStatus;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -26,6 +27,8 @@ public record UserDto(
         @Schema(example = "2025-01-01T10:00:00") LocalDateTime lastAccessAt,
         @Schema(example = "2025-01-01T10:00:00") LocalDateTime instructorVerifiedAt,
         @Schema(example = "2025-01-01T10:00:00") LocalDateTime partnershipTerminatedAt,
+        @Schema(example = "POLICY_VIOLATION") PartnershipTerminationReasonType partnershipTerminationReasonType,
+        @Schema(example = "Repeated policy violations after multiple warnings") String partnershipTerminationReasonDetail,
         @Schema(example = "false") Boolean isPartnershipTerminated
 ) {
 }
