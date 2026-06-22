@@ -5,6 +5,8 @@ import com.cinx.notification.messaging.event.learning.CertificateApprovedEvent;
 import com.cinx.notification.messaging.event.learning.CertificateRequestedEvent;
 import com.cinx.notification.messaging.event.learning.CourseCompletedEvent;
 import com.cinx.notification.messaging.event.learning.DailyReminderDueEvent;
+import com.cinx.notification.service.format.NotificationFormatter;
+import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -27,6 +29,7 @@ public class LearningNotificationListener {
 
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+    private final NotificationFormatter notificationFormatter;
 
     @RabbitHandler
     public void handleCertificateRequested(CertificateRequestedEvent event, Channel channel,
@@ -41,31 +44,19 @@ public class LearningNotificationListener {
             }
             String courseTitle = event.getCourseTitle() != null ? event.getCourseTitle() : "your course";
             String studentName = event.getUserName() != null ? event.getUserName() : "A student";
-            String title = "New Certificate Request";
-            String message = studentName + " requested a certificate for " + courseTitle + ".";
             if (event.getInstructorId() == null || event.getInstructorId().isBlank()) {
                 throw new IllegalStateException("Certificate request event missing instructorId");
             }
             if (event.getInstructorEmail() == null || event.getInstructorEmail().isBlank()) {
                 throw new IllegalStateException("Certificate request event missing instructorEmail");
             }
+            NotificationMessage notification = notificationFormatter.certificateRequested(
+                    event.getRequestId(), studentName, event.getCourseId(), courseTitle);
 
             NotificationContext ctx = NotificationContext.builder()
                     .channels(List.of("EMAIL", "IN_APP"))
-                    .emailPayload(Map.of(
-                            "to", event.getInstructorEmail(),
-                            "subject", "New Certificate Request - " + courseTitle,
-                            "body", String.format(
-                                    "<html><body><h2>New Certificate Request</h2>" +
-                                            "<p>%s requested a certificate for <b>%s</b>.</p>" +
-                                            "</body></html>",
-                                    studentName, courseTitle)
-                    ))
-                    .inAppPayload(Map.of(
-                            "userIds", List.of(event.getInstructorId()),
-                            "title", title,
-                            "message", message
-                    ))
+                    .emailPayload(notification.emailPayload(event.getInstructorEmail()))
+                    .inAppPayload(notification.inAppPayload(List.of(event.getInstructorId())))
                     .build();
 
             dispatchService.dispatch(ctx);
@@ -89,35 +80,19 @@ public class LearningNotificationListener {
                 return;
             }
             String courseTitle = event.getCourseTitle() != null ? event.getCourseTitle() : "your course";
-            String title = "Certificate Approved";
-            String message = "Your certificate for " + courseTitle + " has been approved.";
             if (event.getUserId() == null || event.getUserId().isBlank()) {
                 throw new IllegalStateException("Certificate approved event missing userId");
             }
             if (event.getUserEmail() == null || event.getUserEmail().isBlank()) {
                 throw new IllegalStateException("Certificate approved event missing userEmail");
             }
+            NotificationMessage notification = notificationFormatter.certificateApproved(
+                    event.getRequestId(), event.getUserName(), event.getCourseId(), courseTitle, event.getCertificateUrl());
 
             NotificationContext ctx = NotificationContext.builder()
                     .channels(List.of("EMAIL", "IN_APP"))
-                    .emailPayload(Map.of(
-                            "to", event.getUserEmail(),
-                            "subject", "Certificate Approved - " + courseTitle,
-                            "body", String.format(
-                                    "<html><body><h2>Certificate Approved</h2>" +
-                                            "<p>Congratulations%s!</p>" +
-                                            "<p>Your certificate for <b>%s</b> has been approved.</p>" +
-                                            "<p><a href=\"%s\">View your certificate</a></p>" +
-                                            "</body></html>",
-                                    event.getUserName() != null ? " " + event.getUserName() : "",
-                                    courseTitle,
-                                    event.getCertificateUrl())
-                    ))
-                    .inAppPayload(Map.of(
-                            "userIds", List.of(event.getUserId()),
-                            "title", title,
-                            "message", message
-                    ))
+                    .emailPayload(notification.emailPayload(event.getUserEmail()))
+                    .inAppPayload(notification.inAppPayload(List.of(event.getUserId())))
                     .build();
 
             dispatchService.dispatch(ctx);
@@ -139,22 +114,13 @@ public class LearningNotificationListener {
                 channel.basicAck(tag, false);
                 return;
             }
-            String title = "Course Completed!";
-            String message = "Congratulations on completing: " + event.getCourseTitle();
+            NotificationMessage notification = notificationFormatter.courseCompleted(
+                    event.getCourseId(), event.getCourseTitle());
 
             NotificationContext ctx = NotificationContext.builder()
                     .channels(List.of("IN_APP", "PUSH"))
-                    .inAppPayload(Map.of(
-                            "userIds", List.of(event.getUserId()),
-                            "title", title,
-                            "message", message
-                    ))
-                    .pushPayload(Map.of(
-                            "userIds", List.of(event.getUserId()),
-                            "title", title,
-                            "message", message,
-                            "data", Map.of("courseId", event.getCourseId())
-                    ))
+                    .inAppPayload(notification.inAppPayload(List.of(event.getUserId())))
+                    .pushPayload(notification.pushPayload(List.of(event.getUserId())))
                     .build();
 
             dispatchService.dispatch(ctx);
@@ -176,22 +142,13 @@ public class LearningNotificationListener {
                 channel.basicAck(tag, false);
                 return;
             }
-            String title = "Don't break your momentum!";
-            String message = buildDailyGoalReminderMessage(event);
+            NotificationMessage notification = notificationFormatter.dailyReminder(
+                    event.getGoalType(), event.getTargetValue(), event.getCurrentValue(), event.getTargetItemId());
 
             NotificationContext ctx = NotificationContext.builder()
                     .channels(List.of("IN_APP", "PUSH"))
-                    .inAppPayload(Map.of(
-                            "userIds", List.of(event.getUserId()),
-                            "title", title,
-                            "message", message
-                    ))
-                    .pushPayload(Map.of(
-                            "userIds", List.of(event.getUserId()),
-                            "title", title,
-                            "message", message,
-                            "data", buildDailyGoalPushData(event)
-                    ))
+                    .inAppPayload(notification.inAppPayload(List.of(event.getUserId())))
+                    .pushPayload(notification.pushPayload(List.of(event.getUserId())))
                     .build();
 
             dispatchService.dispatch(ctx);
@@ -211,33 +168,4 @@ public class LearningNotificationListener {
         }
     }
 
-    private String buildDailyGoalReminderMessage(DailyReminderDueEvent event) {
-        String goalType = event.getGoalType() != null ? event.getGoalType() : "";
-        return switch (goalType) {
-            case "XP" -> "You have a goal of " + event.getTargetValue() + " XP today. Keep learning!";
-            case "LEARNING_ITEMS_COMPLETED" -> "You have a goal of completing " + event.getTargetValue() + " learning item(s) today.";
-            case "VIDEOS_COMPLETED" -> "You have a goal of completing " + event.getTargetValue() + " video lesson(s) today.";
-            case "QUIZZES_PASSED" -> "You have a goal of passing " + event.getTargetValue() + " quiz(zes) today.";
-            case "ASSIGNMENTS_SUBMITTED" -> "You have a goal of submitting " + event.getTargetValue() + " assignment(s) today.";
-            case "SPECIFIC_LESSON_COMPLETED" -> "You have a specific lesson to complete today. Keep learning!";
-            default -> "You have a learning goal to complete today. Keep learning!";
-        };
-    }
-
-    private Map<String, String> buildDailyGoalPushData(DailyReminderDueEvent event) {
-        String goalType = event.getGoalType() != null ? event.getGoalType() : "";
-        if (event.getTargetItemId() == null) {
-            return Map.of(
-                    "goalType", goalType,
-                    "targetValue", String.valueOf(event.getTargetValue()),
-                    "currentValue", String.valueOf(event.getCurrentValue())
-            );
-        }
-        return Map.of(
-                "goalType", goalType,
-                "targetValue", String.valueOf(event.getTargetValue()),
-                "currentValue", String.valueOf(event.getCurrentValue()),
-                "targetItemId", event.getTargetItemId()
-        );
-    }
 }

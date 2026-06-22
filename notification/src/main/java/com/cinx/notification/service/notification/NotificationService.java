@@ -8,6 +8,7 @@ import com.cinx.notification.mapper.UserNotificationMapper;
 import com.cinx.notification.model.Notification;
 import com.cinx.notification.model.UserNotification;
 import com.cinx.notification.repository.UserNotificationRepository;
+import com.cinx.notification.utils.NotificationJson;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -37,6 +38,10 @@ public class NotificationService implements INotificationService{
         Notification notification = notificationRepository.save(Notification.builder()
                     .title(request.title())
                     .message(request.message())
+                    .type(request.type())
+                    .referenceId(request.referenceId())
+                    .actionUrl(request.actionUrl())
+                    .metadataJson(NotificationJson.write(request.metadata()))
                     .build());
         userNotificationRepository.saveAll(request.userIds().stream()
                 .map(userId -> UserNotification.builder()

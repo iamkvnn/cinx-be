@@ -12,6 +12,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -22,6 +23,10 @@ public class PushNotificationService {
     private final INotificationService notificationService;
 
     public void sendPushNotificationToUser(String userId, String title, String body) {
+        sendPushNotificationToUser(userId, title, body, Map.of());
+    }
+
+    public void sendPushNotificationToUser(String userId, String title, String body, Map<String, String> data) {
         try {
             ApiResponse<List<String>> response = userClient.getUserFcmTokens(userId);
             
@@ -37,6 +42,7 @@ public class PushNotificationService {
                         .addAllTokens(tokens)
                         .setNotification(notification)
                         .putData("click_action", "NOTIFICATION_CLICK") // Adjust based on your frontend
+                        .putAllData(data == null ? Map.of() : data)
                         .build();
 
                 FirebaseMessaging.getInstance().sendEachForMulticastAsync(message);

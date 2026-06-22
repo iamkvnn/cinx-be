@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.stereotype.Component;
+import org.springframework.web.util.HtmlUtils;
 
 import java.util.Map;
 
@@ -46,7 +47,7 @@ public class EmailNotificationStrategy implements NotificationChannelStrategy {
     }
 
     private String wrapInHtmlTemplate(String subject, String body) {
-        if (body.contains("<div class=\"cinx-email\"")) {
+        if (body.contains("class=\"cinx-email\"") || body.contains("class='cinx-email'")) {
             return body;
         }
 
@@ -75,6 +76,7 @@ public class EmailNotificationStrategy implements NotificationChannelStrategy {
         }
         
         // Build a professional HTML frame
+        String safeSubject = HtmlUtils.htmlEscape(subject);
         return "<!DOCTYPE html>" +
                "<html>" +
                "<head>" +
@@ -83,7 +85,7 @@ public class EmailNotificationStrategy implements NotificationChannelStrategy {
                "    body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }" +
                "    .email-container { max-width: 600px; margin: 40px auto; background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.05); border: 1px solid #e2e8f0; }" +
                "    .email-header { background: linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%); padding: 32px; text-align: center; color: #ffffff; }" +
-               "    .email-header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: -0.5px; line-height: 1.3; }" +
+               "    .email-header h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: 0; line-height: 1.3; }" +
                "    .email-header p { margin: 0 0 8px 0; font-size: 13px; opacity: 0.9; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }" +
                "    .email-body { padding: 40px 32px; color: #334155; font-size: 16px; line-height: 1.7; }" +
                "    .email-body p { margin-top: 0; margin-bottom: 16px; }" +
@@ -96,10 +98,10 @@ public class EmailNotificationStrategy implements NotificationChannelStrategy {
                "  </style>" +
                "</head>" +
                "<body>" +
-               "  <div class='email-container'>" +
+               "  <div class='cinx-email email-container'>" +
                "    <div class='email-header'>" +
                "      <p>CINX Platform</p>" +
-               "      <h1>" + subject + "</h1>" +
+               "      <h1>" + safeSubject + "</h1>" +
                "    </div>" +
                "    <div class='email-body'>" +
                "      " + htmlContent + "" +

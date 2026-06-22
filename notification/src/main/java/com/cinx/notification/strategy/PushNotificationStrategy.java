@@ -29,7 +29,12 @@ public class PushNotificationStrategy implements NotificationChannelStrategy {
         }
 
         try {
-            userIds.forEach(userId -> pushNotificationService.sendPushNotificationToUser(userId, title, message));
+            Map<String, String> data = payload.get("data") instanceof Map<?, ?> map
+                    ? map.entrySet().stream().collect(java.util.stream.Collectors.toMap(
+                            entry -> String.valueOf(entry.getKey()),
+                            entry -> String.valueOf(entry.getValue())))
+                    : Map.of();
+            userIds.forEach(userId -> pushNotificationService.sendPushNotificationToUser(userId, title, message, data));
             log.info("Sent push notification to user {}", userIds);
         } catch (Exception e) {
             log.error("Failed to send push notification for user {}", userIds, e);

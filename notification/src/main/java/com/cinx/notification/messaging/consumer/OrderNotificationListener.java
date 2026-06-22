@@ -5,6 +5,8 @@ import com.cinx.notification.client.UserClient;
 import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.order.OrderEvent;
+import com.cinx.notification.service.format.NotificationFormatter;
+import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -26,6 +28,7 @@ public class OrderNotificationListener {
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
     private final UserClient userClient;
+    private final NotificationFormatter notificationFormatter;
 
     @RabbitListener(queues = "notification.order.queue", ackMode = "MANUAL")
     public void handleOrderCreated(OrderEvent event, Channel channel,
@@ -55,13 +58,10 @@ public class OrderNotificationListener {
     }
 
     private NotificationContext buildOrderCreatedContext(OrderEvent event) {
+        NotificationMessage notification = notificationFormatter.orderCreated(event.getId());
         return NotificationContext.builder()
                 .channels(List.of("IN_APP"))
-                .inAppPayload(Map.of(
-                        "userIds", List.of(event.getUserId()),
-                        "title", "Order Created",
-                        "message", "Your order with ID " + event.getId() + " has been created."
-                ))
+                .inAppPayload(notification.inAppPayload(List.of(event.getUserId())))
                 .build();
     }
 
@@ -69,31 +69,14 @@ public class OrderNotificationListener {
         UserDto user = getUser(event.getUserId());
         String formattedPrice = event.getTotalPrice() != null
                 ? String.format("%,d VND", event.getTotalPrice())
-                : "Free";
-
-        String title = "Order Cancelled";
-        String message = String.format(
-                "Your order %s (%s) has been cancelled.",
-                event.getId(), formattedPrice);
+                : "0 VND";
+        NotificationMessage notification = notificationFormatter.orderCancelled(
+                event.getId(), formattedPrice, user.name());
 
         return NotificationContext.builder()
                 .channels(List.of("EMAIL", "IN_APP"))
-                .emailPayload(Map.of(
-                        "to", user.email(),
-                        "subject", "Order Cancelled - Order " + event.getId(),
-                        "body", String.format(
-                                "<html><body><h2>Order Cancelled</h2>" +
-                                        "<p>Dear %s,</p>" +
-                                        "<p>Your order <b>%s</b> has been cancelled.</p>" +
-                                        "<p>Total Amount: <b>%s</b></p>" +
-                                        "</body></html>",
-                                user.name(), event.getId(), formattedPrice)
-                ))
-                .inAppPayload(Map.of(
-                        "userIds", List.of(event.getUserId()),
-                        "title", title,
-                        "message", message
-                ))
+                .emailPayload(notification.emailPayload(user.email()))
+                .inAppPayload(notification.inAppPayload(List.of(event.getUserId())))
                 .build();
     }
 

@@ -6,6 +6,8 @@ import com.cinx.notification.client.UserClient;
 import com.cinx.notification.dto.response.user.UserDto;
 import com.cinx.notification.messaging.context.NotificationContext;
 import com.cinx.notification.messaging.event.course.CourseContentPublishedEvent;
+import com.cinx.notification.service.format.NotificationFormatter;
+import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
@@ -28,6 +30,7 @@ public class CourseNotificationListener {
     private final UserClient userClient;
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
+    private final NotificationFormatter notificationFormatter;
 
     @RabbitListener(queues = "notification.course.queue", ackMode = "MANUAL")
     public void handleCourseContentPublished(CourseContentPublishedEvent event, Channel channel,
@@ -56,17 +59,13 @@ public class CourseNotificationListener {
 
             List<String> userIds = enrolledRes.data();
 
-            String title = "Course Update: " + courseTitle;
-            String message = "New content has been published in " + courseTitle + ". Check it out!";
+            NotificationMessage notification = notificationFormatter.coursePublishedForLearners(
+                    event.getCourseId(), courseTitle);
 
             // In-app: one batch for all enrolled users
             NotificationContext inAppCtx = NotificationContext.builder()
                     .channels(List.of("IN_APP"))
-                    .inAppPayload(Map.of(
-                            "userIds", userIds,
-                            "title", title,
-                            "message", message
-                    ))
+                    .inAppPayload(notification.inAppPayload(userIds))
                     .build();
             dispatchService.dispatch(inAppCtx);
 
@@ -79,13 +78,7 @@ public class CourseNotificationListener {
                         if (email != null && !email.isBlank()) {
                             NotificationContext emailCtx = NotificationContext.builder()
                                     .channels(List.of("EMAIL"))
-                                    .emailPayload(Map.of(
-                                            "to", email,
-                                            "subject", title,
-                                            "body", String.format(
-                                                    "<html><body><h3>%s</h3><p>%s</p></body></html>",
-                                                    title, message)
-                                    ))
+                                    .emailPayload(notification.emailPayload(email))
                                     .build();
                             dispatchService.dispatch(emailCtx);
                         }
@@ -121,26 +114,13 @@ public class CourseNotificationListener {
         if (instructor.email() == null || instructor.email().isBlank()) {
             throw new IllegalStateException("Instructor email is missing for userId: " + event.getInstructorId());
         }
-        String title = "Course Published";
-        String message = "Your course " + courseTitle + " has been approved and published.";
+        NotificationMessage notification = notificationFormatter.coursePublishedForInstructor(
+                event.getCourseId(), courseTitle, instructor.name());
 
         NotificationContext ctx = NotificationContext.builder()
                 .channels(List.of("EMAIL", "IN_APP"))
-                .emailPayload(Map.of(
-                        "to", instructor.email(),
-                        "subject", "Course Published - " + courseTitle,
-                        "body", String.format(
-                                "<html><body><h2>Course Published</h2>" +
-                                        "<p>Dear %s,</p>" +
-                                        "<p>Your course <b>%s</b> has been approved by admin and is now published.</p>" +
-                                        "</body></html>",
-                                instructor.name(), courseTitle)
-                ))
-                .inAppPayload(Map.of(
-                        "userIds", List.of(event.getInstructorId()),
-                        "title", title,
-                        "message", message
-                ))
+                .emailPayload(notification.emailPayload(instructor.email()))
+                .inAppPayload(notification.inAppPayload(List.of(event.getInstructorId())))
                 .build();
         dispatchService.dispatch(ctx);
     }

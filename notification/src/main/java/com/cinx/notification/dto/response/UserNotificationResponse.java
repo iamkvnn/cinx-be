@@ -1,6 +1,7 @@
 package com.cinx.notification.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.util.Map;
 
 public record UserNotificationResponse(
         @Schema(example = "noti_123")
@@ -11,6 +12,13 @@ public record UserNotificationResponse(
         String title,
         @Schema(example = "You have successfully enrolled in Introduction to Java.")
         String message,
+        @Schema(example = "COURSE_PUBLISHED")
+        String type,
+        @Schema(example = "course_123")
+        String referenceId,
+        @Schema(example = "/courses/course_123")
+        String actionUrl,
+        Map<String, Object> metadata,
         @Schema(example = "false")
         Boolean isRead
 ) {

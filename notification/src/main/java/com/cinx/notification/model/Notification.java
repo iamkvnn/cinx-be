@@ -1,5 +1,6 @@
 package com.cinx.notification.model;
 
+import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -18,4 +19,9 @@ public class Notification {
     private String id;
     private String title;
     private String message;
+    private String type;
+    private String referenceId;
+    private String actionUrl;
+    @Column(columnDefinition = "TEXT")
+    private String metadataJson;
 }
