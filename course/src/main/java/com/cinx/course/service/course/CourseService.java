@@ -161,6 +161,9 @@ public class CourseService implements ICourseService {
         Category category = category(request.categoryId());
         Long discountRate = calculateDiscountRate(request.price(), request.discountedPrice());
         CourseDraft draft = courseDraftService.updateDraft(course, request, category, discountRate);
+        if (course.getStatus() == CourseStatus.PUBLISHED) {
+            return toResponse(course, draft);
+        }
         courseMapper.partialUpdate(course, request);
         course.setCategory(category);
         course.setDiscountRate(discountRate);
