@@ -63,6 +63,18 @@ public class NotificationService implements INotificationService{
 
     @Transactional
     @Override
+    public void markAllAsRead(String userId) {
+        userNotificationRepository.updateReadStatusByUserId(userId, true);
+    }
+
+    @Transactional
+    @Override
+    public void markAllAsUnread(String userId) {
+        userNotificationRepository.updateReadStatusByUserId(userId, false);
+    }
+
+    @Transactional
+    @Override
     public void deleteNotification(String userId, String notificationId) {
         userNotificationRepository.deleteById(notificationId);
     }

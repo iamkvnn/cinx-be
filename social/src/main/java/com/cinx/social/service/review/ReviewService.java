@@ -6,14 +6,16 @@ import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.mapper.SortConverter;
 import com.cinx.social.client.EnrollmentClient;
+import com.cinx.social.client.UserClient;
 import com.cinx.social.dto.request.CreateReportReviewRequest;
 import com.cinx.social.dto.request.CreateReviewReactionRequest;
 import com.cinx.social.dto.request.CreateReviewRequest;
 import com.cinx.social.dto.request.UpdateReviewRequest;
+import com.cinx.social.dto.response.ReviewReactionResponse;
 import com.cinx.social.dto.response.ReviewResponse;
 import com.cinx.social.dto.response.CheckEnrollmentStatus;
+import com.cinx.social.dto.response.UserSummaryResponse;
 import com.cinx.social.event.CourseReviewCreatedEvent;
-import com.cinx.social.mapper.ReviewMapper;
 import com.cinx.social.messaging.CourseReviewEventPublisher;
 import com.cinx.social.model.Report;
 import com.cinx.social.model.ReportType;
@@ -24,11 +26,19 @@ import com.cinx.social.repository.ReviewReactionRepository;
 import com.cinx.social.repository.ReviewRepository;
 import com.cinx.social.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -43,53 +53,50 @@ import com.cinx.common.dto.ApiResponse;
 
 @RequiredArgsConstructor
 @Service
+@Slf4j
 public class ReviewService implements IReviewService {
     private final ReviewRepository reviewRepository;
     private final ReportRepository reportRepository;
     private final ReviewReactionRepository reviewReactionRepository;
     private final ReviewReplyRepository reviewReplyRepository;
-    private final ReviewMapper reviewMapper;
     private final CourseService courseService;
     private final EnrollmentClient enrollmentClient;
+    private final UserClient userClient;
     private final CourseReviewEventPublisher reviewEventPublisher;
 
     @Override
     public Page<ReviewResponse> getReviewsByCourseId(String courseId, int page, int size, String sort) {
         Pageable pageable = org.springframework.data.domain.PageRequest.of(page - 1, size, SortConverter.toSort(sort));
-        return reviewRepository.findByCourseId(courseId, pageable).map(review -> {
-            ReviewResponse dto = reviewMapper.toDto(review);
-            ReviewReply reply = reviewReplyRepository.findByReviewId(review.getId()).orElse(null);
-            if (reply != null) {
-                ReviewReplyDto replyDto = new ReviewReplyDto();
-                replyDto.setId(reply.getId());
-                replyDto.setReviewId(reply.getReviewId());
-                replyDto.setInstructorId(reply.getInstructorId());
-                replyDto.setContent(reply.getContent());
-                replyDto.setCreatedAt(reply.getCreatedAt());
-                replyDto.setUpdatedAt(reply.getUpdatedAt());
-                return new ReviewResponse(dto.id(), dto.userId(), dto.courseId(), dto.content(), dto.rating(), replyDto, dto.reactions());
-            }
-            return dto;
-        });
+        Page<Review> reviews = reviewRepository.findByCourseId(courseId, pageable);
+        List<String> reviewIds = reviews.getContent().stream()
+                .map(Review::getId)
+                .toList();
+        if (reviewIds.isEmpty()) {
+            return reviews.map(review -> toReviewResponse(review, null, List.of(), Collections.emptyMap()));
+        }
+        Map<String, ReviewReply> repliesByReviewId = reviewReplyRepository.findByReviewIdIn(reviewIds).stream()
+                .collect(Collectors.toMap(ReviewReply::getReviewId, Function.identity(), (first, second) -> first));
+        Map<String, List<ReviewReaction>> reactionsByReviewId = reviewReactionRepository.findByReviewIdIn(reviewIds).stream()
+                .collect(Collectors.groupingBy(ReviewReaction::getReviewId));
+        Map<String, UserSummaryResponse> usersById = fetchUsersById(reviews.getContent(), repliesByReviewId.values(), reactionsByReviewId.values().stream()
+                .flatMap(Collection::stream)
+                .toList());
+
+        return reviews.map(review -> toReviewResponse(
+                review,
+                repliesByReviewId.get(review.getId()),
+                reactionsByReviewId.getOrDefault(review.getId(), List.of()),
+                usersById));
     }
 
     @Override
     public ReviewResponse getReviewById(String reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found"));
-        ReviewResponse dto = reviewMapper.toDto(review);
         ReviewReply reply = reviewReplyRepository.findByReviewId(review.getId()).orElse(null);
-        if (reply != null) {
-            ReviewReplyDto replyDto = new ReviewReplyDto();
-            replyDto.setId(reply.getId());
-            replyDto.setReviewId(reply.getReviewId());
-            replyDto.setInstructorId(reply.getInstructorId());
-            replyDto.setContent(reply.getContent());
-            replyDto.setCreatedAt(reply.getCreatedAt());
-            replyDto.setUpdatedAt(reply.getUpdatedAt());
-            return new ReviewResponse(dto.id(), dto.userId(), dto.courseId(), dto.content(), dto.rating(), replyDto, dto.reactions());
-        }
-        return dto;
+        List<ReviewReaction> reactions = reviewReactionRepository.findByReviewId(review.getId());
+        Map<String, UserSummaryResponse> usersById = fetchUsersById(List.of(review), Optional.ofNullable(reply).stream().toList(), reactions);
+        return toReviewResponse(review, reply, reactions, usersById);
     }
 
     @Override
@@ -233,6 +240,80 @@ public class ReviewService implements IReviewService {
         }
 
         reviewReplyRepository.delete(reply);
+    }
+
+    private ReviewResponse toReviewResponse(
+            Review review,
+            ReviewReply reply,
+            List<ReviewReaction> reactions,
+            Map<String, UserSummaryResponse> usersById) {
+        ReviewReplyDto replyDto = reply != null ? toReviewReplyDto(reply, usersById) : null;
+        List<ReviewReactionResponse> reactionResponses = reactions.stream()
+                .map(reaction -> new ReviewReactionResponse(
+                        reaction.getId(),
+                        reaction.getUserId(),
+                        usersById.get(reaction.getUserId()),
+                        reaction.getReviewId(),
+                        reaction.isLiked()))
+                .toList();
+
+        return new ReviewResponse(
+                review.getId(),
+                review.getUserId(),
+                usersById.get(review.getUserId()),
+                review.getCourseId(),
+                review.getContent(),
+                review.getRating(),
+                replyDto,
+                reactionResponses);
+    }
+
+    private ReviewReplyDto toReviewReplyDto(ReviewReply reply, Map<String, UserSummaryResponse> usersById) {
+        ReviewReplyDto replyDto = new ReviewReplyDto();
+        replyDto.setId(reply.getId());
+        replyDto.setReviewId(reply.getReviewId());
+        replyDto.setInstructorId(reply.getInstructorId());
+        replyDto.setInstructor(usersById.get(reply.getInstructorId()));
+        replyDto.setContent(reply.getContent());
+        replyDto.setCreatedAt(reply.getCreatedAt());
+        replyDto.setUpdatedAt(reply.getUpdatedAt());
+        return replyDto;
+    }
+
+    private Map<String, UserSummaryResponse> fetchUsersById(
+            List<Review> reviews,
+            Collection<ReviewReply> replies,
+            List<ReviewReaction> reactions) {
+        LinkedHashSet<String> userIds = new LinkedHashSet<>();
+        reviews.stream()
+                .map(Review::getUserId)
+                .forEach(userIds::add);
+        replies.stream()
+                .map(ReviewReply::getInstructorId)
+                .forEach(userIds::add);
+        reactions.stream()
+                .map(ReviewReaction::getUserId)
+                .forEach(userIds::add);
+
+        userIds.remove(null);
+        if (userIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+
+        ApiResponse<List<UserSummaryResponse>> response;
+        try {
+            response = userClient.getUsersByIds(List.copyOf(userIds));
+        } catch (Exception ex) {
+            log.warn("Failed to fetch review user summaries", ex);
+            return Collections.emptyMap();
+        }
+        if (response == null || !response.success() || response.data() == null) {
+            return Collections.emptyMap();
+        }
+
+        return response.data().stream()
+                .filter(user -> user.userId() != null)
+                .collect(Collectors.toMap(UserSummaryResponse::userId, Function.identity(), (first, second) -> first));
     }
 
     private void validateRating(Double rating) {

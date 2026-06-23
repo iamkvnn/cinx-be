@@ -3,6 +3,7 @@ package com.cinx.learning.service.video;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.SubmitVideoQuestionRequest;
+import com.cinx.learning.dto.request.TrackingVideoLessonRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
 import com.cinx.learning.dto.response.VideoLessonResponse;
 import com.cinx.learning.mapper.VideoLessonTrackingHistoryMapper;
@@ -25,7 +26,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
+import java.util.concurrent.atomic.AtomicReference;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -52,6 +55,40 @@ class VideoServiceTest {
 
     @InjectMocks
     private VideoService videoService;
+
+    @Test
+    void firstVideoTrackingCreditsInitialWatchedRange() {
+        VideoLessonResponse lesson = videoLesson(13, false, 0);
+        AtomicReference<VideoLessonTrackingHistory> savedHistory = new AtomicReference<>();
+        when(courseService.getVideoLessonById("course-1", "video-1"))
+                .thenReturn(new ApiResponse<>(true, "ok", lesson));
+        when(videoLessonTrackingHistoryRepository.findForUpdateByUserIdAndVideoLessonId("user-1", "video-1"))
+                .thenAnswer(invocation -> Optional.ofNullable(savedHistory.get()));
+        when(videoLessonTrackingHistoryRepository.save(any(VideoLessonTrackingHistory.class)))
+                .thenAnswer(invocation -> {
+                    VideoLessonTrackingHistory history = invocation.getArgument(0);
+                    savedHistory.set(history);
+                    return history;
+                });
+        when(learningProgressService.updateLearningItemProgress(
+                "user-1",
+                "video-1",
+                new UpdateLearningItemRequest(true, true, 10.0)))
+                .thenReturn(new LearningItemProgressUpdateResult(true, true, false, false));
+
+        videoService.trackVideoProgress(
+                "course-1",
+                "video-1",
+                "user-1",
+                new TrackingVideoLessonRequest(13));
+
+        assertEquals("[[0,13]]", savedHistory.get().getWatchedRanges());
+        verify(learningProgressService).updateLearningItemProgress(
+                "user-1",
+                "video-1",
+                new UpdateLearningItemRequest(true, true, 10.0));
+        verify(dailyGoalService).recordProgress("user-1", DailyGoalType.VIDEOS_COMPLETED, 1);
+    }
 
     @Test
     void videoDoesNotCompleteAtSeventyNinePercent() {

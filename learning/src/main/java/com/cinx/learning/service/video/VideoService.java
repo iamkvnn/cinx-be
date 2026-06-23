@@ -77,11 +77,14 @@ public class VideoService implements IVideoService {
         VideoLessonTrackingHistory trackingHistory = videoLessonTrackingHistoryRepository
                 .findForUpdateByUserIdAndVideoLessonId(userId, lessonId)
                 .orElse(null);
+        boolean newTrackingHistory = trackingHistory == null;
         int previousPosition = trackingHistory != null && trackingHistory.getCurrentPosition() != null
                 ? trackingHistory.getCurrentPosition()
                 : 0;
         LocalDateTime previousTrackingTime = trackingHistory != null ? trackingHistory.getLastTrackingTime() : null;
-        int creditedSeconds = creditedWatchedSeconds(previousPosition, currentPosition, previousTrackingTime, now);
+        int creditedSeconds = newTrackingHistory
+                ? currentPosition
+                : creditedWatchedSeconds(previousPosition, currentPosition, previousTrackingTime, now);
 
         if (trackingHistory == null) {
             trackingHistory = VideoLessonTrackingHistory.builder()
@@ -155,8 +158,12 @@ public class VideoService implements IVideoService {
                 
         double progress = 0.0;
         if (trackingHistory != null && videoLessonResponse.duration() != null && videoLessonResponse.duration() > 0) {
+            log.info("Calculating progress for userId {} and videoLessonId {}: watchedRanges={}, duration={}",
+                    userId, videoLessonId, trackingHistory.getWatchedRanges(), videoLessonResponse.duration());
             progress = (double) watchedRangeTracker.watchedSeconds(trackingHistory.getWatchedRanges()) / videoLessonResponse.duration();
         }
+
+        log.info("progress for userId {} and videoLessonId {}: {}", userId, videoLessonId, progress);
 
         boolean watchedEnough = progress >= COMPLETION_WATCH_THRESHOLD;
         boolean questionsCompleted = true;
@@ -210,9 +217,7 @@ public class VideoService implements IVideoService {
         if (previousTrackingTime == null) {
             return 0;
         }
-        long elapsedCap = previousTrackingTime == null
-                ? 0
-                : Math.min(Math.max(Duration.between(previousTrackingTime, now).getSeconds(), 0), MAX_CREDITED_HEARTBEAT_SECONDS);
+        long elapsedCap = Math.min(Math.max(Duration.between(previousTrackingTime, now).getSeconds(), 0), MAX_CREDITED_HEARTBEAT_SECONDS);
         return (int) Math.min(positionDelta, elapsedCap);
     }
 
