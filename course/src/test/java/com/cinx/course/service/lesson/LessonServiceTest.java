@@ -69,7 +69,8 @@ class LessonServiceTest {
         Section section = publishedSection(course(CourseStatus.PUBLISHED));
         Lesson lesson = lesson("les-1", 1024, section);
         lesson.setIsPreview(true);
-        when(courseAccessService.ensureReadableCourse(null, "course-1")).thenReturn(section.getCourse());
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(section.getCourse()));
+        when(courseAccessService.canReadCourse(null, section.getCourse())).thenReturn(true);
         when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
 
         lessonService.ensureCanReadLessonContent(null, "course-1", "les-1", LessonType.VIDEO);
@@ -82,7 +83,8 @@ class LessonServiceTest {
         Section section = publishedSection(course(CourseStatus.PUBLISHED));
         Lesson lesson = lesson("les-1", 1024, section);
         lesson.setIsPreview(false);
-        when(courseAccessService.ensureReadableCourse(null, "course-1")).thenReturn(section.getCourse());
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(section.getCourse()));
+        when(courseAccessService.canReadCourse(null, section.getCourse())).thenReturn(true);
         when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
 
         assertThatThrownBy(() -> lessonService.ensureCanReadLessonContent(null, "course-1", "les-1", LessonType.VIDEO))
@@ -95,11 +97,54 @@ class LessonServiceTest {
         Section section = publishedSection(course(CourseStatus.PUBLISHED));
         Lesson lesson = lesson("les-1", 1024, section);
         lesson.setIsPreview(false);
-        when(courseAccessService.ensureReadableCourse("student-1", "course-1")).thenReturn(section.getCourse());
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(section.getCourse()));
+        when(courseAccessService.canReadCourse("student-1", section.getCourse())).thenReturn(true);
         when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
         when(courseAccessService.isEnrolled("student-1", "course-1")).thenReturn(true);
 
         lessonService.ensureCanReadLessonContent("student-1", "course-1", "les-1", LessonType.VIDEO);
+    }
+
+    @Test
+    void ensureCanReadLessonContentAllowsOwnerToReadDraftLesson() {
+        Course course = course(CourseStatus.DRAFT);
+        CourseDraft draft = draft(course);
+        Section section = section("sec-1", draft);
+        Lesson lesson = lesson("les-1", 1024, section);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.canReadCourse("inst-1", course)).thenReturn(false);
+        when(courseAccessService.canManageCourse("inst-1", course)).thenReturn(true);
+        when(lessonRepository.findByCourseAndStableId("course-1", "les-1")).thenReturn(List.of(lesson));
+
+        lessonService.ensureCanReadLessonContent("inst-1", "course-1", "les-1", LessonType.VIDEO);
+
+        verify(courseAccessService, never()).isEnrolled(any(), any());
+    }
+
+    @Test
+    void ensureCanReadLessonContentRejectsDraftLessonForNonOwner() {
+        Course course = course(CourseStatus.DRAFT);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.canReadCourse("student-1", course)).thenReturn(false);
+        when(courseAccessService.canManageCourse("student-1", course)).thenReturn(false);
+
+        assertThatThrownBy(() -> lessonService.ensureCanReadLessonContent("student-1", "course-1", "les-1", LessonType.VIDEO))
+                .isInstanceOf(com.cinx.common.exception.NotFoundException.class);
+    }
+
+    @Test
+    void ensureCanReadLessonContentAllowsOwnerToReadDraftOnlyLessonOnPublishedCourse() {
+        Course course = course(CourseStatus.PUBLISHED);
+        CourseDraft draft = draft(course);
+        Section section = section("sec-1", draft);
+        Lesson lesson = lesson("les-draft", 1024, section);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.canReadCourse("inst-1", course)).thenReturn(true);
+        when(lessonRepository.findReadableByCourseAndStableId("course-1", "les-draft")).thenReturn(List.of());
+        when(courseAccessService.canManageCourse("inst-1", course)).thenReturn(true);
+        when(lessonRepository.findByCourseAndStableId("course-1", "les-draft")).thenReturn(List.of(lesson));
+
+        lessonService.ensureCanReadLessonContent("inst-1", "course-1", "les-draft", LessonType.VIDEO);
     }
 
     @Test

@@ -115,12 +115,28 @@ public class LessonService implements ILessonService {
     @Override
     @Transactional(readOnly = true)
     public void ensureCanReadLessonContent(String currentUserId, String courseId, String lessonId, LessonType lessonType) {
-        Course course = courseAccessService.ensureReadableCourse(currentUserId, courseId);
-        Lesson lesson = lessonRepository.findReadableByCourseAndStableId(courseId, lessonId).stream()
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (courseAccessService.canReadCourse(currentUserId, course)) {
+            Optional<Lesson> readableLesson = lessonRepository.findReadableByCourseAndStableId(courseId, lessonId).stream()
+                    .filter(candidate -> lessonType == null || candidate.getLessonType() == lessonType)
+                    .findFirst();
+            if (readableLesson.isPresent()) {
+                ensureReadableLessonAccess(currentUserId, courseId, course, readableLesson.get());
+                return;
+            }
+        }
+
+        if (!courseAccessService.canManageCourse(currentUserId, course)) {
+            throw new NotFoundException("Lesson not found with id: " + lessonId);
+        }
+        lessonRepository.findByCourseAndStableId(courseId, lessonId).stream()
                 .filter(candidate -> lessonType == null || candidate.getLessonType() == lessonType)
                 .findFirst()
                 .orElseThrow(() -> new NotFoundException("Lesson not found with id: " + lessonId));
+    }
 
+    private void ensureReadableLessonAccess(String currentUserId, String courseId, Course course, Lesson lesson) {
         if (Boolean.TRUE.equals(lesson.getIsPreview())) {
             return;
         }
