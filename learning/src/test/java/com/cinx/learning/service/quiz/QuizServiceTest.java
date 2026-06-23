@@ -40,6 +40,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.argThat;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -113,6 +115,7 @@ class QuizServiceTest {
                 .build();
         QuizSessionResponse response = new QuizSessionResponse(
                 "session-1",
+                "user-1",
                 "quiz-1",
                 session.getStartTime(),
                 session.getEndTime(),
@@ -142,6 +145,50 @@ class QuizServiceTest {
         assertThat(session.getStatus()).isEqualTo(QuizSessionStatus.GRADED);
         assertThat(result.status()).isEqualTo(QuizSessionStatus.GRADED);
         verify(dailyGoalService).recordProgress("user-1", DailyGoalType.QUIZZES_PASSED, 1);
+    }
+
+    @Test
+    void submitQuizSessionStoresUserIdOnSubmission() {
+        QuizSession session = session(QuizSessionStatus.IN_PROGRESS);
+        QuizSessionQuestion question = QuizSessionQuestion.builder()
+                .quizSessionId("session-1")
+                .questionId("q-1")
+                .questionType(QuizQuestionType.SINGLE_CHOICE)
+                .correctAnswer("a")
+                .userAnswer("a")
+                .build();
+        QuizSessionResponse response = new QuizSessionResponse(
+                "session-1",
+                "user-1",
+                "quiz-1",
+                session.getStartTime(),
+                session.getEndTime(),
+                QuizSessionStatus.SUBMITTED,
+                true,
+                true,
+                null);
+
+        when(quizSessionRepository.findById("session-1")).thenReturn(Optional.of(session));
+        when(quizSessionQuestionRepository.findAllByQuizSessionId(eq("session-1"), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(question)));
+        when(questionEvaluatorFactory.resolve(question)).thenReturn(q -> 1.0);
+        when(quizSessionSubmissionRepository.save(any(QuizSessionSubmission.class)))
+                .thenAnswer(invocation -> invocation.getArgument(0));
+        when(quizScoreAggregator.aggregateScore("course-1", "user-1", "quiz-1")).thenReturn(10.0);
+        when(learningProgressService.updateLearningItemProgress(
+                "user-1",
+                "quiz-1",
+                new UpdateLearningItemRequest(true, true, 10.0)))
+                .thenReturn(new LearningItemProgressUpdateResult(false, true, false, false));
+        when(quizSessionMapper.toDto(session)).thenReturn(response);
+
+        QuizSessionResponse result = quizService.submitQuizSession("session-1", new SubmitQuizSessionRequest(List.of()));
+
+        assertThat(result.userId()).isEqualTo("user-1");
+        verify(quizSessionSubmissionRepository).save(argThat(submission ->
+                "user-1".equals(submission.getUserId())
+                        && "session-1".equals(submission.getQuizSessionId())
+                        && submission.getSubmissionTime() != null));
     }
 
     @Test
