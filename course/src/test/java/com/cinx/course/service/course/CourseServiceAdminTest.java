@@ -200,7 +200,7 @@ class CourseServiceAdminTest {
         draft.setId("draft-1");
         draft.setCourse(archivedCourse);
         CourseResponse response = response(archivedCourse);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(archivedCourse);
         when(courseDraftService.findDraft(archivedCourse)).thenReturn(Optional.of(draft));
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(archivedCourse), eq(draft), any(UserDto.class))).thenReturn(response);
@@ -214,7 +214,7 @@ class CourseServiceAdminTest {
     void ownerDraftDetailRejectsArchivedCourseWithoutDraft() {
         authenticate("inst-1");
         Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(archivedCourse);
         when(courseDraftService.findDraft(archivedCourse)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> courseService.getEditableDraftCourseById("inst-1", "course-1"))
@@ -225,9 +225,8 @@ class CourseServiceAdminTest {
     void nonOwnerCannotReadArchivedCourseDraftDetail() {
         authenticate("inst-2");
         Course archivedCourse = course("course-1", "inst-1", CourseStatus.ARCHIVED);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(archivedCourse));
         doThrow(new ForbiddenException("You are not allowed to access this course"))
-                .when(courseAccessService).ensureCurrentUserOwns("inst-2", archivedCourse);
+                .when(courseAccessService).ensureManageableCourse("inst-2", "course-1");
 
         assertThatThrownBy(() -> courseService.getEditableDraftCourseById("inst-2", "course-1"))
                 .isInstanceOf(ForbiddenException.class);
@@ -334,7 +333,7 @@ class CourseServiceAdminTest {
         authenticate("inst-1");
         Course course = course("course-1", "inst-1", CourseStatus.DRAFT);
         CourseResponse response = response(course);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(course), any(UserDto.class))).thenReturn(response);
@@ -352,7 +351,7 @@ class CourseServiceAdminTest {
         draft.setId("draft-1");
         draft.setCourse(course);
         CourseResponse draftResponse = response(course);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
         when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
         when(courseMapper.toResponse(eq(course), eq(draft), any(UserDto.class))).thenReturn(draftResponse);
@@ -366,7 +365,7 @@ class CourseServiceAdminTest {
     void getDraftCourseRejectsPublishedCourseWithoutDraft() {
         authenticate("inst-1");
         Course course = course("course-1", "inst-1", CourseStatus.PUBLISHED);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> courseService.getEditableDraftCourseById("inst-1", "course-1"))

@@ -63,9 +63,7 @@ public class CourseService implements ICourseService {
     @Override
     @Transactional(readOnly = true)
     public CourseResponse getEditableDraftCourseById(String currentUserId, String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        courseAccessService.ensureCurrentUserOwns(currentUserId, course);
+        Course course = courseAccessService.ensureManageableCourse(currentUserId, courseId);
         return draftOnlyResponse(course);
     }
 
