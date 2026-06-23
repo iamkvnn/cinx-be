@@ -50,6 +50,7 @@ public class SecurityConfig {
                         "/api/v1/courses/*/lessons/*/videos",
                         "/api/v1/categories/**",
                         "/api/v1/reviews/**",
+                        "/api/v1/users/ids",
                         "/api/v1/policies",
                         "/api/v1/policies/*").permitAll()
                 .pathMatchers("/api/v1/auth/**",
