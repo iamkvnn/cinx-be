@@ -50,19 +50,27 @@ class SubtitleEventPublisher:
 
     async def _publish(self, routing_key: str, payload: dict) -> None:
         body = json.dumps(payload, ensure_ascii=False).encode("utf-8")
+        exchange_name = getattr(self.exchange, "name", settings.AI_SUBTITLE_EXCHANGE)
         for attempt in range(1, PUBLISH_RETRY_ATTEMPTS + 1):
             try:
+                logger.info("Publishing subtitle event exchange=%s routing_key=%s", exchange_name, routing_key)
                 await self.exchange.publish(
                     aio_pika.Message(body=body, content_type="application/json", delivery_mode=aio_pika.DeliveryMode.PERSISTENT),
                     routing_key=routing_key,
+                    mandatory=True,
                 )
                 return
             except AMQP_ERRORS:
                 if attempt == PUBLISH_RETRY_ATTEMPTS:
-                    logger.exception("Failed to publish subtitle event routing_key=%s after retries", routing_key)
+                    logger.exception(
+                        "Failed to publish subtitle event exchange=%s routing_key=%s after retries",
+                        exchange_name,
+                        routing_key,
+                    )
                     raise
                 logger.warning(
-                    "RabbitMQ publish failed routing_key=%s attempt=%s/%s; retrying",
+                    "RabbitMQ publish failed exchange=%s routing_key=%s attempt=%s/%s; retrying",
+                    exchange_name,
                     routing_key,
                     attempt,
                     PUBLISH_RETRY_ATTEMPTS,
@@ -79,14 +87,15 @@ async def start_consumer() -> None:
         login=settings.RABBITMQ_USER,
         password=settings.RABBITMQ_PASSWORD,
     )
-    channel = await connection.channel()
-    await channel.set_qos(prefetch_count=settings.RABBITMQ_PREFETCH)
+    consumer_channel = await connection.channel()
+    publisher_channel = await connection.channel()
+    await consumer_channel.set_qos(prefetch_count=settings.RABBITMQ_PREFETCH)
 
-    course_exchange = await channel.declare_exchange(settings.COURSE_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
-    ai_exchange = await channel.declare_exchange(settings.AI_SUBTITLE_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
-    dlx = await channel.declare_exchange(settings.RABBITMQ_DLX, aio_pika.ExchangeType.DIRECT, durable=True)
+    course_exchange = await consumer_channel.declare_exchange(settings.COURSE_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
+    ai_exchange = await publisher_channel.declare_exchange(settings.AI_SUBTITLE_EXCHANGE, aio_pika.ExchangeType.TOPIC, durable=True)
+    dlx = await consumer_channel.declare_exchange(settings.RABBITMQ_DLX, aio_pika.ExchangeType.DIRECT, durable=True)
 
-    queue = await channel.declare_queue(
+    queue = await consumer_channel.declare_queue(
         settings.SUBTITLE_QUEUE,
         durable=True,
         arguments={
@@ -94,7 +103,7 @@ async def start_consumer() -> None:
             "x-dead-letter-routing-key": "subtitle-ai.course.dead",
         },
     )
-    dlq = await channel.declare_queue(settings.SUBTITLE_DLQ, durable=True)
+    dlq = await consumer_channel.declare_queue(settings.SUBTITLE_DLQ, durable=True)
     await dlq.bind(dlx, "subtitle-ai.course.dead")
 
     for routing_key in [key.strip() for key in settings.SUBTITLE_ROUTING_KEYS.split(",") if key.strip()]:
