@@ -247,6 +247,7 @@ public class QuizService implements IQuizService {
 
         quizSession.setQuizSessionSubmission(quizSessionSubmissionRepository.save(
                 QuizSessionSubmission.builder()
+                        .userId(quizSession.getUserId())
                         .quizSessionId(quizSession.getId())
                         .score(rawScore)
                         .submissionTime(LocalDateTime.now())
