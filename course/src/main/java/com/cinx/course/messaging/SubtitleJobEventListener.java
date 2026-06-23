@@ -24,32 +24,47 @@ public class SubtitleJobEventListener {
     @RabbitListener(queues = "course.subtitle.ai.queue")
     public void onSubtitleJobEvent(Message message) throws IOException {
         String routingKey = message.getMessageProperties().getReceivedRoutingKey();
+        String messageId = message.getMessageProperties().getMessageId();
         byte[] body = message.getBody();
-        switch (routingKey) {
-            case "ai.subtitle.job.progress" -> {
-                SubtitleJobProgressEvent event = objectMapper.readValue(body, SubtitleJobProgressEvent.class);
-                subtitleJobService.markProcessing(event.jobId(), event.progressPercent());
+        try {
+            switch (routingKey) {
+                case "ai.subtitle.job.progress" -> {
+                    SubtitleJobProgressEvent event = objectMapper.readValue(body, SubtitleJobProgressEvent.class);
+                    log.info("Received subtitle AI progress event jobId={} progress={}", event.jobId(), event.progressPercent());
+                    subtitleJobService.markProcessing(event.jobId(), event.progressPercent());
+                }
+                case "ai.subtitle.job.completed" -> {
+                    SubtitleJobCompletedEvent event = objectMapper.readValue(body, SubtitleJobCompletedEvent.class);
+                    log.info("Received subtitle AI completed event jobId={} outputFileKey={}", event.jobId(), event.outputFileKey());
+                    subtitleJobService.markCompleted(new SubtitleJobCompletedRequest(
+                            event.jobId(),
+                            event.outputFileKey(),
+                            event.outputFileUrl(),
+                            event.fileName(),
+                            event.fileType(),
+                            event.fileSize(),
+                            event.languageCode(),
+                            event.displayName(),
+                            event.wordConfidenceFileKey(),
+                            event.wordConfidenceFileUrl()
+                    ));
+                }
+                case "ai.subtitle.job.failed" -> {
+                    SubtitleJobFailedEvent event = objectMapper.readValue(body, SubtitleJobFailedEvent.class);
+                    log.info("Received subtitle AI failed event jobId={} errorCode={}", event.jobId(), event.errorCode());
+                    subtitleJobService.markFailed(event.jobId(), event.errorCode(), event.errorMessage());
+                }
+                default -> log.warn("Ignored unsupported subtitle AI routing key: {}", routingKey);
             }
-            case "ai.subtitle.job.completed" -> {
-                SubtitleJobCompletedEvent event = objectMapper.readValue(body, SubtitleJobCompletedEvent.class);
-                subtitleJobService.markCompleted(new SubtitleJobCompletedRequest(
-                        event.jobId(),
-                        event.outputFileKey(),
-                        event.outputFileUrl(),
-                        event.fileName(),
-                        event.fileType(),
-                        event.fileSize(),
-                        event.languageCode(),
-                        event.displayName(),
-                        event.wordConfidenceFileKey(),
-                        event.wordConfidenceFileUrl()
-                ));
-            }
-            case "ai.subtitle.job.failed" -> {
-                SubtitleJobFailedEvent event = objectMapper.readValue(body, SubtitleJobFailedEvent.class);
-                subtitleJobService.markFailed(event.jobId(), event.errorCode(), event.errorMessage());
-            }
-            default -> log.warn("Ignored unsupported subtitle AI routing key: {}", routingKey);
+        } catch (Exception ex) {
+            log.error(
+                    "Failed to handle subtitle AI event routingKey={} messageId={} body={}",
+                    routingKey,
+                    messageId,
+                    new String(body),
+                    ex
+            );
+            throw ex;
         }
     }
 }

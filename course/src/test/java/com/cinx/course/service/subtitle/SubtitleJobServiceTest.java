@@ -43,6 +43,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyList;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.times;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -245,6 +246,40 @@ class SubtitleJobServiceTest {
                 null
         ));
         verify(subtitleTrackRepository, times(1)).save(any(SubtitleTrack.class));
+    }
+
+    @Test
+    void markCompleted_usesProvidedOutputUrlWithoutBuildingCdnFallback() {
+        VideoLesson videoLesson = videoLesson("lesson-1");
+        SubtitleJob completedJob = job(videoLesson, SubtitleJobType.TRANSLATE, "vi");
+        completedJob.setId("job-vi");
+        when(subtitleJobRepository.findById("job-vi")).thenReturn(Optional.of(completedJob));
+        when(subtitleTrackRepository.findByVideoLessonLessonIdAndLanguageCode("lesson-1", "vi")).thenReturn(Optional.empty());
+        when(subtitleTrackRepository.save(any(SubtitleTrack.class))).thenAnswer(invocation -> {
+            SubtitleTrack track = invocation.getArgument(0);
+            track.setId("subtitle-vi");
+            return track;
+        });
+        when(subtitleJobRepository.save(any(SubtitleJob.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        subtitleJobService.markCompleted(new SubtitleJobCompletedRequest(
+                "job-vi",
+                completedJob.getExpectedOutputFileKey(),
+                "https://cdn.example.com/" + completedJob.getExpectedOutputFileKey(),
+                "job-vi.vtt",
+                "text/vtt",
+                2048L,
+                "vi",
+                "Vietnamese",
+                null,
+                null
+        ));
+
+        ArgumentCaptor<SubtitleTrack> trackCaptor = ArgumentCaptor.forClass(SubtitleTrack.class);
+        verify(subtitleTrackRepository).save(trackCaptor.capture());
+        assertThat(trackCaptor.getValue().getFileUrl())
+                .isEqualTo("https://cdn.example.com/" + completedJob.getExpectedOutputFileKey());
+        verify(s3Service, never()).publicUrl(any());
     }
 
     private void authenticate(String userId) {

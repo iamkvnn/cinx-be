@@ -171,7 +171,7 @@ public class SubtitleJobService implements ISubtitleJobService {
             subtitleTrack.setLanguageCode(outputLanguageCode);
             subtitleTrack.setDisplayName(displayName(request.displayName(), displayName(job.getDisplayName(), whisperLanguageRegistry.displayName(outputLanguageCode))));
             subtitleTrack.setFileKey(request.outputFileKey());
-            subtitleTrack.setFileUrl(displayName(request.outputFileUrl(), s3Service.publicUrl(request.outputFileKey())));
+            subtitleTrack.setFileUrl(resolveOutputFileUrl(request));
             subtitleTrack.setOriginalFileKey(null);
             subtitleTrack.setFileName(displayName(request.fileName(), job.getId() + ".vtt"));
             subtitleTrack.setFileType(NORMALIZED_CONTENT_TYPE);
@@ -343,6 +343,13 @@ public class SubtitleJobService implements ISubtitleJobService {
 
     private String displayName(String value, String fallback) {
         return value == null || value.isBlank() ? fallback : value.trim();
+    }
+
+    private String resolveOutputFileUrl(SubtitleJobCompletedRequest request) {
+        if (request.outputFileUrl() != null && !request.outputFileUrl().isBlank()) {
+            return request.outputFileUrl().trim();
+        }
+        return s3Service.publicUrl(request.outputFileKey());
     }
 
     private void markFailedJob(SubtitleJob job, String errorCode, String errorMessage) {
