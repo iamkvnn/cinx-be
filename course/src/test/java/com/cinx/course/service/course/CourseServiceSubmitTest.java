@@ -2,8 +2,10 @@ package com.cinx.course.service.course;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.exception.BadRequestException;
+import com.cinx.course.consts.CoursePublishStatus;
 import com.cinx.course.consts.CourseStatus;
 import com.cinx.course.dto.request.CreateCourseRequest;
+import com.cinx.course.dto.request.UpdateCourseRequest;
 import com.cinx.course.dto.response.CourseResponse;
 import com.cinx.course.dto.response.UserDto;
 import com.cinx.course.mapper.CourseMapper;
@@ -107,6 +109,44 @@ class CourseServiceSubmitTest {
         assertThat(course.getPublishStatus()).isNull();
         verify(courseRepository, never()).save(course);
         verify(courseEventProducer, never()).publishCourseApprovalRequestedEvent(any());
+    }
+
+    @Test
+    void updatePublishedCourseUpdatesDraftOnlyUntilApproval() {
+        Course course = course("course-1", "inst-1");
+        course.setStatus(CourseStatus.PUBLISHED);
+        course.setPublishStatus(CoursePublishStatus.PUBLISHED);
+        course.setTitle("Published title");
+        course.setPrice(100_000L);
+        CourseDraft draft = draft("draft-1", course);
+        UpdateCourseRequest request = new UpdateCourseRequest(
+                "Draft title",
+                "Draft description",
+                "cat-2",
+                120_000L,
+                90_000L,
+                true,
+                150L,
+                true,
+                "Draft certificate"
+        );
+        Category category = new Category();
+        category.setId("cat-2");
+        CourseResponse response = response(course);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(categoryRepository.findById("cat-2")).thenReturn(Optional.of(category));
+        when(courseDraftService.updateDraft(course, request, category, 25L)).thenReturn(draft);
+        when(userService.getInstructorById("inst-1")).thenReturn(new ApiResponse<>(true, "ok", instructor("inst-1")));
+        when(courseMapper.toResponse(eq(course), eq(draft), any(UserDto.class))).thenReturn(response);
+
+        CourseResponse result = courseService.updateCourse("inst-1", "course-1", request);
+
+        assertThat(result).isSameAs(response);
+        assertThat(course.getTitle()).isEqualTo("Published title");
+        assertThat(course.getPrice()).isEqualTo(100_000L);
+        assertThat(course.getPublishStatus()).isEqualTo(CoursePublishStatus.PUBLISHED);
+        verify(courseMapper, never()).partialUpdate(course, request);
+        verify(courseRepository, never()).save(course);
     }
 
     private Course course(String courseId, String instructorId) {

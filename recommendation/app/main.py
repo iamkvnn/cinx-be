@@ -49,14 +49,6 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title=settings.APP_NAME, lifespan=lifespan)
-from fastapi.middleware.cors import CORSMiddleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=False,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
 app.add_middleware(CorrelationMiddleware)
 app.add_exception_handler(ProblemDetailException, problem_detail_exception_handler)
 app.add_exception_handler(HTTPException, http_exception_handler)

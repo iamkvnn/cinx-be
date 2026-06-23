@@ -63,9 +63,7 @@ public class CurriculumService implements ICurriculumService {
     @Override
     @Transactional(readOnly = true)
     public CourseCurriculumResponse getEditableDraftCurriculum(String currentUserId, String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        courseAccessService.ensureCurrentUserOwns(currentUserId, course);
+        Course course = courseAccessService.ensureManageableCourse(currentUserId, courseId);
         return draftCurriculum(course);
     }
 

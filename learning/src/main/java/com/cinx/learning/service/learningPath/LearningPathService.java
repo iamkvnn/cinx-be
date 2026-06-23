@@ -11,9 +11,11 @@ import com.cinx.learning.dto.request.LearningPathRequest;
 import com.cinx.learning.dto.response.CheckEnrollmentStatus;
 import com.cinx.learning.dto.response.LearningPathResponse;
 import com.cinx.learning.mapper.LearningPathMapper;
+import com.cinx.learning.model.LearningItemProgress;
 import com.cinx.learning.model.LearningPathItem;
 import com.cinx.learning.model.UserLearningPath;
 import com.cinx.learning.repository.CourseProgressRepository;
+import com.cinx.learning.repository.LearningItemProgressRepository;
 import com.cinx.learning.repository.LearningPathItemRepository;
 import com.cinx.learning.repository.UserLearningPathRepository;
 import com.cinx.learning.service.cart.CartClient;
@@ -24,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -37,6 +40,7 @@ public class LearningPathService implements ILearningPathService {
     private final EnrollmentClient enrollmentClient;
     private final CartClient cartClient;
     private final CourseProgressRepository courseProgressRepository;
+    private final LearningItemProgressRepository learningItemProgressRepository;
 
     @Override
     @Transactional(readOnly = true)
@@ -76,7 +80,22 @@ public class LearningPathService implements ILearningPathService {
                 .map(CheckEnrollmentStatus::courseId)
                 .toList();
 
-        LearningPathStatus initialStatus = !unenrolledCourseIds.isEmpty() ? LearningPathStatus.PENDING_PAYMENT : LearningPathStatus.ACTIVE;
+        List<String> lessonIds = request.getItems().stream()
+                .map(LearningPathItemRequest::getLessonId)
+                .toList();
+        Set<String> completedLessonIds = learningItemProgressRepository
+                .findAllByUserIdAndItemIdIn(userId, lessonIds)
+                .stream()
+                .filter(progress -> Boolean.TRUE.equals(progress.getIsCompleted()))
+                .map(LearningItemProgress::getItemId)
+                .collect(Collectors.toSet());
+
+        int totalItems = request.getItems().size();
+        int completedItems = (int) request.getItems().stream()
+                .filter(req -> completedLessonIds.contains(req.getLessonId()))
+                .count();
+        double currentProgress = totalItems == 0 ? 0.0 : (double) completedItems / totalItems * 100;
+        LearningPathStatus initialStatus = resolveInitialStatus(unenrolledCourseIds, completedItems, totalItems);
 
         UserLearningPath savedPath = pathRepository.save(
                 UserLearningPath.builder()
@@ -84,9 +103,9 @@ public class LearningPathService implements ILearningPathService {
                     .title(request.getTitle())
                     .description(request.getDescription())
                     .status(initialStatus)
-                    .currentProgress(0.0)
-                    .totalItems(request.getItems().size())
-                    .completedItems(0)
+                    .currentProgress(currentProgress)
+                    .totalItems(totalItems)
+                    .completedItems(completedItems)
                     .build());
 
         savedPath.setItems(itemRepository.saveAll(request.getItems().stream()
@@ -97,7 +116,7 @@ public class LearningPathService implements ILearningPathService {
                         .lessonId(req.getLessonId())
                         .orderIndex(req.getOrderIndex())
                         .isSuggested(req.getIsSuggested())
-                        .isCompleted(false)
+                        .isCompleted(completedLessonIds.contains(req.getLessonId()))
                         .build()
         ).toList()));
 
@@ -148,7 +167,7 @@ public class LearningPathService implements ILearningPathService {
         boolean allEnrolled = enrolledCourseCount == courseIdsInPath.size();
 
         if (allEnrolled) {
-            path.setStatus(LearningPathStatus.ACTIVE);
+            path.setStatus(isPathCompleted(path) ? LearningPathStatus.COMPLETED : LearningPathStatus.ACTIVE);
             pathRepository.save(path);
         }
     }
@@ -203,5 +222,18 @@ public class LearningPathService implements ILearningPathService {
                         itemRepository.saveAll(courseItems);
                     }
                 });
+    }
+
+    private LearningPathStatus resolveInitialStatus(List<String> unenrolledCourseIds, int completedItems, int totalItems) {
+        if (!unenrolledCourseIds.isEmpty()) {
+            return LearningPathStatus.PENDING_PAYMENT;
+        }
+        return completedItems == totalItems ? LearningPathStatus.COMPLETED : LearningPathStatus.ACTIVE;
+    }
+
+    private boolean isPathCompleted(UserLearningPath path) {
+        return path.getTotalItems() != null
+                && path.getCompletedItems() != null
+                && path.getTotalItems().equals(path.getCompletedItems());
     }
 }

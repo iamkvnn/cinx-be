@@ -7,8 +7,10 @@ import java.util.Map;
 
 public interface ICourseAccessService {
     Course ensureReadableCourse(String currentUserId, String courseId);
+    Course ensureManageableCourse(String currentUserId, String courseId);
     boolean canReadCourse(String currentUserId, Course course);
     boolean canReadCourse(String currentUserId, Course course, Map<String, Boolean> enrollmentByCourseId);
+    boolean canManageCourse(String currentUserId, Course course);
     Map<String, Boolean> enrollmentByCourseId(String currentUserId, List<Course> courses);
     boolean isAdmin();
     boolean isCourseOwner(String currentUserId, Course course);

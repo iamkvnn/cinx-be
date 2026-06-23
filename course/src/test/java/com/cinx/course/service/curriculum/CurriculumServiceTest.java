@@ -85,7 +85,7 @@ class CurriculumServiceTest {
         draft.setCourse(course);
         Section section = section("sec-draft", 1024);
         Lesson lesson = lesson("les-draft", 1024, section);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
         when(sectionRepository.findDraftByDraft("draft-1")).thenReturn(List.of(section));
         when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(lesson));
@@ -176,7 +176,7 @@ class CurriculumServiceTest {
         draft.setCourse(course);
         Section draftSection = section("sec-draft", 1024);
         Lesson draftLesson = lesson("les-draft", 1024, draftSection);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
         when(sectionRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftSection));
         when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftLesson));
@@ -198,7 +198,7 @@ class CurriculumServiceTest {
         draft.setCourse(course);
         Section draftSection = section("sec-draft", 1024);
         Lesson draftLesson = lesson("les-draft", 1024, draftSection);
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("admin-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.of(draft));
         when(sectionRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftSection));
         when(lessonRepository.findDraftByDraft("draft-1")).thenReturn(List.of(draftLesson));
@@ -214,7 +214,7 @@ class CurriculumServiceTest {
         Course course = course(CourseStatus.DRAFT);
         course.setInstructorId("inst-1");
         authenticate("inst-1");
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
 
         CourseCurriculumResponse response = curriculumService.getEditableDraftCurriculum("inst-1", "course-1");
@@ -228,7 +228,7 @@ class CurriculumServiceTest {
         Course course = course(CourseStatus.PUBLISHED);
         course.setInstructorId("inst-1");
         authenticate("inst-1");
-        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseAccessService.ensureManageableCourse("inst-1", "course-1")).thenReturn(course);
         when(courseDraftService.findDraft(course)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> curriculumService.getEditableDraftCurriculum("inst-1", "course-1"))

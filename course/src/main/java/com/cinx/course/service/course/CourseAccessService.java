@@ -39,6 +39,17 @@ public class CourseAccessService implements ICourseAccessService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public Course ensureManageableCourse(String currentUserId, String courseId) {
+        Course course = courseRepository.findById(courseId)
+                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
+        if (!canManageCourse(currentUserId, course)) {
+            throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "You are not allowed to access this course");
+        }
+        return course;
+    }
+
+    @Override
     public boolean canReadCourse(String currentUserId, Course course) {
         if (course.getStatus() == CourseStatus.PUBLISHED) {
             return true;
@@ -62,6 +73,11 @@ public class CourseAccessService implements ICourseAccessService {
         return isAdmin()
                 || isCourseOwner(currentUserId, course)
                 || Boolean.TRUE.equals(enrollmentByCourseId.get(course.getId()));
+    }
+
+    @Override
+    public boolean canManageCourse(String currentUserId, Course course) {
+        return isAdmin() || isCourseOwner(currentUserId, course);
     }
 
     @Override

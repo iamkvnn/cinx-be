@@ -17,4 +17,9 @@ public interface LearningItemProgressRepository extends JpaRepository<LearningIt
             "JOIN lip.courseProgress cp " +
             "WHERE cp.userId = :userId AND lip.itemId = :itemId")
     Optional<LearningItemProgress> findByItemIdAndUserId(String itemId, String userId);
+
+    @Query("SELECT lip FROM LearningItemProgress lip " +
+            "JOIN lip.courseProgress cp " +
+            "WHERE cp.userId = :userId AND lip.itemId IN :itemIds")
+    List<LearningItemProgress> findAllByUserIdAndItemIdIn(String userId, List<String> itemIds);
 }

@@ -62,6 +62,43 @@ class CourseAccessServiceTest {
     }
 
     @Test
+    void canReadCourseRejectsDraftCourseForOwner() {
+        Course course = course(CourseStatus.DRAFT, "inst-1");
+
+        assertThat(courseAccessService.canReadCourse("inst-1", course)).isFalse();
+    }
+
+    @Test
+    void ensureManageableCourseAllowsDraftCourseForOwner() {
+        Course course = course(CourseStatus.DRAFT, "inst-1");
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+
+        Course result = courseAccessService.ensureManageableCourse("inst-1", "course-1");
+
+        assertThat(result).isSameAs(course);
+    }
+
+    @Test
+    void ensureManageableCourseAllowsDraftCourseForAdmin() {
+        authenticateAdmin("admin-1");
+        Course course = course(CourseStatus.DRAFT, "inst-1");
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+
+        Course result = courseAccessService.ensureManageableCourse("admin-1", "course-1");
+
+        assertThat(result).isSameAs(course);
+    }
+
+    @Test
+    void ensureManageableCourseRejectsDraftCourseForNonOwner() {
+        Course course = course(CourseStatus.DRAFT, "inst-1");
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+
+        assertThatThrownBy(() -> courseAccessService.ensureManageableCourse("student-1", "course-1"))
+                .isInstanceOf(ForbiddenException.class);
+    }
+
+    @Test
     void ensureReadableCourseRejectsArchivedCourseForAnonymousUser() {
         when(courseRepository.findById("course-1")).thenReturn(Optional.of(course(CourseStatus.ARCHIVED, "inst-1")));
 

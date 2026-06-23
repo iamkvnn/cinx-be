@@ -63,9 +63,7 @@ public class CourseService implements ICourseService {
     @Override
     @Transactional(readOnly = true)
     public CourseResponse getEditableDraftCourseById(String currentUserId, String courseId) {
-        Course course = courseRepository.findById(courseId)
-                .orElseThrow(() -> new NotFoundException("Course not found with id: " + courseId));
-        courseAccessService.ensureCurrentUserOwns(currentUserId, course);
+        Course course = courseAccessService.ensureManageableCourse(currentUserId, courseId);
         return draftOnlyResponse(course);
     }
 
@@ -163,6 +161,9 @@ public class CourseService implements ICourseService {
         Category category = category(request.categoryId());
         Long discountRate = calculateDiscountRate(request.price(), request.discountedPrice());
         CourseDraft draft = courseDraftService.updateDraft(course, request, category, discountRate);
+        if (course.getStatus() == CourseStatus.PUBLISHED) {
+            return toResponse(course, draft);
+        }
         courseMapper.partialUpdate(course, request);
         course.setCategory(category);
         course.setDiscountRate(discountRate);
