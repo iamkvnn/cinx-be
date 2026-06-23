@@ -4,6 +4,7 @@ import com.cinx.notification.model.UserNotification;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
 public interface UserNotificationRepository extends JpaRepository<UserNotification, String> {
@@ -12,4 +13,8 @@ public interface UserNotificationRepository extends JpaRepository<UserNotificati
     Page<UserNotification> findByUserId(String query, String userId, Pageable pageable);
     @Query("SELECT COUNT(un) FROM UserNotification un WHERE un.userId = :userId AND un.isRead = false")
     Long countByUserIdAndReadFalse(String userId);
+
+    @Modifying
+    @Query("UPDATE UserNotification un SET un.isRead = :isRead WHERE un.userId = :userId")
+    void updateReadStatusByUserId(String userId, Boolean isRead);
 }

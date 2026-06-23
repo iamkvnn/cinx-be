@@ -7,6 +7,7 @@ public record ReviewReactionResponse(
         String id,
         @Schema(example = "user_123")
         String userId,
+        UserSummaryResponse user,
         @Schema(example = "rev_123")
         String reviewId,
         @Schema(example = "true")

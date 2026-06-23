@@ -8,6 +8,7 @@ public record ReviewResponse(
         String id,
         @Schema(example = "user_123")
         String userId,
+        UserSummaryResponse user,
         @Schema(example = "course_123")
         String courseId,
         @Schema(example = "Great course, learned a lot!")

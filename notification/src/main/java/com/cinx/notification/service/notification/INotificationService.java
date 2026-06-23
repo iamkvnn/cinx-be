@@ -9,5 +9,7 @@ public interface INotificationService {
     Long countUnreadNotifications(String userId);
     void sendNotification(CreateNotificationRequest request);
     void toggleRead(String userId, String notificationId);
+    void markAllAsRead(String userId);
+    void markAllAsUnread(String userId);
     void deleteNotification(String userId, String notificationId);
 }

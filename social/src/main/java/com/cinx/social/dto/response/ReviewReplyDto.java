@@ -12,6 +12,7 @@ public class ReviewReplyDto {
     private String reviewId;
     @Schema(example = "inst_123")
     private String instructorId;
+    private UserSummaryResponse instructor;
     @Schema(example = "Thank you for the review!")
     private String content;
     @Schema(example = "2025-01-01T10:00:00")

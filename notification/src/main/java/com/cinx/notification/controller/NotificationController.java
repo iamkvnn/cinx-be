@@ -53,6 +53,22 @@ public class NotificationController {
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/mark-all-read")
+    public ResponseEntity<ApiResponse<Void>> markAllAsRead() {
+        String userId = AuthenticationUtil.extractUserId();
+        notificationService.markAllAsRead(userId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "All notifications marked as read successfully", null));
+    }
+
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
+    @PostMapping("/mark-all-unread")
+    public ResponseEntity<ApiResponse<Void>> markAllAsUnread() {
+        String userId = AuthenticationUtil.extractUserId();
+        notificationService.markAllAsUnread(userId);
+        return ResponseEntity.ok(new ApiResponse<>(true, "All notifications marked as unread successfully", null));
+    }
+
+    @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @DeleteMapping("/{notificationId}")
     public ResponseEntity<ApiResponse<Void>> deleteNotification(@PathVariable String notificationId) {
         String userId = AuthenticationUtil.extractUserId();
