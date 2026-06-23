@@ -1,3 +1,4 @@
+from pydantic import AliasChoices, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -7,7 +8,10 @@ class Settings(BaseSettings):
 
     RABBITMQ_HOST: str = "localhost"
     RABBITMQ_PORT: int = 5672
-    RABBITMQ_USER: str
+    RABBITMQ_USER: str = Field(
+        default="guest",
+        validation_alias=AliasChoices("RABBITMQ_USER", "RABBITMQ_USERNAME"),
+    )
     RABBITMQ_PASSWORD: str
     COURSE_EXCHANGE: str = "course.events.exchange"
     AI_SUBTITLE_EXCHANGE: str = "ai.subtitle.events.exchange"

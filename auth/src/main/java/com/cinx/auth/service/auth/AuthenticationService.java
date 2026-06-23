@@ -103,6 +103,9 @@ public class AuthenticationService implements IAuthenticationService {
         if (user.getRole() != request.role()) {
             throw new BadRequestException(ErrorCode.INVALID_CREDENTIALS, "Invalid email or password");
         }
+        if (user.getRole() == Role.INSTRUCTOR && !userProfileService.checkInstructorVerified(user.getId()).data()) {
+            throw new BadRequestException(ErrorCode.INSTRUCTOR_NOT_VERIFIED, "Instructor account is not verified by admin");
+        }
         
         userService.checkAndUnbanIfNeeded(user);
         if (user.getStatus().equals(UserStatus.BANNED)) {

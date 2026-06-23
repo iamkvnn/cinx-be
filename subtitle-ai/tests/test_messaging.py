@@ -25,11 +25,11 @@ class FlakyExchange:
         self.attempts = 0
         self.messages = []
 
-    async def publish(self, message, routing_key):
+    async def publish(self, message, routing_key, mandatory=False):
         self.attempts += 1
         if self.attempts == 1:
             raise ConnectionError("connection lost")
-        self.messages.append((routing_key, message.body))
+        self.messages.append((routing_key, mandatory, message.body))
 
 
 class BrokenPublisher:
@@ -54,6 +54,7 @@ class MessagingTest(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(2, exchange.attempts)
         self.assertEqual("ai.subtitle.job.progress", exchange.messages[0][0])
+        self.assertTrue(exchange.messages[0][1])
 
     async def test_failure_publish_connection_error_is_swallowed(self):
         await publish_failure_from_body(b'{"jobId":"job-1"}', BrokenPublisher(), RuntimeError("boom"))
