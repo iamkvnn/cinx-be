@@ -71,6 +71,7 @@ public class CourseQnAService implements ICourseQnAService {
 
         CourseQuestion question = mapper.toModel(request);
         question.setUserId(userId);
+        question.setUpvoteCount(defaultCount(question.getUpvoteCount()));
         question = questionRepository.save(question);
 
         CourseQuestionCreatedEvent event = CourseQuestionCreatedEvent.builder()
@@ -188,7 +189,7 @@ public class CourseQnAService implements ICourseQnAService {
                 .build();
         questionUpvoteRepository.save(upvote);
         
-        question.setUpvoteCount(question.getUpvoteCount() + 1);
+        question.setUpvoteCount(defaultCount(question.getUpvoteCount()) + 1);
         questionRepository.save(question);
     }
 
@@ -217,12 +218,14 @@ public class CourseQnAService implements ICourseQnAService {
         CourseAnswer answer = mapper.toModel(request);
         answer.setUserId(userId);
         answer.setQuestionId(questionId);
+        answer.setUpvoteCount(defaultCount(answer.getUpvoteCount()));
+        answer.setIsInstructorAnswer(defaultBoolean(answer.getIsInstructorAnswer()));
         
         String parentAuthorId = null;
         if (request.getParentAnswerId() != null) {
             CourseAnswer parent = answerRepository.findById(request.getParentAnswerId())
                     .orElseThrow(() -> new NotFoundException("Parent answer not found"));
-            answer.setDepth(parent.getDepth() + 1);
+            answer.setDepth(defaultCount(parent.getDepth()) + 1);
             parentAuthorId = parent.getUserId();
         } else {
             answer.setDepth(0);
@@ -297,7 +300,7 @@ public class CourseQnAService implements ICourseQnAService {
                 .build();
         answerUpvoteRepository.save(upvote);
 
-        answer.setUpvoteCount(answer.getUpvoteCount() + 1);
+        answer.setUpvoteCount(defaultCount(answer.getUpvoteCount()) + 1);
         answerRepository.save(answer);
     }
 
@@ -313,5 +316,13 @@ public class CourseQnAService implements ICourseQnAService {
                 .reason(request.getReason())
                 .build();
         reportRepository.save(report);
+    }
+
+    private int defaultCount(Integer value) {
+        return value == null ? 0 : value;
+    }
+
+    private boolean defaultBoolean(Boolean value) {
+        return value != null && value;
     }
 }
