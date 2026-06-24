@@ -2,17 +2,23 @@ package com.cinx.social.service.impl;
 
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.social.client.EnrollmentClient;
+import com.cinx.social.dto.request.CreateAnswerRequest;
 import com.cinx.social.dto.request.CreateQuestionRequest;
+import com.cinx.social.dto.response.AnswerDto;
 import com.cinx.social.dto.response.CheckEnrollmentStatus;
+import com.cinx.social.dto.response.CourseResponse;
+import com.cinx.social.dto.response.InstructorResponse;
 import com.cinx.social.dto.response.QuestionDto;
 import com.cinx.social.mapper.CourseQnAMapper;
 import com.cinx.social.messaging.CourseQnAEventPublisher;
+import com.cinx.social.model.CourseAnswer;
 import com.cinx.social.model.CourseQuestion;
 import com.cinx.social.repository.AnswerUpvoteRepository;
 import com.cinx.social.repository.CourseAnswerRepository;
 import com.cinx.social.repository.CourseQuestionRepository;
 import com.cinx.social.repository.QuestionUpvoteRepository;
 import com.cinx.social.repository.ReportRepository;
+import com.cinx.social.service.course.CourseService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -20,10 +26,12 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -43,6 +51,8 @@ class CourseQnAServiceTest {
     private CourseQnAMapper mapper;
     @Mock
     private EnrollmentClient enrollmentClient;
+    @Mock
+    private CourseService courseService;
     @Mock
     private CourseQnAEventPublisher eventPublisher;
 
@@ -83,5 +93,65 @@ class CourseQnAServiceTest {
         verify(questionRepository).save(argThat(question ->
                 "user-1".equals(question.getUserId())
                         && Integer.valueOf(0).equals(question.getUpvoteCount())));
+    }
+
+    @Test
+    void createAnswerAllowsCourseInstructorWithoutEnrollment() {
+        CreateAnswerRequest request = new CreateAnswerRequest();
+        request.setQuestionId("question-1");
+        request.setContent("Instructor answer");
+
+        CourseQuestion question = CourseQuestion.builder()
+                .courseId("course-1")
+                .userId("student-1")
+                .title("Question title")
+                .content("Question content")
+                .build();
+        question.setId("question-1");
+
+        CourseAnswer mapped = CourseAnswer.builder()
+                .content("Instructor answer")
+                .build();
+
+        AnswerDto response = new AnswerDto();
+        response.setId("answer-1");
+        response.setIsInstructorAnswer(true);
+
+        when(questionRepository.findById("question-1")).thenReturn(Optional.of(question));
+        when(courseService.getCourseById("course-1"))
+                .thenReturn(new ApiResponse<>(true, "ok", new CourseResponse(
+                        "course-1",
+                        "Course title",
+                        "Course description",
+                        null,
+                        new InstructorResponse("instructor-1", "Instructor", "avatar_url"),
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null,
+                        null
+                )));
+        when(mapper.toModel(request)).thenReturn(mapped);
+        when(answerRepository.save(any(CourseAnswer.class))).thenAnswer(invocation -> {
+            CourseAnswer answer = invocation.getArgument(0);
+            answer.setId("answer-1");
+            return answer;
+        });
+        when(mapper.toDto(any(CourseAnswer.class))).thenReturn(response);
+
+        AnswerDto result = courseQnAService.createAnswer("instructor-1", "question-1", request);
+
+        assertThat(result.getIsInstructorAnswer()).isTrue();
+        verify(enrollmentClient, never()).checkEnrollmentStatus(any());
+        verify(answerRepository).save(argThat(answer ->
+                "instructor-1".equals(answer.getUserId())
+                        && "question-1".equals(answer.getQuestionId())
+                        && Boolean.TRUE.equals(answer.getIsInstructorAnswer())));
     }
 }

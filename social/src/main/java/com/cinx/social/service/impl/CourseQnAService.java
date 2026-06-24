@@ -13,6 +13,7 @@ import com.cinx.social.dto.request.UpdateAnswerRequest;
 import com.cinx.social.dto.request.UpdateQuestionRequest;
 import com.cinx.social.dto.response.AnswerDto;
 import com.cinx.social.dto.response.CheckEnrollmentStatus;
+import com.cinx.social.dto.response.CourseResponse;
 import com.cinx.social.dto.response.QuestionDto;
 import com.cinx.social.event.CourseAnswerCreatedEvent;
 import com.cinx.social.event.CourseQuestionCreatedEvent;
@@ -27,6 +28,7 @@ import com.cinx.social.repository.CourseAnswerRepository;
 import com.cinx.social.repository.CourseQuestionRepository;
 import com.cinx.social.repository.QuestionUpvoteRepository;
 import com.cinx.social.service.ICourseQnAService;
+import com.cinx.social.service.course.CourseService;
 import com.cinx.social.model.Report;
 import com.cinx.social.model.ReportType;
 import com.cinx.social.repository.ReportRepository;
@@ -55,6 +57,7 @@ public class CourseQnAService implements ICourseQnAService {
     private final ReportRepository reportRepository;
     private final CourseQnAMapper mapper;
     private final EnrollmentClient enrollmentClient;
+    private final CourseService courseService;
     private final CourseQnAEventPublisher eventPublisher;
 
     private void verifyEnrollment(String userId, String courseId) {
@@ -62,6 +65,15 @@ public class CourseQnAService implements ICourseQnAService {
         if (response == null || !response.success() || response.data().isEmpty() || !response.data().get(0).isEnrolled()) {
             throw new ForbiddenException(ErrorCode.NOT_ENROLLED_IN_COURSE, "Not enrolled in this course");
         }
+    }
+
+    private boolean isCourseInstructor(String userId, String courseId) {
+        ApiResponse<CourseResponse> response = courseService.getCourseById(courseId);
+        if (response == null || !response.success() || response.data() == null) {
+            throw new NotFoundException("Course not found");
+        }
+        CourseResponse course = response.data();
+        return course.instructor() != null && userId.equals(course.instructor().id());
     }
 
     @Override
@@ -212,14 +224,17 @@ public class CourseQnAService implements ICourseQnAService {
     public AnswerDto createAnswer(String userId, String questionId, CreateAnswerRequest request) {
         CourseQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new NotFoundException("Question not found"));
-                
-        verifyEnrollment(userId, question.getCourseId());
+
+        boolean instructorAnswer = isCourseInstructor(userId, question.getCourseId());
+        if (!instructorAnswer) {
+            verifyEnrollment(userId, question.getCourseId());
+        }
 
         CourseAnswer answer = mapper.toModel(request);
         answer.setUserId(userId);
         answer.setQuestionId(questionId);
         answer.setUpvoteCount(defaultCount(answer.getUpvoteCount()));
-        answer.setIsInstructorAnswer(defaultBoolean(answer.getIsInstructorAnswer()));
+        answer.setIsInstructorAnswer(instructorAnswer);
         
         String parentAuthorId = null;
         if (request.getParentAnswerId() != null) {
