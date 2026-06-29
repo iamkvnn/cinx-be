@@ -23,6 +23,11 @@ public class RabbitMQConfig {
     }
 
     @Bean
+    public TopicExchange qnaExchange() {
+        return ExchangeBuilder.topicExchange("course.qna.exchange").durable(true).build();
+    }
+
+    @Bean
     public DirectExchange deadLetterExchange() {
         return ExchangeBuilder.directExchange("dlx.exchange").durable(true).build();
     }

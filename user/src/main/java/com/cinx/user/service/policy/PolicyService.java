@@ -20,8 +20,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.transaction.support.TransactionSynchronization;
-import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import java.text.Normalizer;
 import java.time.LocalDateTime;
@@ -144,7 +142,7 @@ public class PolicyService implements IPolicyService {
         document.setPublishedAt(now);
         policyDocumentRepository.saveAll(oldPublishedDocuments);
         PolicyDocument saved = policyDocumentRepository.save(document);
-        publishAfterCommit(() -> publishPolicyPublished(saved));
+        publishPolicyPublished(saved);
         return policyMapper.toDetailResponse(saved);
     }
 
@@ -160,7 +158,7 @@ public class PolicyService implements IPolicyService {
         document.setStatus(PolicyStatus.ARCHIVED);
         PolicyDocument saved = policyDocumentRepository.save(document);
         if (wasPublished) {
-            publishAfterCommit(() -> publishPolicyArchived(saved));
+            publishPolicyArchived(saved);
         }
         return policyMapper.toDetailResponse(saved);
     }
@@ -249,19 +247,6 @@ public class PolicyService implements IPolicyService {
         }
         String trimmed = value.trim();
         return trimmed.isEmpty() ? null : trimmed;
-    }
-
-    private void publishAfterCommit(Runnable runnable) {
-        if (!TransactionSynchronizationManager.isSynchronizationActive()) {
-            runnable.run();
-            return;
-        }
-        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
-            @Override
-            public void afterCommit() {
-                runnable.run();
-            }
-        });
     }
 
     private void publishPolicyPublished(PolicyDocument document) {

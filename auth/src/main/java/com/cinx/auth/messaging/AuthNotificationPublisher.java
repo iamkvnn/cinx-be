@@ -2,8 +2,6 @@ package com.cinx.auth.messaging;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.amqp.core.MessageProperties;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Map;
@@ -16,7 +14,7 @@ public class AuthNotificationPublisher {
 
     private static final String EXCHANGE = "auth.events.exchange";
 
-    private final RabbitTemplate rabbitTemplate;
+    private final OutboxEventPublisher outboxEventPublisher;
 
     /** OTP sent when a new user registers (email verification). */
     public void publishOtpVerifyEmail(String email, String otp) {
@@ -64,11 +62,15 @@ public class AuthNotificationPublisher {
     }
 
     private void publish(String routingKey, Map<String, Object> payload) {
-        rabbitTemplate.convertAndSend(EXCHANGE, routingKey, payload, msg -> {
-            msg.getMessageProperties().setMessageId(UUID.randomUUID().toString());
-            msg.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
-            return msg;
-        });
+        outboxEventPublisher.enqueue(
+                UUID.randomUUID().toString(),
+                "AuthNotification",
+                routingKey,
+                routingKey,
+                EXCHANGE,
+                routingKey,
+                payload
+        );
         log.info("Auth event published → routingKey={}", routingKey);
     }
 }

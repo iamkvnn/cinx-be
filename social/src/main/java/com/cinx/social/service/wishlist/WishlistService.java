@@ -28,6 +28,7 @@ public class WishlistService implements IWishlistService{
     }
 
     @Override
+    @Transactional
     public void addToWishlist(String userId, AddToWishlistRequest request) {
         wishlistItemRepository.save(WishlistItem.builder()
                 .userId(userId)

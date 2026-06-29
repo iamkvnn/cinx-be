@@ -12,8 +12,11 @@ import com.cinx.notification.utils.NotificationJson;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -24,7 +27,10 @@ public class NotificationService implements INotificationService{
 
     @Override
     public Page<UserNotificationResponse> getNotifications(String userId, String query, int page, int size, String sort) {
-        return userNotificationRepository.findByUserId(query, userId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
+        Sort resolvedSort = sort == null || sort.isBlank()
+                ? Sort.by(Sort.Direction.DESC, "sentAt")
+                : SortConverter.toSort(sort);
+        return userNotificationRepository.findByUserId(query, userId, PageRequest.of(page - 1, size, resolvedSort))
                 .map(userNotificationMapper::toDto);
     }
 
@@ -35,6 +41,11 @@ public class NotificationService implements INotificationService{
 
     @Override
     public void sendNotification(CreateNotificationRequest request) {
+        sendNotification(request, LocalDateTime.now());
+    }
+
+    @Override
+    public void sendNotification(CreateNotificationRequest request, LocalDateTime sentAt) {
         Notification notification = notificationRepository.save(Notification.builder()
                     .title(request.title())
                     .message(request.message())
@@ -49,6 +60,7 @@ public class NotificationService implements INotificationService{
                         .notificationId(notification.getId())
                         .notification(notification)
                         .isRead(false)
+                        .sentAt(sentAt)
                         .build())
                 .toList());
     }

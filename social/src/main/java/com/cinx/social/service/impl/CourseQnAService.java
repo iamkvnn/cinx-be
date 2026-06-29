@@ -33,7 +33,6 @@ import com.cinx.social.model.Report;
 import com.cinx.social.model.ReportType;
 import com.cinx.social.repository.ReportRepository;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
@@ -48,7 +47,6 @@ import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class CourseQnAService implements ICourseQnAService {
     private final CourseQuestionRepository questionRepository;
     private final CourseAnswerRepository answerRepository;
@@ -248,22 +246,17 @@ public class CourseQnAService implements ICourseQnAService {
 
         answer = answerRepository.save(answer);
 
-        // Publish event
-        try {
-            CourseAnswerCreatedEvent event = CourseAnswerCreatedEvent.builder()
-                    .eventId(java.util.UUID.randomUUID().toString())
-                    .answerId(answer.getId())
-                    .questionId(question.getId())
-                    .courseId(question.getCourseId())
-                    .questionAuthorId(question.getUserId())
-                    .parentAnswerAuthorId(parentAuthorId)
-                    .answeredByUserId(userId)
-                    .occurredAt(java.time.Instant.now())
-                    .build();
-            eventPublisher.publishAnswerCreatedEvent(event);
-        } catch (Exception e) {
-            log.error("Failed to publish CourseAnswerCreatedEvent", e);
-        }
+        CourseAnswerCreatedEvent event = CourseAnswerCreatedEvent.builder()
+                .eventId(UUID.randomUUID().toString())
+                .answerId(answer.getId())
+                .questionId(question.getId())
+                .courseId(question.getCourseId())
+                .questionAuthorId(question.getUserId())
+                .parentAnswerAuthorId(parentAuthorId)
+                .answeredByUserId(userId)
+                .occurredAt(Instant.now())
+                .build();
+        eventPublisher.publishAnswerCreatedEvent(event);
 
         return mapper.toDto(answer);
     }

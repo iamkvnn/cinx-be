@@ -98,6 +98,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void banUser(String userId, BanUserRequest request) {
         User user = findById(userId);
 
@@ -136,6 +137,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void unbanUser(String userId) {
         User user = findById(userId);
         user.setStatus(UserStatus.ACTIVE);
@@ -146,6 +148,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void checkAndUnbanIfNeeded(User user) {
         if (UserStatus.BANNED.equals(user.getStatus()) && user.getBanExpiresAt() != null && user.getBanExpiresAt().isBefore(LocalDateTime.now())) {
             user.setStatus(UserStatus.ACTIVE);
@@ -157,6 +160,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public String generateOtp(String email) {
         User user = findByEmail(email);
         String otp = OtpGenerator.generateOtp();
@@ -167,6 +171,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void verifyEmail(VerifyEmailRequest request) {
         User user = findByEmail(request.email());
         verifyOtp(user, request.otp());
@@ -177,6 +182,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void resetPassword(ResetPasswordRequest request) {
         User user = findByEmail(request.email());
         verifyOtp(user, request.otp());
@@ -187,6 +193,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void changePassword(ChangePasswordRequest request) {
         User user = findByEmail(request.email());
         if (!passwordEncoder.matches(request.oldPassword(), user.getPassword())) {

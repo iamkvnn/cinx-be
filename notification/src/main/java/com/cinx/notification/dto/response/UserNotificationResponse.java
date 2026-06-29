@@ -1,6 +1,7 @@
 package com.cinx.notification.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import java.util.Map;
 
 public record UserNotificationResponse(
@@ -20,6 +21,8 @@ public record UserNotificationResponse(
         String actionUrl,
         Map<String, Object> metadata,
         @Schema(example = "false")
-        Boolean isRead
+        Boolean isRead,
+        @Schema(example = "2025-01-01T10:00:00")
+        LocalDateTime sentAt
 ) {
 }
