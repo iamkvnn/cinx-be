@@ -3,6 +3,8 @@ package com.cinx.notification.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -16,6 +18,7 @@ public class UserNotification {
     private String userId;
     private String notificationId;
     private Boolean isRead;
+    private LocalDateTime sentAt;
 
     @ManyToOne
     @JoinColumn(name = "notificationId", insertable = false, updatable = false)

@@ -23,7 +23,6 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @Component
@@ -83,6 +82,7 @@ public class SocialNotificationListener {
                 channel.basicAck(tag, false);
                 return;
             }
+
             ApiResponse<CourseResponse> courseRes = courseClient.getCourseById(event.getCourseId());
             if (courseRes != null && courseRes.success() && courseRes.data() != null) {
                 CourseResponse course = courseRes.data();

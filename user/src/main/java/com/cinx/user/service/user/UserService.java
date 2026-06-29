@@ -77,6 +77,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public UserDto createUser(CreateUserRequest request) {
         if (userRepository.existsByEmail(request.email())) {
             throw new AlreadyExistException(ErrorCode.RESOURCE_ALREADY_EXISTS, "User already exists with email: " + request.email());
@@ -107,6 +108,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void verifyInstructor(String id) {
         User user = getOrThrowByUserId(id);
         user.setIsInstructorVerified(true);
@@ -116,6 +118,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void rejectInstructor(String id, String reason) {
         User user = getOrThrowByUserId(id);
         user.setIsInstructorVerified(false);
@@ -148,6 +151,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void toggleBan(String id) {
         User user = getOrThrowByUserId(id);
         if (user.getStatus() == null || user.getStatus() != UserStatus.BANNED) {
@@ -159,6 +163,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public UserDto updateProfile(String id, UpdateProfileRequest dto) {
         User existingUser = getOrThrowByUserId(id);
         
@@ -212,6 +217,7 @@ public class UserService implements IUserService {
     }
 
     @Override
+    @Transactional
     public void saveDeviceToken(String userId, com.cinx.user.dto.request.DeviceTokenRequest request) {
         Optional<UserDeviceToken> existingToken = userDeviceTokenRepository.findByFcmToken(request.fcmToken());
         if (existingToken.isPresent()) {

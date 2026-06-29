@@ -23,6 +23,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.ParseException;
 import java.time.Instant;
@@ -50,12 +51,14 @@ public class AuthenticationService implements IAuthenticationService {
     private final IGoogleAuthenticationService googleAuthenticationService;
 
     @Override
+    @Transactional
     public void sendVerifyOtp(String email) {
         String otp = userService.generateOtp(email);
         authNotificationPublisher.publishOtpVerifyEmail(email, otp);
     }
 
     @Override
+    @Transactional
     public void sendForgotPasswordOtp(String email) {
         String otp = userService.generateOtp(email);
         authNotificationPublisher.publishOtpForgotPassword(email, otp);

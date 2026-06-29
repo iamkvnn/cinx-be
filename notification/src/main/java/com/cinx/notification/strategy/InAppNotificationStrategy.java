@@ -7,6 +7,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +41,7 @@ public class InAppNotificationStrategy implements NotificationChannelStrategy {
         }
 
         try {
+            LocalDateTime sentAt = LocalDateTime.now();
             CreateNotificationRequest request = new CreateNotificationRequest(
                     title, message, type, referenceId, actionUrl, metadata, userIds);
             userIds.forEach(userId -> messagingTemplate.convertAndSendToUser(userId, "/queue/notifications", Map.of(
@@ -48,9 +50,10 @@ public class InAppNotificationStrategy implements NotificationChannelStrategy {
                     "type", type == null ? "" : type,
                     "referenceId", referenceId == null ? "" : referenceId,
                     "actionUrl", actionUrl == null ? "" : actionUrl,
-                    "metadata", metadata
+                    "metadata", metadata,
+                    "sentAt", sentAt
             )));
-            notificationService.sendNotification(request);
+            notificationService.sendNotification(request, sentAt);
             log.info("Saved in-app notification for user {}", userIds);
         } catch (Exception e) {
             log.error("Failed to save in-app notification for user {}", userIds, e);

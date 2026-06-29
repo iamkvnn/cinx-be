@@ -28,6 +28,7 @@ import com.cinx.social.service.course.CourseService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 import java.util.Collection;
@@ -100,6 +101,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void createReview(String userId, CreateReviewRequest request) {
         validateRating(request.rating());
         requireEnrolled(request.courseId());
@@ -135,6 +137,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void updateReview(String userId, String reviewId, UpdateReviewRequest request) {
         validateRating(request.rating());
         Review review = reviewRepository.findById(reviewId)
@@ -149,6 +152,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void deleteReview(String userId, String reviewId) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found"));
@@ -160,6 +164,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void reportReview(String userId, String reviewId, CreateReportReviewRequest request) {
         if (!reviewRepository.existsById(reviewId)) {
             throw new NotFoundException("Review not found");
@@ -173,6 +178,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void reactReview(String userId, String reviewId, CreateReviewReactionRequest request) {
         if (!reviewRepository.existsById(reviewId)) {
             throw new NotFoundException("Review not found");
@@ -192,6 +198,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void createReviewReply(String userId, String reviewId, CreateReviewReplyRequest request) {
         Review review = reviewRepository.findById(reviewId)
                 .orElseThrow(() -> new NotFoundException("Review not found"));
@@ -218,6 +225,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void updateReviewReply(String userId, String replyId, UpdateReviewReplyRequest request) {
         ReviewReply reply = reviewReplyRepository.findById(replyId)
                 .orElseThrow(() -> new NotFoundException("Reply not found"));
@@ -231,6 +239,7 @@ public class ReviewService implements IReviewService {
     }
 
     @Override
+    @Transactional
     public void deleteReviewReply(String userId, String replyId) {
         ReviewReply reply = reviewReplyRepository.findById(replyId)
                 .orElseThrow(() -> new NotFoundException("Reply not found"));
