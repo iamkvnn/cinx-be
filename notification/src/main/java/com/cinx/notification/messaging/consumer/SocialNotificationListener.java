@@ -14,6 +14,7 @@ import com.cinx.notification.service.format.NotificationFormatter;
 import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
@@ -23,6 +24,7 @@ import org.springframework.messaging.handler.annotation.Header;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Component
@@ -35,6 +37,32 @@ public class SocialNotificationListener {
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
     private final NotificationFormatter notificationFormatter;
+    private final ObjectMapper objectMapper;
+
+    @RabbitHandler(isDefault = true)
+    public void handleGenericSocialEvent(Map<String, Object> payload, Channel channel,
+                                         @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                         @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId,
+                                         @Header(value = "eventType", required = false) String eventType) {
+        String resolvedEventType = eventType != null ? eventType : inferEventType(payload);
+        if (resolvedEventType == null) {
+            log.warn("Ignoring unsupported social notification eventType={} payload={}", eventType, payload);
+            ack(channel, tag);
+            return;
+        }
+        switch (resolvedEventType) {
+            case "CourseReviewCreated" -> handleReviewCreated(
+                    objectMapper.convertValue(payload, CourseReviewCreatedEvent.class), channel, tag, messageId);
+            case "CourseQuestionCreated" -> handleQuestionCreated(
+                    objectMapper.convertValue(payload, CourseQuestionCreatedEvent.class), channel, tag, messageId);
+            case "CourseAnswerCreated" -> handleAnswerCreated(
+                    objectMapper.convertValue(payload, CourseAnswerCreatedEvent.class), channel, tag, messageId);
+            default -> {
+                log.warn("Ignoring unsupported social notification eventType={} payload={}", eventType, payload);
+                ack(channel, tag);
+            }
+        }
+    }
 
     @RabbitHandler
     public void handleReviewCreated(CourseReviewCreatedEvent event, Channel channel,
@@ -157,6 +185,27 @@ public class SocialNotificationListener {
         } catch (Exception ex) {
             log.error("Error nacking message", ex);
         }
+    }
+
+    private void ack(Channel channel, long tag) {
+        try {
+            channel.basicAck(tag, false);
+        } catch (Exception ex) {
+            log.error("Error acking message", ex);
+        }
+    }
+
+    private String inferEventType(Map<String, Object> payload) {
+        if (payload.containsKey("reviewId")) {
+            return "CourseReviewCreated";
+        }
+        if (payload.containsKey("questionTitle")) {
+            return "CourseQuestionCreated";
+        }
+        if (payload.containsKey("answerId")) {
+            return "CourseAnswerCreated";
+        }
+        return null;
     }
 
     private String resolveUserName(String userId) {

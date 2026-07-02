@@ -10,6 +10,7 @@ import com.cinx.notification.service.format.NotificationMessage;
 import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.amqp.rabbit.annotation.RabbitHandler;
@@ -30,6 +31,34 @@ public class LearningNotificationListener {
     private final INotificationDispatchService dispatchService;
     private final IdempotencyService idempotencyService;
     private final NotificationFormatter notificationFormatter;
+    private final ObjectMapper objectMapper;
+
+    @RabbitHandler(isDefault = true)
+    public void handleGenericLearningEvent(Map<String, Object> payload, Channel channel,
+                                           @Header(AmqpHeaders.DELIVERY_TAG) long tag,
+                                           @Header(value = AmqpHeaders.MESSAGE_ID, required = false) String messageId,
+                                           @Header(value = "eventType", required = false) String eventType) {
+        String resolvedEventType = eventType != null ? eventType : inferEventType(payload);
+        if (resolvedEventType == null) {
+            log.warn("Ignoring unsupported learning notification eventType={} payload={}", eventType, payload);
+            ack(channel, tag);
+            return;
+        }
+        switch (resolvedEventType) {
+            case "learning.certificate.requested", "CertificateRequested" -> handleCertificateRequested(
+                    objectMapper.convertValue(payload, CertificateRequestedEvent.class), channel, tag, messageId);
+            case "learning.certificate.approved", "CertificateApproved" -> handleCertificateApproved(
+                    objectMapper.convertValue(payload, CertificateApprovedEvent.class), channel, tag, messageId);
+            case "learning.course.completed", "CourseCompleted" -> handleCourseCompleted(
+                    objectMapper.convertValue(payload, CourseCompletedEvent.class), channel, tag, messageId);
+            case "learning.reminder.due", "DailyReminderDue" -> handleDailyReminderDue(
+                    objectMapper.convertValue(payload, DailyReminderDueEvent.class), channel, tag, messageId);
+            default -> {
+                log.warn("Ignoring unsupported learning notification eventType={} payload={}", eventType, payload);
+                ack(channel, tag);
+            }
+        }
+    }
 
     @RabbitHandler
     public void handleCertificateRequested(CertificateRequestedEvent event, Channel channel,
@@ -166,6 +195,30 @@ public class LearningNotificationListener {
         } catch (Exception ex) {
             log.error("Error nacking message", ex);
         }
+    }
+
+    private void ack(Channel channel, long tag) {
+        try {
+            channel.basicAck(tag, false);
+        } catch (Exception ex) {
+            log.error("Error acking message", ex);
+        }
+    }
+
+    private String inferEventType(Map<String, Object> payload) {
+        if (payload.containsKey("instructorId")) {
+            return "learning.certificate.requested";
+        }
+        if (payload.containsKey("certificateUrl") || payload.containsKey("userEmail")) {
+            return "learning.certificate.approved";
+        }
+        if (payload.containsKey("goalType")) {
+            return "learning.reminder.due";
+        }
+        if (payload.containsKey("courseId") && payload.containsKey("courseTitle")) {
+            return "learning.course.completed";
+        }
+        return null;
     }
 
 }
