@@ -95,7 +95,7 @@ public class CourseQnAService implements ICourseQnAService {
                 .build();
         eventPublisher.publishQuestionCreatedEvent(event);
 
-        return mapper.toDto(question);
+        return mapQuestionToDtoWithAnswersCount(question, userId);
     }
 
     @Override
@@ -108,13 +108,7 @@ public class CourseQnAService implements ICourseQnAService {
         } else {
             courseQuestionPage = questionRepository.findByCourseId(courseId, pageable);
         }
-        return courseQuestionPage.map(q -> {
-            QuestionDto dto = mapper.toDto(q);
-            if (currentUserId != null) {
-                dto.setHasUpvoted(questionUpvoteRepository.existsByQuestionIdAndUserId(q.getId(), currentUserId));
-            }
-            return dto;
-        });
+        return courseQuestionPage.map(q -> mapQuestionToDtoWithAnswersCount(q, currentUserId));
     }
 
     @Override
@@ -123,12 +117,15 @@ public class CourseQnAService implements ICourseQnAService {
         CourseQuestion question = questionRepository.findById(questionId)
                 .orElseThrow(() -> new NotFoundException("Question not found"));
         
+        return mapQuestionToDtoWithAnswersCount(question, currentUserId);
+    }
+
+    private QuestionDto mapQuestionToDtoWithAnswersCount(CourseQuestion question, String currentUserId) {
         QuestionDto dto = mapper.toDto(question);
         if (currentUserId != null) {
-            dto.setHasUpvoted(questionUpvoteRepository.existsByQuestionIdAndUserId(questionId, currentUserId));
+            dto.setHasUpvoted(questionUpvoteRepository.existsByQuestionIdAndUserId(question.getId(), currentUserId));
         }
-
-        dto.setAnswersCount(answerRepository.countByQuestionId(questionId));
+        dto.setAnswersCount(answerRepository.countByQuestionId(question.getId()));
         return dto;
     }
 
@@ -167,7 +164,7 @@ public class CourseQnAService implements ICourseQnAService {
         }
         mapper.partialUpdate(question, request);
         question = questionRepository.save(question);
-        return mapper.toDto(question);
+        return mapQuestionToDtoWithAnswersCount(question, userId);
     }
 
     @Override
@@ -258,7 +255,7 @@ public class CourseQnAService implements ICourseQnAService {
                 .build();
         eventPublisher.publishAnswerCreatedEvent(event);
 
-        return mapper.toDto(answer);
+        return mapAnswerToDtoWithRepliesCount(answer, userId);
     }
 
 
@@ -273,7 +270,7 @@ public class CourseQnAService implements ICourseQnAService {
         }
         mapper.partialUpdate(answer, request);
         answer = answerRepository.save(answer);
-        return mapper.toDto(answer);
+        return mapAnswerToDtoWithRepliesCount(answer, userId);
     }
 
     @Override
