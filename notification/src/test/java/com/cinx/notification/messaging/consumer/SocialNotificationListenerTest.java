@@ -12,6 +12,7 @@ import com.cinx.notification.service.dispatch.INotificationDispatchService;
 import com.cinx.notification.service.format.NotificationFormatter;
 import com.cinx.notification.service.idempotency.IdempotencyService;
 import com.rabbitmq.client.Channel;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -19,7 +20,9 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.LinkedHashMap;
 import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.never;
@@ -48,7 +51,8 @@ class SocialNotificationListenerTest {
                 userClient,
                 dispatchService,
                 idempotencyService,
-                new NotificationFormatter()
+                new NotificationFormatter(),
+                new ObjectMapper()
         );
     }
 
@@ -131,6 +135,35 @@ class SocialNotificationListenerTest {
         verify(dispatchService, never()).dispatch(org.mockito.ArgumentMatchers.any());
         verify(idempotencyService).markSuccess("message-4");
         verify(channel).basicAck(13L, false);
+    }
+
+    @Test
+    void genericQuestionCreatedPayloadDispatchesByEventTypeHeader() throws Exception {
+        when(courseClient.getCourseById("course-1")).thenReturn(new ApiResponse<>(
+                true, "ok", new CourseResponse("course-1", "Course title", new InstructorResponse("instructor-1", "Instructor"))));
+
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("eventId", "event-5");
+        payload.put("questionId", "question-1");
+        payload.put("courseId", "course-1");
+        payload.put("askedByUserId", "student-1");
+        payload.put("questionTitle", "Question title");
+
+        listener.handleGenericSocialEvent(payload, channel, 14L, "message-5", "CourseQuestionCreated");
+
+        ArgumentCaptor<NotificationContext> captor = ArgumentCaptor.forClass(NotificationContext.class);
+        verify(dispatchService).dispatch(captor.capture());
+        assertThat(userIds(captor.getValue())).containsExactly("instructor-1");
+        verify(idempotencyService).markSuccess("message-5");
+        verify(channel).basicAck(14L, false);
+    }
+
+    @Test
+    void genericUnsupportedPayloadIsAckedWithoutRetry() throws Exception {
+        listener.handleGenericSocialEvent(Map.of("eventId", "event-6"), channel, 15L, "message-6", "UnknownEvent");
+
+        verify(dispatchService, never()).dispatch(org.mockito.ArgumentMatchers.any());
+        verify(channel).basicAck(15L, false);
     }
 
     @SuppressWarnings("unchecked")
