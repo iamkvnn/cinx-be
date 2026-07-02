@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./eureka
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-eureka:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-eureka:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-eureka:${{ github.sha }}

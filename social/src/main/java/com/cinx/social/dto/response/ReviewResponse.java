@@ -1,6 +1,7 @@
 package com.cinx.social.dto.response;
 
 import io.swagger.v3.oas.annotations.media.Schema;
+import java.time.LocalDateTime;
 import java.util.List;
 
 public record ReviewResponse(
@@ -16,6 +17,10 @@ public record ReviewResponse(
         @Schema(example = "4.5")
         Double rating,
         ReviewReplyDto reply,
-        List<ReviewReactionResponse> reactions
+        List<ReviewReactionResponse> reactions,
+        @Schema(example = "2025-01-01T10:00:00")
+        LocalDateTime createdAt,
+        @Schema(example = "2025-01-01T10:00:00")
+        LocalDateTime updatedAt
 ) {
 }

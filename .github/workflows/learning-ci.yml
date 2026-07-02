@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./learning
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-learning:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-learning:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-learning:${{ github.sha }}

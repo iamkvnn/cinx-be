@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./cart
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-cart:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-cart:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-cart:${{ github.sha }}

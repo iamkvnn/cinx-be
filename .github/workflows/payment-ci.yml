@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./payment
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-payment:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-payment:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-payment:${{ github.sha }}
