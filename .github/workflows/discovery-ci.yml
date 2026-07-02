@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./discovery
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-discovery:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-discovery:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-discovery:${{ github.sha }}

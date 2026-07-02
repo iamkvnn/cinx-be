@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./social
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-social:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-social:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-social:${{ github.sha }}

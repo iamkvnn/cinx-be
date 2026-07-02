@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./gateway
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-gateway:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-gateway:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-gateway:${{ github.sha }}

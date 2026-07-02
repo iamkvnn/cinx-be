@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./auth
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-auth:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-auth:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-auth:${{ github.sha }}

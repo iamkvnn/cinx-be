@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./notification
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-notification:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-notification:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-notification:${{ github.sha }}

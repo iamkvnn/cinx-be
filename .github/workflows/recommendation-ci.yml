@@ -44,4 +44,6 @@ jobs:
         with:
           context: ./recommendation
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-recommendation:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-recommendation:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-recommendation:${{ github.sha }}

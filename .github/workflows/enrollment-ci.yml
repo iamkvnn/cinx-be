@@ -47,4 +47,6 @@ jobs:
         with:
           context: ./enrollment
           push: true
-          tags: ${{ secrets.DOCKERHUB_USERNAME }}/cinx-enrollment:latest
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-enrollment:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/cinx-enrollment:${{ github.sha }}
