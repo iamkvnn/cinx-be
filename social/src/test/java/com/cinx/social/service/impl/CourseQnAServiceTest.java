@@ -24,6 +24,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 
 import java.util.List;
 import java.util.Optional;
@@ -60,6 +63,33 @@ class CourseQnAServiceTest {
     private CourseQnAService courseQnAService;
 
     @Test
+    void getQuestionsByCourseSetsAnswersCount() {
+        CourseQuestion question = CourseQuestion.builder()
+                .courseId("course-1")
+                .lessonId("lesson-1")
+                .userId("user-1")
+                .title("Question title")
+                .content("Question content")
+                .build();
+        question.setId("question-1");
+
+        QuestionDto mapped = new QuestionDto();
+        mapped.setId("question-1");
+
+        when(questionRepository.findByCourseId(any(), any(Pageable.class)))
+                .thenReturn(new PageImpl<>(List.of(question)));
+        when(mapper.toDto(question)).thenReturn(mapped);
+        when(questionUpvoteRepository.existsByQuestionIdAndUserId("question-1", "user-2")).thenReturn(true);
+        when(answerRepository.countByQuestionId("question-1")).thenReturn(3);
+
+        Page<QuestionDto> result = courseQnAService.getQuestionsByCourse("course-1", null, "user-2", 1, 10, "");
+
+        QuestionDto dto = result.getContent().get(0);
+        assertThat(dto.getAnswersCount()).isEqualTo(3);
+        assertThat(dto.getHasUpvoted()).isTrue();
+    }
+
+    @Test
     void createQuestionDefaultsUpvoteCountBeforeSaving() {
         CreateQuestionRequest request = new CreateQuestionRequest();
         request.setCourseId("course-1");
@@ -90,6 +120,7 @@ class CourseQnAServiceTest {
         QuestionDto result = courseQnAService.createQuestion("user-1", request);
 
         assertThat(result.getUpvoteCount()).isEqualTo(0);
+        assertThat(result.getAnswersCount()).isZero();
         verify(questionRepository).save(argThat(question ->
                 "user-1".equals(question.getUserId())
                         && Integer.valueOf(0).equals(question.getUpvoteCount())));
@@ -148,6 +179,7 @@ class CourseQnAServiceTest {
         AnswerDto result = courseQnAService.createAnswer("instructor-1", "question-1", request);
 
         assertThat(result.getIsInstructorAnswer()).isTrue();
+        assertThat(result.getRepliesCount()).isZero();
         verify(enrollmentClient, never()).checkEnrollmentStatus(any());
         verify(answerRepository).save(argThat(answer ->
                 "instructor-1".equals(answer.getUserId())
