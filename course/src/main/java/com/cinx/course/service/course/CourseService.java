@@ -280,7 +280,8 @@ public class CourseService implements ICourseService {
     public RejectCourseResponse getRejectReason(String courseId) {
         RejectCourseReason reason = rejectCourseReasonRepository.findByCourse(courseId)
                 .orElseThrow(() -> new NotFoundException("Reject reason not found for course id: " + courseId));
-        return new RejectCourseResponse(reason.getCourseId(), reason.getReason());
+        LocalDateTime rejectedAt = reason.getUpdatedAt() != null ? reason.getUpdatedAt() : reason.getCreatedAt();
+        return new RejectCourseResponse(reason.getCourseId(), reason.getReason(), rejectedAt);
     }
 
     @Override

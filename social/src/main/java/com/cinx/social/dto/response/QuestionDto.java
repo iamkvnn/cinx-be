@@ -27,4 +27,6 @@ public class QuestionDto {
     private Integer answersCount;
     @Schema(example = "2025-01-01T10:00:00")
     private LocalDateTime createdAt;
+    @Schema(example = "2025-01-01T10:00:00")
+    private LocalDateTime updatedAt;
 }

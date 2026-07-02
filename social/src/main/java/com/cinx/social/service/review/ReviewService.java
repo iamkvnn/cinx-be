@@ -274,7 +274,9 @@ public class ReviewService implements IReviewService {
                 review.getContent(),
                 review.getRating(),
                 replyDto,
-                reactionResponses);
+                reactionResponses,
+                review.getCreatedAt(),
+                review.getUpdatedAt());
     }
 
     private ReviewReplyDto toReviewReplyDto(ReviewReply reply, Map<String, UserSummaryResponse> usersById) {

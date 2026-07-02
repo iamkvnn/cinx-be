@@ -5,7 +5,7 @@ import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
 import com.cinx.common.utils.AuthenticationUtil;
 import com.cinx.enrollment.dto.response.CheckEnrollmentStatus;
-import com.cinx.enrollment.dto.response.CourseResponse;
+import com.cinx.enrollment.dto.response.EnrolledCourseResponse;
 import com.cinx.enrollment.service.enrollment.IEnrollmentService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
@@ -23,7 +23,7 @@ public class EnrollmentController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<CourseResponse>> getEnrolledCourses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<PaginatedApiResponse<EnrolledCourseResponse>> getEnrolledCourses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
         String userId = AuthenticationUtil.extractUserId();
         return ResponseEntity.ok(PaginationWrapper.wrap(enrollmentService.getEnrolledCourses(userId, page, size)));
     }
