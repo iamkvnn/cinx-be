@@ -9,8 +9,10 @@ import com.cinx.course.dto.response.SectionResponse;
 import com.cinx.course.mapper.SectionMapper;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.CourseDraft;
+import com.cinx.course.model.Lesson;
 import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
+import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
 import com.cinx.course.service.course.ICourseDraftService;
 import com.cinx.course.utils.OrderIndexUtils;
@@ -32,6 +34,7 @@ public class SectionService implements ISectionService {
     private final CourseRepository courseRepository;
     private final ICourseDraftService courseDraftService;
     private final SectionRepository sectionRepository;
+    private final LessonRepository lessonRepository;
     private final SectionMapper sectionMapper;
 
     @Transactional
@@ -110,6 +113,9 @@ public class SectionService implements ISectionService {
     @Override
     public void deleteSection(String courseId, String sectionId) {
         Section section = editableSection(courseId, sectionId);
+        List<Lesson> lessons = lessonRepository.findBySectionIdsForUpdate(List.of(section.getId()));
+        lessonRepository.deleteAll(lessons);
+        section.getLessons().clear();
         sectionRepository.delete(section);
     }
 
