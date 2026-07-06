@@ -66,7 +66,7 @@ class LearningProgressServiceTest {
         LearningItemProgress progress = item("video-1", courseProgress, false, false, null);
         LessonResponse videoLesson = new LessonResponse("video-1", "Video", 120L, LessonType.VIDEO, 1);
 
-        when(learningItemProgressRepository.findByItemIdAndUserId("video-1", "user-1"))
+        when(learningItemProgressRepository.findByItemIdAndUserIdForUpdate("video-1", "user-1"))
                 .thenReturn(Optional.of(progress));
         when(courseService.getEnrolledLessonById("course-1", "video-1"))
                 .thenReturn(new ApiResponse<>(true, "ok", videoLesson));
@@ -81,7 +81,7 @@ class LearningProgressServiceTest {
         CourseProgress courseProgress = courseProgress("course-1", 1);
         LearningItemProgress failedQuiz = item("quiz-1", courseProgress, false, false, null);
 
-        when(learningItemProgressRepository.findByItemIdAndUserId("quiz-1", "user-1"))
+        when(learningItemProgressRepository.findByItemIdAndUserIdForUpdate("quiz-1", "user-1"))
                 .thenReturn(Optional.of(failedQuiz));
         when(learningItemProgressRepository.findAllByUserIdAndCourseId("user-1", "course-1"))
                 .thenReturn(List.of(failedQuiz));
@@ -111,7 +111,7 @@ class LearningProgressServiceTest {
         courseProgress.setCompletedItems(1);
         courseProgress.setIsCompleted(true);
 
-        when(learningItemProgressRepository.findByItemIdAndUserId("quiz-1", "user-1"))
+        when(learningItemProgressRepository.findByItemIdAndUserIdForUpdate("quiz-1", "user-1"))
                 .thenReturn(Optional.of(failedQuiz));
         when(learningItemProgressRepository.findAllByUserIdAndCourseId("user-1", "course-1"))
                 .thenReturn(List.of(failedQuiz));
@@ -139,7 +139,7 @@ class LearningProgressServiceTest {
         LearningItemProgress quiz = item("quiz-1", courseProgress, false, false, null);
         LearningItemProgress article = item("article-1", courseProgress, true, true, 8.0);
 
-        when(learningItemProgressRepository.findByItemIdAndUserId("quiz-1", "user-1"))
+        when(learningItemProgressRepository.findByItemIdAndUserIdForUpdate("quiz-1", "user-1"))
                 .thenReturn(Optional.of(quiz));
         when(learningItemProgressRepository.findAllByUserIdAndCourseId("user-1", "course-1"))
                 .thenReturn(List.of(quiz, article));
