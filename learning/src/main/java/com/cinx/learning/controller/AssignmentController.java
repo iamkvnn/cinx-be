@@ -30,12 +30,11 @@ public class AssignmentController {
             @RequestParam String assignmentId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
         authorizationService.requireLessonInstructor(currentUserId, assignmentId);
-        return ResponseEntity.ok(PaginationWrapper.wrap(assignmentService.getAssignmentSubmissions(assignmentId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(assignmentService.getAssignmentSubmissions(assignmentId, page, size, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))

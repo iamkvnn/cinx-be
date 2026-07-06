@@ -5,7 +5,7 @@ import com.cinx.social.model.ReportType;
 import org.springframework.data.domain.Page;
 
 public interface IAdminReportService {
-    Page<AdminReportResponse> getReports(ReportType type, int page, int size, String sort);
+    Page<AdminReportResponse> getReports(ReportType type, int page, int size, String query, String sort);
     void dismissReport(String reportId);
     void deleteReportedContent(String reportId);
 }

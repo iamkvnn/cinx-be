@@ -73,6 +73,15 @@ public interface CourseRepository extends JpaRepository<Course, String> {
     """)
     List<Course> findEnrolledReadableByIds(@Param("ids") List<String> ids);
 
+    @Query("""
+        SELECT c.id
+        FROM Course c
+        WHERE c.id IN :ids
+            AND c.status IN (com.cinx.course.consts.CourseStatus.PUBLISHED, com.cinx.course.consts.CourseStatus.ARCHIVED)
+            AND (:query IS NULL OR c.id LIKE %:query% OR c.title LIKE %:query% OR c.description LIKE %:query%)
+    """)
+    List<String> searchEnrolledReadableIds(@Param("ids") List<String> ids, @Param("query") String query);
+
     long countByInstructorId(String instructorId);
 
     long countByInstructorIdAndStatus(String instructorId, CourseStatus status);

@@ -40,14 +40,9 @@ public class AdminReportService implements IAdminReportService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<AdminReportResponse> getReports(ReportType type, int page, int size, String sort) {
+    public Page<AdminReportResponse> getReports(ReportType type, int page, int size, String query, String sort) {
         Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
-        Page<Report> reports;
-        if (type != null) {
-            reports = reportRepository.findByType(type, pageable);
-        } else {
-            reports = reportRepository.findAll(pageable);
-        }
+        Page<Report> reports = reportRepository.search(type, normalizeQuery(query), pageable);
 
         ReportContext context = buildReportContext(reports.getContent());
         return reports.map(report -> toAdminReportResponse(report, context));
@@ -254,5 +249,12 @@ public class AdminReportService implements IAdminReportService {
             Map<String, CourseQuestion> questionsById,
             Map<String, CourseAnswer> answersById,
             Map<String, UserSummaryResponse> usersById) {
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim();
     }
 }

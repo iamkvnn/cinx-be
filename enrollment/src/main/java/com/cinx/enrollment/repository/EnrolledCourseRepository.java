@@ -14,6 +14,8 @@ public interface EnrolledCourseRepository extends JpaRepository<EnrolledCourse, 
 
     Page<EnrolledCourse> findAllByUserId(String userId, Pageable pageable);
 
+    Page<EnrolledCourse> findAllByUserIdAndCourseIdIn(String userId, List<String> courseIds, Pageable pageable);
+
     long countByUserId(String userId);
 
     List<EnrolledCourse> findAllByUserIdAndCourseIdIn(String userId, List<String> courseIds);

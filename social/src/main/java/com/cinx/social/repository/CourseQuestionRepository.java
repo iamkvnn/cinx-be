@@ -17,6 +17,15 @@ public interface CourseQuestionRepository extends JpaRepository<CourseQuestion, 
     Page<CourseQuestion> findByCourseIdAndLessonId(String courseId, String lessonId, Pageable pageable);
 
     @Query("""
+        SELECT q
+        FROM CourseQuestion q
+        WHERE q.courseId = :courseId
+          AND (:lessonId IS NULL OR q.lessonId = :lessonId)
+          AND (:query IS NULL OR q.title LIKE %:query% OR q.content LIKE %:query% OR q.userId LIKE %:query%)
+    """)
+    Page<CourseQuestion> search(String courseId, String lessonId, String query, Pageable pageable);
+
+    @Query("""
         SELECT COUNT(q)
         FROM CourseQuestion q
         WHERE q.courseId = :courseId

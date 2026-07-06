@@ -3,6 +3,7 @@ package com.cinx.learning.service.assignment;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.CreateAssignmentSubmissionRequest;
 import com.cinx.learning.dto.request.UpdateLearningItemRequest;
@@ -38,9 +39,9 @@ public class AssignmentService implements IAssignmentService {
     private String cdnUrl;
 
     @Override
-    public Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size) {
+    public Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size, String sort) {
         validatePageRequest(page, size);
-        return assignmentSubmissionRepository.findAllByAssignmentId(assignmentId, PageRequest.of(page - 1, size))
+        return assignmentSubmissionRepository.findAllByAssignmentId(assignmentId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(assignmentSubmissionMapper::toDto);
     }
 

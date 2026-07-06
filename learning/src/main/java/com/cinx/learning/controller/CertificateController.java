@@ -54,7 +54,7 @@ public class CertificateController {
             @RequestParam(required = false) String sort
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
-        Page<CertificateRequestResponse> result = certificateService.getRequestsByCourse(currentUserId, courseId, status, page, size);
+        Page<CertificateRequestResponse> result = certificateService.getRequestsByCourse(currentUserId, courseId, status, page, size, query, sort);
         return ResponseEntity.ok(new PaginatedApiResponse<>(
                 true, "Success",
                 result.getContent(),
@@ -72,7 +72,7 @@ public class CertificateController {
             @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
-        Page<CertificateRequestResponse> result = certificateService.getAllRequests(status, page, size);
+        Page<CertificateRequestResponse> result = certificateService.getAllRequests(status, page, size, query, sort);
         return ResponseEntity.ok(new PaginatedApiResponse<>(
                 true, "Success",
                 result.getContent(),

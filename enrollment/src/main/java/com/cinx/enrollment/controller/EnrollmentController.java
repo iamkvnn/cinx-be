@@ -23,9 +23,14 @@ public class EnrollmentController {
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
     @GetMapping
-    public ResponseEntity<PaginatedApiResponse<EnrolledCourseResponse>> getEnrolledCourses(@RequestParam(defaultValue = "1") int page, @RequestParam(defaultValue = "10") int size) {
+    public ResponseEntity<PaginatedApiResponse<EnrolledCourseResponse>> getEnrolledCourses(
+            @RequestParam(defaultValue = "1") int page,
+            @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
+            @RequestParam(required = false) String sort
+    ) {
         String userId = AuthenticationUtil.extractUserId();
-        return ResponseEntity.ok(PaginationWrapper.wrap(enrollmentService.getEnrolledCourses(userId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(enrollmentService.getEnrolledCourses(userId, page, size, query, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))

@@ -17,6 +17,14 @@ public interface ReportRepository extends JpaRepository<Report, String> {
     void deleteByRefIdAndType(String refId, ReportType type);
     List<Report> findAllByRefIdAndType(String refId, ReportType type);
 
+    @Query("""
+        SELECT r
+        FROM Report r
+        WHERE (:type IS NULL OR r.type = :type)
+          AND (:query IS NULL OR r.id LIKE %:query% OR r.reporterId LIKE %:query% OR r.refId LIKE %:query% OR r.reason LIKE %:query%)
+    """)
+    Page<Report> search(ReportType type, String query, Pageable pageable);
+
     @Query("SELECT COUNT(r) FROM Report r WHERE r.createdAt BETWEEN :start AND :end")
     Long countReportsBetween(LocalDateTime start, LocalDateTime end);
 

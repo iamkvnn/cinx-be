@@ -11,9 +11,9 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface IQuizService {
-    Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size);
+    Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size, String sort);
     QuizSessionResponse getQuizSession(String id);
-    Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size);
+    Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size, String sort);
     QuizSessionResponse createQuizSession(String courseId, String userId, String lessonId);
     void chooseQuizSessionQuestion(String quizSessionId, ChooseQuizAnswerRequest request);
     QuizSessionResponse submitQuizSession(String quizSessionId, SubmitQuizSessionRequest request);
