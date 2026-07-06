@@ -86,6 +86,9 @@ public interface CourseRepository extends JpaRepository<Course, String> {
 
     long countByInstructorIdAndStatus(String instructorId, CourseStatus status);
 
+    @Query("SELECT c.id FROM Course c WHERE c.instructorId = :instructorId")
+    List<String> findIdsByInstructorId(@Param("instructorId") String instructorId);
+
     long countByStatus(CourseStatus status);
 
     @Query("SELECT AVG(c.rating) FROM Course c WHERE c.instructorId = :instructorId AND c.rating IS NOT NULL")

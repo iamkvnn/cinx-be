@@ -20,6 +20,9 @@ public interface CourseService {
     @GetMapping("/courses/{id}/lessons")
     ApiResponse<List<String>> getCourseLessonIdsByCourseId(@PathVariable String id);
 
+    @GetMapping("/courses/instructors/{instructorId}/ids")
+    ApiResponse<List<String>> getCourseIdsByInstructor(@PathVariable String instructorId);
+
     @GetMapping("/courses/{courseId}/lessons/{lessonId}")
     ApiResponse<LessonResponse> getEnrolledLessonById(@PathVariable String courseId, @PathVariable String lessonId);
 

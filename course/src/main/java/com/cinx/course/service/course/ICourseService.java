@@ -16,6 +16,7 @@ public interface ICourseService {
     CourseResponse getReadableCourseById(String currentUserId, String courseId);
     List<CourseResponse> getReadableCourseByIds(String currentUserId, List<String> courseIds);
     List<String> searchReadableCourseIds(List<String> courseIds, String query);
+    List<String> getCourseIdsByInstructor(String instructorId);
     Page<CourseResponse> getAllPublishedCourses(String query, String categoryId, String instructorId, Integer rating, Integer priceFrom, Integer priceTo, int page, int size, String sort);
     CourseResponse getEditableDraftCourseById(String currentUserId, String courseId);
     InstructorCourseSummaryResponse getInstructorCourseSummary(String instructorId);
