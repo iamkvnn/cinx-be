@@ -14,6 +14,7 @@ public interface ICourseQnAService {
     QuestionDto getQuestionById(String questionId, String currentUserId);
     QuestionDto updateQuestion(String userId, String questionId, UpdateQuestionRequest request);
     void deleteQuestion(String userId, String questionId);
+    void deleteQuestionByAdmin(String questionId);
     void upvoteQuestion(String userId, String questionId);
     void reportQuestion(String userId, String questionId, CreateQnAReportRequest request);
 
@@ -22,6 +23,7 @@ public interface ICourseQnAService {
     Page<AnswerDto> getReplies(String parentAnswerId, String currentUserId, int page, int size, String sort);
     AnswerDto updateAnswer(String userId, String answerId, UpdateAnswerRequest request);
     void deleteAnswer(String userId, String answerId);
+    void deleteAnswerByAdmin(String answerId);
     void upvoteAnswer(String userId, String answerId);
     void reportAnswer(String userId, String answerId, CreateQnAReportRequest request);
 }

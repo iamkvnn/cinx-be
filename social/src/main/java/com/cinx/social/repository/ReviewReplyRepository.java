@@ -12,6 +12,7 @@ import java.util.Optional;
 public interface ReviewReplyRepository extends JpaRepository<ReviewReply, String> {
     Optional<ReviewReply> findByReviewId(String reviewId);
     List<ReviewReply> findByReviewIdIn(List<String> reviewIds);
+    void deleteByReviewId(String reviewId);
 
     @Query("""
         SELECT COUNT(rr)

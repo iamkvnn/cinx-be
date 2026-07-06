@@ -10,4 +10,5 @@ import java.util.Optional;
 public interface QuestionUpvoteRepository extends JpaRepository<QuestionUpvote, String> {
     Optional<QuestionUpvote> findByQuestionIdAndUserId(String questionId, String userId);
     boolean existsByQuestionIdAndUserId(String questionId, String userId);
+    void deleteByQuestionId(String questionId);
 }

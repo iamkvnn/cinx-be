@@ -18,6 +18,7 @@ public interface IReviewService {
     void createReview(String userId, CreateReviewRequest request);
     void updateReview(String userId, String reviewId, UpdateReviewRequest request);
     void deleteReview(String userId, String reviewId);
+    void deleteReviewByAdmin(String reviewId);
     void reportReview(String userId, String reviewId, CreateReportReviewRequest request);
     void reactReview(String userId, String reviewId, CreateReviewReactionRequest request);
     
