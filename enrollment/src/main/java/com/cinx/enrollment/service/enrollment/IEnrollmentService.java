@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface IEnrollmentService {
-    Page<EnrolledCourseResponse> getEnrolledCourses(String userId, int page, int size);
+    Page<EnrolledCourseResponse> getEnrolledCourses(String userId, int page, int size, String query, String sort);
     List<CheckEnrollmentStatus> checkEnrollmentStatus(String userId, List<String> courseIds);
     void enrollCourses(List<CreateEnrolledCourseRequest> requests);
     List<String> getUserIdsEnrolledInCourse(String courseId);

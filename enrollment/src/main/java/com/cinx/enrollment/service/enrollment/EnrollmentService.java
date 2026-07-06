@@ -1,5 +1,6 @@
 package com.cinx.enrollment.service.enrollment;
 
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.enrollment.consts.OrderStatus;
 import com.cinx.enrollment.dto.request.CreateEnrolledCourseRequest;
 import com.cinx.enrollment.dto.response.CheckEnrollmentStatus;
@@ -16,6 +17,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -36,11 +39,32 @@ public class EnrollmentService implements IEnrollmentService {
     private final EnrolledCourseEventProducer enrolledCourseEventProducer;
 
     @Override
-    public Page<EnrolledCourseResponse> getEnrolledCourses(String userId, int page, int size) {
-        Page<EnrolledCourse> enrolledCourses = enrolledCourseRepository.findAllByUserId(userId, PageRequest.of(page - 1, size));
+    public Page<EnrolledCourseResponse> getEnrolledCourses(String userId, int page, int size, String query, String sort) {
+        Pageable pageable = PageRequest.of(page - 1, size, enrollmentSort(sort));
+        String normalizedQuery = normalizeQuery(query);
+        Page<EnrolledCourse> enrolledCourses;
+        if (normalizedQuery == null) {
+            enrolledCourses = enrolledCourseRepository.findAllByUserId(userId, pageable);
+        } else {
+            List<String> enrolledCourseIds = enrolledCourseRepository.findAllByUserId(userId, Pageable.unpaged())
+                    .stream()
+                    .map(EnrolledCourse::getCourseId)
+                    .toList();
+            if (enrolledCourseIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            List<String> matchedCourseIds = courseService.searchCourseIds(enrolledCourseIds, normalizedQuery).data();
+            if (matchedCourseIds == null || matchedCourseIds.isEmpty()) {
+                return Page.empty(pageable);
+            }
+            enrolledCourses = enrolledCourseRepository.findAllByUserIdAndCourseIdIn(userId, matchedCourseIds, pageable);
+        }
         List<String> courseIds = enrolledCourses.getContent().stream()
             .map(EnrolledCourse::getCourseId)
             .toList();
+        if (courseIds.isEmpty()) {
+            return new PageImpl<>(List.of(), enrolledCourses.getPageable(), enrolledCourses.getTotalElements());
+        }
         List<CourseResponse> courses = courseService.getCoursesByIds(courseIds).data();
         Map<String, EnrolledCourse> enrolledCourseByCourseId = enrolledCourses.getContent().stream()
                 .collect(Collectors.toMap(EnrolledCourse::getCourseId, Function.identity()));
@@ -96,5 +120,20 @@ public class EnrollmentService implements IEnrollmentService {
                 orderRepository.sumRevenueByUserId(OrderStatus.PAID, userId),
                 orderRepository.countOrdersByUserId(OrderStatus.PAID, userId)
         );
+    }
+
+    private Sort enrollmentSort(String sort) {
+        return SortConverter.toSort(sort).stream()
+                .map(order -> "enrolledAt".equals(order.getProperty())
+                        ? order.withProperty("createdAt")
+                        : order)
+                .collect(Collectors.collectingAndThen(Collectors.toList(), Sort::by));
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim();
     }
 }

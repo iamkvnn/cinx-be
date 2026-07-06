@@ -36,7 +36,6 @@ public class QuizSessionController {
             @RequestParam(required = false) String userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
@@ -49,7 +48,7 @@ public class QuizSessionController {
         } else if (!userId.equals(currentUserId)) {
             authorizationService.requireLessonInstructor(currentUserId, lessonId);
         }
-        return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessions(userId, lessonId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessions(userId, lessonId, page, size, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))
@@ -66,12 +65,11 @@ public class QuizSessionController {
             @PathVariable String quizSessionId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort
     ) {
         String currentUserId = AuthenticationUtil.extractUserId();
         authorizationService.requireQuizSessionOwnerOrInstructor(currentUserId, quizSessionId);
-        return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessionQuestions(quizSessionId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(quizService.getQuizSessionQuestions(quizSessionId, page, size, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))

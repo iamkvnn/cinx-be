@@ -101,14 +101,9 @@ public class CourseQnAService implements ICourseQnAService {
 
     @Override
     @Transactional(readOnly = true)
-    public Page<QuestionDto> getQuestionsByCourse(String courseId, String lessonId, String currentUserId, int page, int size, String sort) {
+    public Page<QuestionDto> getQuestionsByCourse(String courseId, String lessonId, String currentUserId, int page, int size, String query, String sort) {
         Pageable pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
-        Page<CourseQuestion> courseQuestionPage;
-        if (lessonId != null && !lessonId.isEmpty()) {
-            courseQuestionPage = questionRepository.findByCourseIdAndLessonId(courseId, lessonId, pageable);
-        } else {
-            courseQuestionPage = questionRepository.findByCourseId(courseId, pageable);
-        }
+        Page<CourseQuestion> courseQuestionPage = questionRepository.search(courseId, normalizeQuery(lessonId), normalizeQuery(query), pageable);
         return courseQuestionPage.map(q -> mapQuestionToDtoWithAnswersCount(q, currentUserId));
     }
 
@@ -392,5 +387,12 @@ public class CourseQnAService implements ICourseQnAService {
 
     private boolean defaultBoolean(Boolean value) {
         return value != null && value;
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim();
     }
 }

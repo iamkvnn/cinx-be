@@ -17,12 +17,14 @@ import com.cinx.social.service.ICourseQnAService;
 import com.cinx.social.service.review.IReviewService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -69,14 +71,14 @@ class AdminReportServiceTest {
                 .build();
         review.setId("review-1");
 
-        when(reportRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
+        when(reportRepository.search(eq(null), eq(null), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
         when(reviewRepository.findAllById(List.of("review-1"))).thenReturn(List.of(review));
         when(userClient.getUsersByIds(List.of("reporter-1", "owner-1"))).thenReturn(new ApiResponse<>(true, "ok", List.of(
                 user("reporter-1", "Reporter"),
                 user("owner-1", "Owner")
         )));
 
-        Page<AdminReportResponse> result = adminReportService.getReports(null, 1, 10, null);
+        Page<AdminReportResponse> result = adminReportService.getReports(null, 1, 10, null, null);
 
         AdminReportResponse response = result.getContent().get(0);
         assertThat(response.reporter().name()).isEqualTo("Reporter");
@@ -98,19 +100,19 @@ class AdminReportServiceTest {
                 .build();
         question.setId("question-1");
 
-        when(reportRepository.findByType(eq(ReportType.QUESTION), any(Pageable.class)))
+        when(reportRepository.search(eq(ReportType.QUESTION), eq("Spam"), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(report)));
         when(questionRepository.findAllById(List.of("question-1"))).thenReturn(List.of(question));
         when(userClient.getUsersByIds(List.of("reporter-1", "owner-1")))
                 .thenReturn(new ApiResponse<>(true, "ok", List.of(user("reporter-1", "Reporter"), user("owner-1", "Owner"))));
 
-        AdminReportResponse response = adminReportService.getReports(ReportType.QUESTION, 1, 10, null).getContent().get(0);
+        AdminReportResponse response = adminReportService.getReports(ReportType.QUESTION, 1, 10, " Spam ", null).getContent().get(0);
 
         assertThat(response.reportedContent().title()).isEqualTo("Question title");
         assertThat(response.reportedContent().content()).isEqualTo("Question content");
         assertThat(response.reportedContent().courseId()).isEqualTo("course-1");
         assertThat(response.reportedContent().lessonId()).isEqualTo("lesson-1");
-        verify(reportRepository).findByType(eq(ReportType.QUESTION), any(Pageable.class));
+        verify(reportRepository).search(eq(ReportType.QUESTION), eq("Spam"), any(Pageable.class));
     }
 
     @Test
@@ -123,12 +125,12 @@ class AdminReportServiceTest {
                 .build();
         answer.setId("answer-1");
 
-        when(reportRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
+        when(reportRepository.search(eq(null), eq(null), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
         when(answerRepository.findAllById(List.of("answer-1"))).thenReturn(List.of(answer));
         when(userClient.getUsersByIds(List.of("reporter-1", "owner-1")))
                 .thenReturn(new ApiResponse<>(true, "ok", List.of(user("reporter-1", "Reporter"), user("owner-1", "Owner"))));
 
-        AdminReportResponse response = adminReportService.getReports(null, 1, 10, null).getContent().get(0);
+        AdminReportResponse response = adminReportService.getReports(null, 1, 10, null, null).getContent().get(0);
 
         assertThat(response.reportedContent().content()).isEqualTo("Answer content");
         assertThat(response.reportedContent().questionId()).isEqualTo("question-1");
@@ -144,11 +146,11 @@ class AdminReportServiceTest {
                 .build();
         answer.setId("answer-1");
 
-        when(reportRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
+        when(reportRepository.search(eq(null), eq(null), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
         when(answerRepository.findAllById(List.of("answer-1"))).thenReturn(List.of(answer));
         when(userClient.getUsersByIds(List.of("reporter-1", "owner-1"))).thenThrow(new RuntimeException("user unavailable"));
 
-        AdminReportResponse response = adminReportService.getReports(null, 1, 10, null).getContent().get(0);
+        AdminReportResponse response = adminReportService.getReports(null, 1, 10, null, null).getContent().get(0);
 
         assertThat(response.reporterId()).isEqualTo("reporter-1");
         assertThat(response.reporter()).isNull();
@@ -160,17 +162,29 @@ class AdminReportServiceTest {
     void getReportsReturnsMissingContentShellWhenContentWasDeleted() {
         Report report = report("report-1", "reporter-1", "review-1", ReportType.REVIEW);
 
-        when(reportRepository.findAll(any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
+        when(reportRepository.search(eq(null), eq(null), any(Pageable.class))).thenReturn(new PageImpl<>(List.of(report)));
         when(reviewRepository.findAllById(List.of("review-1"))).thenReturn(List.of());
         when(userClient.getUsersByIds(List.of("reporter-1")))
                 .thenReturn(new ApiResponse<>(true, "ok", List.of(user("reporter-1", "Reporter"))));
 
-        AdminReportResponse response = adminReportService.getReports(null, 1, 10, null).getContent().get(0);
+        AdminReportResponse response = adminReportService.getReports(null, 1, 10, null, null).getContent().get(0);
 
         assertThat(response.reportedContent().id()).isEqualTo("review-1");
         assertThat(response.reportedContent().type()).isEqualTo(ReportType.REVIEW);
         assertThat(response.reportedContent().content()).isNull();
         assertThat(response.reportedContent().ownerId()).isNull();
+    }
+
+    @Test
+    void getReportsUsesSortParameter() {
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(reportRepository.search(eq(null), eq(null), pageableCaptor.capture())).thenReturn(Page.empty());
+
+        adminReportService.getReports(null, 1, 10, " ", "{\"createdAt\":\"DESC\"}");
+
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("createdAt");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
     }
 
     @Test

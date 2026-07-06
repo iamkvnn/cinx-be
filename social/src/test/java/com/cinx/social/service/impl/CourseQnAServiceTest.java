@@ -39,6 +39,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.argThat;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -81,17 +82,18 @@ class CourseQnAServiceTest {
         QuestionDto mapped = new QuestionDto();
         mapped.setId("question-1");
 
-        when(questionRepository.findByCourseId(any(), any(Pageable.class)))
+        when(questionRepository.search(any(), any(), any(), any(Pageable.class)))
                 .thenReturn(new PageImpl<>(List.of(question)));
         when(mapper.toDto(question)).thenReturn(mapped);
         when(questionUpvoteRepository.existsByQuestionIdAndUserId("question-1", "user-2")).thenReturn(true);
         when(answerRepository.countByQuestionId("question-1")).thenReturn(3);
 
-        Page<QuestionDto> result = courseQnAService.getQuestionsByCourse("course-1", null, "user-2", 1, 10, "");
+        Page<QuestionDto> result = courseQnAService.getQuestionsByCourse("course-1", null, "user-2", 1, 10, " title ", "");
 
         QuestionDto dto = result.getContent().get(0);
         assertThat(dto.getAnswersCount()).isEqualTo(3);
         assertThat(dto.getHasUpvoted()).isTrue();
+        verify(questionRepository).search(eq("course-1"), eq(null), eq("title"), any(Pageable.class));
     }
 
     @Test

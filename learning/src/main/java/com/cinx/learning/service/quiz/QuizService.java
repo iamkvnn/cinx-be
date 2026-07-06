@@ -3,6 +3,7 @@ package com.cinx.learning.service.quiz;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.consts.QuizQuestionType;
 import com.cinx.learning.consts.QuizSessionStatus;
@@ -55,9 +56,9 @@ public class QuizService implements IQuizService {
     private final QuizSnapshotBuilder snapshotBuilder;
 
     @Override
-    public Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size) {
+    public Page<QuizSessionResponse> getQuizSessions(String userId, String lessonId, int page, int size, String sort) {
         validatePageRequest(page, size);
-        return quizSessionRepository.findAllByQuizLessonId(lessonId, userId, PageRequest.of(page - 1, size))
+        return quizSessionRepository.findAllByQuizLessonId(lessonId, userId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(quizSessionMapper::toDto);
     }
 
@@ -69,7 +70,7 @@ public class QuizService implements IQuizService {
     }
 
     @Override
-    public Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size) {
+    public Page<QuizSessionQuestionResponse> getQuizSessionQuestions(String quizSessionId, int page, int size, String sort) {
         validatePageRequest(page, size);
         QuizSession quizSession = quizSessionRepository.findById(quizSessionId)
                 .orElseThrow(() -> new NotFoundException("Quiz session not found"));
@@ -84,7 +85,7 @@ public class QuizService implements IQuizService {
         boolean hideAnswers = Boolean.FALSE.equals(quizSession.getIsShowAnswersOnReview());
 
         return quizSessionQuestionRepository
-                .findAllByQuizSessionId(quizSessionId, PageRequest.of(page - 1, size))
+                .findAllByQuizSessionId(quizSessionId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(q -> buildResponse(q, inProgress || hideAnswers));
     }
 

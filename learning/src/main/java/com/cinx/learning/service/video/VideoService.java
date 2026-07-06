@@ -4,6 +4,7 @@ import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.learning.consts.DailyGoalType;
 import com.cinx.learning.dto.request.SubmitVideoQuestionRequest;
 import com.cinx.learning.dto.request.TrackingVideoLessonRequest;
@@ -49,10 +50,10 @@ public class VideoService implements IVideoService {
     private final WatchedRangeTracker watchedRangeTracker;
 
     @Override
-    public Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String courseId, String lessonId, int page, int size) {
+    public Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String courseId, String lessonId, int page, int size, String sort) {
         validatePageRequest(page, size);
         getVideoLesson(courseId, lessonId);
-        return videoLessonTrackingHistoryRepository.findByVideoLessonId(lessonId, PageRequest.of(page - 1, size))
+        return videoLessonTrackingHistoryRepository.findByVideoLessonId(lessonId, PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(videoLessonTrackingHistoryMapper::toDto);
     }
 

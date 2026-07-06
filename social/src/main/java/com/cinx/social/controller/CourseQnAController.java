@@ -42,9 +42,10 @@ public class CourseQnAController {
             @RequestParam(required = false) String lessonId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort) {
         String userId = AuthenticationUtil.extractUserId();
-        Page<QuestionDto> questionDtoPage = qnaService.getQuestionsByCourse(courseId, lessonId, userId, page, size, sort);
+        Page<QuestionDto> questionDtoPage = qnaService.getQuestionsByCourse(courseId, lessonId, userId, page, size, query, sort);
         return ResponseEntity.ok(PaginationWrapper.wrap(questionDtoPage));
     }
 

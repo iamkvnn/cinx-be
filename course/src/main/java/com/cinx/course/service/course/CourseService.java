@@ -86,6 +86,16 @@ public class CourseService implements ICourseService {
 
     @Override
     @Transactional(readOnly = true)
+    public List<String> searchReadableCourseIds(List<String> courseIds, String query) {
+        if (courseIds == null || courseIds.isEmpty()) {
+            return List.of();
+        }
+        String normalizedQuery = query == null || query.isBlank() ? null : query.trim();
+        return courseRepository.searchEnrolledReadableIds(courseIds.stream().distinct().toList(), normalizedQuery);
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public InstructorCourseSummaryResponse getInstructorCourseSummary(String instructorId) {
         long courseCount = courseRepository.countByInstructorId(instructorId);
         long publishedCourseCount = courseRepository.countByInstructorIdAndStatus(instructorId, CourseStatus.PUBLISHED);

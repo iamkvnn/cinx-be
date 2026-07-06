@@ -5,7 +5,7 @@ import com.cinx.learning.dto.response.AssignmentSubmissionResponse;
 import org.springframework.data.domain.Page;
 
 public interface IAssignmentService {
-    Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size);
+    Page<AssignmentSubmissionResponse> getAssignmentSubmissions(String assignmentId, int page, int size, String sort);
     AssignmentSubmissionResponse getAssignmentSubmission(String userId, String assignmentId);
     void submitAssignment(String userId, String assignmentId, CreateAssignmentSubmissionRequest request);
     void scoreAssignmentSubmission(String currentUserId, String submissionId, Double score);

@@ -9,7 +9,7 @@ import org.springframework.data.domain.Page;
 import java.util.List;
 
 public interface IVideoService {
-    Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String courseId, String lessonId, int page, int size);
+    Page<VideoLessonTrackingHistoryResponse> getVideoLessonTrackingHistories(String courseId, String lessonId, int page, int size, String sort);
     VideoLessonTrackingHistoryResponse getVideoLessonTrackingHistory(String courseId, String userId, String lessonId);
     void trackVideoProgress(String courseId, String lessonId, String userId, TrackingVideoLessonRequest request);
     void submitVideoQuestionAnswer(String courseId, String lessonId, String userId, SubmitVideoQuestionRequest request);

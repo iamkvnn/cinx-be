@@ -24,8 +24,9 @@ public class AdminReportController {
             @RequestParam(required = false) ReportType type,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
+            @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort) {
-        return ResponseEntity.ok(PaginationWrapper.wrap(adminReportService.getReports(type, page, size, sort)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(adminReportService.getReports(type, page, size, query, sort)));
     }
 
     @DeleteMapping("/{reportId}/dismiss")

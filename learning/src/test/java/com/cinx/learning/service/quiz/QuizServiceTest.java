@@ -26,12 +26,14 @@ import com.cinx.learning.service.learningProgress.LearningItemProgressUpdateResu
 import com.cinx.learning.service.quiz.evaluator.QuestionEvaluatorFactory;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageImpl;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -70,6 +72,19 @@ class QuizServiceTest {
 
     @InjectMocks
     private QuizService quizService;
+
+    @Test
+    void getQuizSessionsUsesSortParameter() {
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(quizSessionRepository.findAllByQuizLessonId(eq("quiz-1"), eq("user-1"), pageableCaptor.capture()))
+                .thenReturn(Page.empty());
+
+        quizService.getQuizSessions("user-1", "quiz-1", 1, 10, "{\"startTime\":\"DESC\"}");
+
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("startTime");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
 
     @Test
     void createQuizSessionRejectsExistingInProgressSession() {
@@ -197,7 +212,7 @@ class QuizServiceTest {
         blocked.setIsReviewAllowed(false);
         when(quizSessionRepository.findById("blocked")).thenReturn(Optional.of(blocked));
 
-        assertThatThrownBy(() -> quizService.getQuizSessionQuestions("blocked", 1, 10))
+        assertThatThrownBy(() -> quizService.getQuizSessionQuestions("blocked", 1, 10, null))
                 .isInstanceOf(BadRequestException.class)
                 .hasMessageContaining("Review is not allowed");
 
@@ -218,7 +233,7 @@ class QuizServiceTest {
                 .thenReturn(new PageImpl<>(List.of(question)));
         when(snapshotBuilder.parseOptionsSnapshot(null)).thenReturn(List.of());
 
-        Page<QuizSessionQuestionResponse> response = quizService.getQuizSessionQuestions("allowed", 1, 10);
+        Page<QuizSessionQuestionResponse> response = quizService.getQuizSessionQuestions("allowed", 1, 10, null);
 
         assertThat(response.getContent()).hasSize(1);
         assertThat(response.getContent().getFirst().correctAnswer()).isEqualTo("b");

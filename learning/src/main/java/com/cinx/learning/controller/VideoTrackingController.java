@@ -35,11 +35,10 @@ public class VideoTrackingController {
             @PathVariable String lessonId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
-            @RequestParam(required = false) String query,
             @RequestParam(required = false) String sort) {
         String currentUserId = AuthenticationUtil.extractUserId();
         authorizationService.requireLessonInstructor(currentUserId, lessonId);
-        return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(courseId, lessonId, page, size)));
+        return ResponseEntity.ok(PaginationWrapper.wrap(videoService.getVideoLessonTrackingHistories(courseId, lessonId, page, size, sort)));
     }
 
     @Operation(summary = "", security = @SecurityRequirement(name = "bearer-jwt"))

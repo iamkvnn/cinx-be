@@ -3,6 +3,7 @@ package com.cinx.learning.service.certificate;
 import com.cinx.common.exception.BadRequestException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.NotFoundException;
+import com.cinx.common.mapper.SortConverter;
 import com.cinx.learning.consts.CertificateStatus;
 import com.cinx.learning.dto.response.CertificateRequestResponse;
 import com.cinx.learning.dto.response.CourseResponse;
@@ -83,23 +84,15 @@ public class CertificateServiceImpl implements ICertificateService {
     }
 
     @Override
-    public Page<CertificateRequestResponse> getRequestsByCourse(String currentUserId, String courseId, CertificateStatus status, int page, int size) {
+    public Page<CertificateRequestResponse> getRequestsByCourse(String currentUserId, String courseId, CertificateStatus status, int page, int size, String query, String sort) {
         authorizationService.requireCourseInstructor(currentUserId, courseId);
-        if (status != null) {
-            return certificateRequestRepository.findByCourseIdAndStatus(courseId, status, PageRequest.of(page - 1, size))
-                    .map(certificateRequestMapper::toDto);
-        }
-        return certificateRequestRepository.findByCourseId(courseId, PageRequest.of(page - 1, size))
+        return certificateRequestRepository.search(courseId, status, normalizeQuery(query), PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(certificateRequestMapper::toDto);
     }
 
     @Override
-    public Page<CertificateRequestResponse> getAllRequests(CertificateStatus status, int page, int size) {
-        if (status != null) {
-            return certificateRequestRepository.findByStatus(status, PageRequest.of(page - 1, size))
-                    .map(certificateRequestMapper::toDto);
-        }
-        return certificateRequestRepository.findAll(PageRequest.of(page - 1, size))
+    public Page<CertificateRequestResponse> getAllRequests(CertificateStatus status, int page, int size, String query, String sort) {
+        return certificateRequestRepository.search(null, status, normalizeQuery(query), PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
                 .map(certificateRequestMapper::toDto);
     }
 
@@ -174,5 +167,12 @@ public class CertificateServiceImpl implements ICertificateService {
                 .stream()
                 .map(certificateRequestMapper::toDto)
                 .toList();
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null || query.isBlank()) {
+            return null;
+        }
+        return query.trim();
     }
 }

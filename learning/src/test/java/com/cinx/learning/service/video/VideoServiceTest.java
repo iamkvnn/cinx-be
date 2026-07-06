@@ -19,16 +19,22 @@ import com.cinx.learning.service.learningProgress.LearningItemProgressUpdateResu
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.Spy;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+import org.springframework.data.domain.Sort;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
 import java.util.concurrent.atomic.AtomicReference;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -55,6 +61,21 @@ class VideoServiceTest {
 
     @InjectMocks
     private VideoService videoService;
+
+    @Test
+    void getVideoLessonTrackingHistoriesUsesSortParameter() {
+        ArgumentCaptor<Pageable> pageableCaptor = ArgumentCaptor.forClass(Pageable.class);
+        when(courseService.getVideoLessonById("course-1", "video-1"))
+                .thenReturn(new ApiResponse<>(true, "ok", videoLesson(100, false, 0)));
+        when(videoLessonTrackingHistoryRepository.findByVideoLessonId(eq("video-1"), pageableCaptor.capture()))
+                .thenReturn(Page.empty());
+
+        videoService.getVideoLessonTrackingHistories("course-1", "video-1", 1, 10, "{\"lastTrackingTime\":\"DESC\"}");
+
+        Sort.Order order = pageableCaptor.getValue().getSort().getOrderFor("lastTrackingTime");
+        assertThat(order).isNotNull();
+        assertThat(order.getDirection()).isEqualTo(Sort.Direction.DESC);
+    }
 
     @Test
     void firstVideoTrackingCreditsInitialWatchedRange() {

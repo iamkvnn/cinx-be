@@ -10,7 +10,7 @@ import java.util.List;
 
 public interface ICourseQnAService {
     QuestionDto createQuestion(String userId, CreateQuestionRequest request);
-    Page<QuestionDto> getQuestionsByCourse(String courseId, String lessonId, String currentUserId, int page, int size, String sort);
+    Page<QuestionDto> getQuestionsByCourse(String courseId, String lessonId, String currentUserId, int page, int size, String query, String sort);
     QuestionDto getQuestionById(String questionId, String currentUserId);
     QuestionDto updateQuestion(String userId, String questionId, UpdateQuestionRequest request);
     void deleteQuestion(String userId, String questionId);
