@@ -27,4 +27,13 @@ public interface CertificateRequestRepository extends JpaRepository<CertificateR
           AND (:query IS NULL OR c.id LIKE %:query% OR c.userId LIKE %:query% OR c.courseId LIKE %:query%)
     """)
     Page<CertificateRequest> search(String courseId, CertificateStatus status, String query, Pageable pageable);
+
+    @Query("""
+        SELECT c
+        FROM CertificateRequest c
+        WHERE c.courseId IN :courseIds
+          AND (:status IS NULL OR c.status = :status)
+          AND (:query IS NULL OR c.id LIKE %:query% OR c.userId LIKE %:query% OR c.courseId LIKE %:query%)
+    """)
+    Page<CertificateRequest> searchByCourseIds(List<String> courseIds, CertificateStatus status, String query, Pageable pageable);
 }

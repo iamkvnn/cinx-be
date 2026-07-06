@@ -91,8 +91,13 @@ public class CertificateServiceImpl implements ICertificateService {
     }
 
     @Override
-    public Page<CertificateRequestResponse> getAllRequests(CertificateStatus status, int page, int size, String query, String sort) {
-        return certificateRequestRepository.search(null, status, normalizeQuery(query), PageRequest.of(page - 1, size, SortConverter.toSort(sort)))
+    public Page<CertificateRequestResponse> getAllRequests(String currentUserId, CertificateStatus status, int page, int size, String query, String sort) {
+        PageRequest pageable = PageRequest.of(page - 1, size, SortConverter.toSort(sort));
+        List<String> courseIds = courseService.getCourseIdsByInstructor(currentUserId).data();
+        if (courseIds == null || courseIds.isEmpty()) {
+            return Page.empty(pageable);
+        }
+        return certificateRequestRepository.searchByCourseIds(courseIds, status, normalizeQuery(query), pageable)
                 .map(certificateRequestMapper::toDto);
     }
 

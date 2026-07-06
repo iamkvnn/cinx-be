@@ -84,6 +84,11 @@ public class InternalCourseController {
         return new ApiResponse<>(true, "Course ids fetched successfully", courseService.searchReadableCourseIds(ids, query));
     }
 
+    @GetMapping("/courses/instructors/{instructorId}/ids")
+    public ApiResponse<List<String>> getCourseIdsByInstructor(@PathVariable String instructorId) {
+        return new ApiResponse<>(true, "Instructor course ids fetched successfully", courseService.getCourseIdsByInstructor(instructorId));
+    }
+
     @PostMapping("/courses/{id}/update-rating")
     public ApiResponse<Void> updateCourseRating(@PathVariable String id, @RequestParam(required = false) Double rating) {
         courseService.updateCourseRating(id, rating);
