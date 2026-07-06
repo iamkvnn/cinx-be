@@ -1,7 +1,9 @@
 package com.cinx.learning.repository;
 
 import com.cinx.learning.model.LearningItemProgress;
+import jakarta.persistence.LockModeType;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 
 import java.util.List;
@@ -17,6 +19,12 @@ public interface LearningItemProgressRepository extends JpaRepository<LearningIt
             "JOIN lip.courseProgress cp " +
             "WHERE cp.userId = :userId AND lip.itemId = :itemId")
     Optional<LearningItemProgress> findByItemIdAndUserId(String itemId, String userId);
+
+    @Lock(LockModeType.PESSIMISTIC_WRITE)
+    @Query("SELECT lip FROM LearningItemProgress lip " +
+            "JOIN lip.courseProgress cp " +
+            "WHERE cp.userId = :userId AND lip.itemId = :itemId")
+    Optional<LearningItemProgress> findByItemIdAndUserIdForUpdate(String itemId, String userId);
 
     @Query("SELECT lip FROM LearningItemProgress lip " +
             "JOIN lip.courseProgress cp " +

@@ -120,7 +120,7 @@ public class LearningProgressService implements ILearningProgressService {
     @Override
     public LearningItemProgressUpdateResult updateLearningItemProgress(String userId, String itemId, UpdateLearningItemRequest request) {
         LearningItemProgress progress = learningItemProgressRepository
-                .findByItemIdAndUserId(itemId, userId)
+                .findByItemIdAndUserIdForUpdate(itemId, userId)
                 .orElseThrow(() -> new NotFoundException("Learning item progress not found"));
 
         CourseProgress course = progress.getCourseProgress();
@@ -165,7 +165,7 @@ public class LearningProgressService implements ILearningProgressService {
     @Override
     public void completeArticleItem(String userId, String itemId) {
         LearningItemProgress progress = learningItemProgressRepository
-                .findByItemIdAndUserId(itemId, userId)
+                .findByItemIdAndUserIdForUpdate(itemId, userId)
                 .orElseThrow(() -> new NotFoundException("Learning item progress not found"));
         String courseId = progress.getCourseProgress().getCourseId();
         LessonResponse lesson = courseService.getEnrolledLessonById(courseId, itemId).data();
