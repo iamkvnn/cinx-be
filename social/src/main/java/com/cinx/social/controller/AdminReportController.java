@@ -3,13 +3,12 @@ package com.cinx.social.controller;
 import com.cinx.common.dto.ApiResponse;
 import com.cinx.common.dto.PaginatedApiResponse;
 import com.cinx.common.mapper.PaginationWrapper;
-import com.cinx.social.model.Report;
+import com.cinx.social.dto.response.AdminReportResponse;
 import com.cinx.social.model.ReportType;
 import com.cinx.social.service.admin.IAdminReportService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.Pageable;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
@@ -21,7 +20,7 @@ public class AdminReportController {
 
     @GetMapping
     @Operation(security = @SecurityRequirement(name = "bearer-jwt"))
-    public ResponseEntity<PaginatedApiResponse<Report>> getReports(
+    public ResponseEntity<PaginatedApiResponse<AdminReportResponse>> getReports(
             @RequestParam(required = false) ReportType type,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size,
