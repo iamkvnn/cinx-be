@@ -6,14 +6,17 @@ import com.cinx.course.dto.response.SectionPositionResponse;
 import com.cinx.course.mapper.SectionMapper;
 import com.cinx.course.model.Course;
 import com.cinx.course.model.CourseDraft;
+import com.cinx.course.model.Lesson;
 import com.cinx.course.model.Section;
 import com.cinx.course.repository.CourseRepository;
+import com.cinx.course.repository.LessonRepository;
 import com.cinx.course.repository.SectionRepository;
 import com.cinx.course.service.course.ICourseDraftService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
+import org.mockito.InOrder;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
@@ -24,6 +27,7 @@ import java.util.stream.StreamSupport;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.inOrder;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -36,6 +40,8 @@ class SectionServiceTest {
     private ICourseDraftService courseDraftService;
     @Mock
     private SectionRepository sectionRepository;
+    @Mock
+    private LessonRepository lessonRepository;
     @Mock
     private SectionMapper sectionMapper;
     @InjectMocks
@@ -134,6 +140,29 @@ class SectionServiceTest {
 
         verify(sectionRepository, never()).save(any());
         verify(sectionRepository, never()).saveAll(any());
+    }
+
+    @Test
+    void deleteSection_deletesLessonsBeforeSection() {
+        Course course = course();
+        CourseDraft draft = draft(course);
+        Section section = section("sec-1", 1024, draft);
+        Lesson lesson = new Lesson();
+        lesson.setId("lesson-1");
+        lesson.setSection(section);
+        section.getLessons().add(lesson);
+        when(courseRepository.findById("course-1")).thenReturn(Optional.of(course));
+        when(courseDraftService.getOrCreateDraft(course)).thenReturn(draft);
+        when(sectionRepository.findDraftSection("draft-1", "sec-1")).thenReturn(Optional.of(section));
+        when(lessonRepository.findBySectionIdsForUpdate(List.of("sec-1-entity"))).thenReturn(List.of(lesson));
+
+        sectionService.deleteSection("course-1", "sec-1");
+
+        InOrder inOrder = inOrder(lessonRepository, sectionRepository);
+        inOrder.verify(lessonRepository).findBySectionIdsForUpdate(List.of("sec-1-entity"));
+        inOrder.verify(lessonRepository).deleteAll(List.of(lesson));
+        inOrder.verify(sectionRepository).delete(section);
+        assertThat(section.getLessons()).isEmpty();
     }
 
     private void mockDraft(Course course, CourseDraft draft, List<Section> sections) {
