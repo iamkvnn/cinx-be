@@ -8,6 +8,8 @@ import com.cinx.social.dto.response.ReportedContentResponse;
 import com.cinx.social.dto.response.UserSummaryResponse;
 import com.cinx.social.model.*;
 import com.cinx.social.repository.*;
+import com.cinx.social.service.ICourseQnAService;
+import com.cinx.social.service.review.IReviewService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
@@ -33,6 +35,8 @@ public class AdminReportService implements IAdminReportService {
     private final CourseQuestionRepository questionRepository;
     private final CourseAnswerRepository answerRepository;
     private final UserClient userClient;
+    private final IReviewService reviewService;
+    private final ICourseQnAService qnaService;
 
     @Override
     @Transactional(readOnly = true)
@@ -62,12 +66,10 @@ public class AdminReportService implements IAdminReportService {
                 .orElseThrow(() -> new NotFoundException("Report not found"));
 
         switch (report.getType()) {
-            case REVIEW -> reviewRepository.deleteById(report.getRefId());
-            case QUESTION -> questionRepository.deleteById(report.getRefId());
-            case ANSWER -> answerRepository.deleteById(report.getRefId());
+            case REVIEW -> reviewService.deleteReviewByAdmin(report.getRefId());
+            case QUESTION -> qnaService.deleteQuestionByAdmin(report.getRefId());
+            case ANSWER -> qnaService.deleteAnswerByAdmin(report.getRefId());
         }
-
-        reportRepository.deleteByRefIdAndType(report.getRefId(), report.getType());
     }
 
     private ReportContext buildReportContext(List<Report> reports) {

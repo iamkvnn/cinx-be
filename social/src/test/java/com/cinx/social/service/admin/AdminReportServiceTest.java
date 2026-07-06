@@ -13,6 +13,8 @@ import com.cinx.social.repository.CourseAnswerRepository;
 import com.cinx.social.repository.CourseQuestionRepository;
 import com.cinx.social.repository.ReportRepository;
 import com.cinx.social.repository.ReviewRepository;
+import com.cinx.social.service.ICourseQnAService;
+import com.cinx.social.service.review.IReviewService;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -27,8 +29,10 @@ import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
@@ -44,6 +48,10 @@ class AdminReportServiceTest {
     private CourseAnswerRepository answerRepository;
     @Mock
     private UserClient userClient;
+    @Mock
+    private IReviewService reviewService;
+    @Mock
+    private ICourseQnAService qnaService;
 
     @InjectMocks
     private AdminReportService adminReportService;
@@ -173,14 +181,47 @@ class AdminReportServiceTest {
     }
 
     @Test
-    void deleteReportedContentDeletesContentAndAllReportsForThatContent() {
+    void deleteReportedContentDelegatesReviewDeletionToReviewService() {
+        Report report = report("report-1", "reporter-1", "review-1", ReportType.REVIEW);
+        when(reportRepository.findById("report-1")).thenReturn(Optional.of(report));
+
+        adminReportService.deleteReportedContent("report-1");
+
+        verify(reviewService).deleteReviewByAdmin("review-1");
+        verify(reviewRepository, never()).deleteById(any());
+        verify(reportRepository, never()).deleteByRefIdAndType(any(), any());
+    }
+
+    @Test
+    void deleteReportedContentDelegatesQuestionDeletionToQnaService() {
         Report report = report("report-1", "reporter-1", "question-1", ReportType.QUESTION);
         when(reportRepository.findById("report-1")).thenReturn(Optional.of(report));
 
         adminReportService.deleteReportedContent("report-1");
 
-        verify(questionRepository).deleteById("question-1");
-        verify(reportRepository).deleteByRefIdAndType("question-1", ReportType.QUESTION);
+        verify(qnaService).deleteQuestionByAdmin("question-1");
+        verify(questionRepository, never()).deleteById(any());
+        verify(reportRepository, never()).deleteByRefIdAndType(any(), any());
+    }
+
+    @Test
+    void deleteReportedContentDelegatesAnswerDeletionToQnaService() {
+        Report report = report("report-1", "reporter-1", "answer-1", ReportType.ANSWER);
+        when(reportRepository.findById("report-1")).thenReturn(Optional.of(report));
+
+        adminReportService.deleteReportedContent("report-1");
+
+        verify(qnaService).deleteAnswerByAdmin("answer-1");
+        verify(answerRepository, never()).deleteById(any());
+        verify(reportRepository, never()).deleteByRefIdAndType(any(), any());
+    }
+
+    @Test
+    void deleteReportedContentThrowsWhenReportDoesNotExist() {
+        when(reportRepository.findById("report-1")).thenReturn(Optional.empty());
+
+        assertThatThrownBy(() -> adminReportService.deleteReportedContent("report-1"))
+                .hasMessage("Report not found");
     }
 
     private Report report(String id, String reporterId, String refId, ReportType type) {

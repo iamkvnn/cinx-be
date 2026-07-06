@@ -159,7 +159,23 @@ public class ReviewService implements IReviewService {
         if (!review.getUserId().equals(userId)) {
             throw new NotFoundException("Review not found");
         }
-        reviewRepository.deleteById(reviewId);
+        deleteReviewContent(review);
+    }
+
+    @Override
+    @Transactional
+    public void deleteReviewByAdmin(String reviewId) {
+        Review review = reviewRepository.findById(reviewId)
+                .orElseThrow(() -> new NotFoundException("Review not found"));
+        deleteReviewContent(review);
+    }
+
+    private void deleteReviewContent(Review review) {
+        String reviewId = review.getId();
+        reviewReactionRepository.deleteByReviewId(reviewId);
+        reviewReplyRepository.deleteByReviewId(reviewId);
+        reportRepository.deleteByRefIdAndType(reviewId, ReportType.REVIEW);
+        reviewRepository.delete(review);
         updateCourseRatingInCourseService(review.getCourseId());
     }
 

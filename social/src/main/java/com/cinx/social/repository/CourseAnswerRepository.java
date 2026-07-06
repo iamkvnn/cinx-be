@@ -8,6 +8,7 @@ import org.springframework.stereotype.Repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import java.util.Collection;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -15,6 +16,9 @@ import java.util.List;
 public interface CourseAnswerRepository extends JpaRepository<CourseAnswer, String> {
     Page<CourseAnswer> findByQuestionIdAndParentAnswerIdIsNullOrderByCreatedAtAsc(String questionId, Pageable pageable);
     Page<CourseAnswer> findByParentAnswerIdOrderByCreatedAtAsc(String parentAnswerId, Pageable pageable);
+    List<CourseAnswer> findByQuestionId(String questionId);
+    List<CourseAnswer> findByParentAnswerId(String parentAnswerId);
+    void deleteByIdIn(Collection<String> answerIds);
     int countByQuestionId(String questionId);
     int countByParentAnswerId(String parentAnswerId);
 

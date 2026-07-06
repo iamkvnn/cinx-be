@@ -40,8 +40,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
 
@@ -175,6 +177,24 @@ public class CourseQnAService implements ICourseQnAService {
         if (!question.getUserId().equals(userId)) {
             throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner");
         }
+        deleteQuestionContent(question);
+    }
+
+    @Override
+    @Transactional
+    public void deleteQuestionByAdmin(String questionId) {
+        CourseQuestion question = questionRepository.findById(questionId)
+                .orElseThrow(() -> new NotFoundException("Question not found"));
+        deleteQuestionContent(question);
+    }
+
+    private void deleteQuestionContent(CourseQuestion question) {
+        List<String> answerIds = answerRepository.findByQuestionId(question.getId()).stream()
+                .map(CourseAnswer::getId)
+                .toList();
+        deleteAnswersByIds(answerIds);
+        questionUpvoteRepository.deleteByQuestionId(question.getId());
+        reportRepository.deleteByRefIdAndType(question.getId(), ReportType.QUESTION);
         questionRepository.delete(question);
     }
 
@@ -281,7 +301,41 @@ public class CourseQnAService implements ICourseQnAService {
         if (!answer.getUserId().equals(userId)) {
             throw new ForbiddenException(ErrorCode.NOT_RESOURCE_OWNER, "Not the owner");
         }
-        answerRepository.delete(answer);
+        deleteAnswerTree(answer);
+    }
+
+    @Override
+    @Transactional
+    public void deleteAnswerByAdmin(String answerId) {
+        CourseAnswer answer = answerRepository.findById(answerId)
+                .orElseThrow(() -> new NotFoundException("Answer not found"));
+        deleteAnswerTree(answer);
+    }
+
+    private void deleteAnswerTree(CourseAnswer answer) {
+        LinkedHashSet<String> answerIds = new LinkedHashSet<>();
+        collectAnswerTreeIds(answer.getId(), answerIds);
+        deleteAnswersByIds(answerIds);
+    }
+
+    private void collectAnswerTreeIds(String answerId, Set<String> answerIds) {
+        if (!answerIds.add(answerId)) {
+            return;
+        }
+        answerRepository.findByParentAnswerId(answerId).stream()
+                .map(CourseAnswer::getId)
+                .forEach(childAnswerId -> collectAnswerTreeIds(childAnswerId, answerIds));
+    }
+
+    private void deleteAnswersByIds(Iterable<String> answerIds) {
+        List<String> ids = java.util.stream.StreamSupport.stream(answerIds.spliterator(), false)
+                .toList();
+        if (ids.isEmpty()) {
+            return;
+        }
+        answerUpvoteRepository.deleteByAnswerIdIn(ids);
+        ids.forEach(answerId -> reportRepository.deleteByRefIdAndType(answerId, ReportType.ANSWER));
+        answerRepository.deleteByIdIn(ids);
     }
 
     @Override
