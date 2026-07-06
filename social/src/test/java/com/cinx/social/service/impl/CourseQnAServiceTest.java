@@ -15,6 +15,8 @@ import com.cinx.social.messaging.CourseQnAEventPublisher;
 import com.cinx.social.model.CourseAnswer;
 import com.cinx.social.model.CourseQuestion;
 import com.cinx.social.model.ReportType;
+import com.cinx.social.model.AnswerUpvote;
+import com.cinx.social.model.QuestionUpvote;
 import com.cinx.social.repository.AnswerUpvoteRepository;
 import com.cinx.social.repository.CourseAnswerRepository;
 import com.cinx.social.repository.CourseQuestionRepository;
@@ -276,6 +278,110 @@ class CourseQnAServiceTest {
         verify(answerUpvoteRepository).deleteByAnswerIdIn(List.of("answer-1"));
         verify(reportRepository).deleteByRefIdAndType("answer-1", ReportType.ANSWER);
         verify(answerRepository).deleteByIdIn(List.of("answer-1"));
+    }
+
+    @Test
+    void upvoteQuestionCreatesUpvoteWhenNotAlreadyUpvoted() {
+        CourseQuestion question = CourseQuestion.builder()
+                .courseId("course-1")
+                .userId("owner-1")
+                .title("Question title")
+                .content("Question content")
+                .upvoteCount(2)
+                .build();
+        question.setId("question-1");
+
+        when(questionRepository.findById("question-1")).thenReturn(Optional.of(question));
+        when(enrollmentClient.checkEnrollmentStatus(List.of("course-1")))
+                .thenReturn(new ApiResponse<>(true, "ok", List.of(new CheckEnrollmentStatus("course-1", true))));
+        when(questionUpvoteRepository.findByQuestionIdAndUserId("question-1", "user-1")).thenReturn(Optional.empty());
+
+        courseQnAService.upvoteQuestion("user-1", "question-1");
+
+        verify(questionUpvoteRepository).save(argThat(upvote ->
+                "question-1".equals(upvote.getQuestionId()) && "user-1".equals(upvote.getUserId())));
+        verify(questionRepository).save(argThat(savedQuestion -> savedQuestion.getUpvoteCount() == 3));
+    }
+
+    @Test
+    void upvoteQuestionRemovesUpvoteWhenAlreadyUpvoted() {
+        CourseQuestion question = CourseQuestion.builder()
+                .courseId("course-1")
+                .userId("owner-1")
+                .title("Question title")
+                .content("Question content")
+                .upvoteCount(2)
+                .build();
+        question.setId("question-1");
+        QuestionUpvote existingUpvote = QuestionUpvote.builder()
+                .questionId("question-1")
+                .userId("user-1")
+                .build();
+
+        when(questionRepository.findById("question-1")).thenReturn(Optional.of(question));
+        when(enrollmentClient.checkEnrollmentStatus(List.of("course-1")))
+                .thenReturn(new ApiResponse<>(true, "ok", List.of(new CheckEnrollmentStatus("course-1", true))));
+        when(questionUpvoteRepository.findByQuestionIdAndUserId("question-1", "user-1")).thenReturn(Optional.of(existingUpvote));
+
+        courseQnAService.upvoteQuestion("user-1", "question-1");
+
+        verify(questionUpvoteRepository).delete(existingUpvote);
+        verify(questionUpvoteRepository, never()).save(any());
+        verify(questionRepository).save(argThat(savedQuestion -> savedQuestion.getUpvoteCount() == 1));
+    }
+
+    @Test
+    void upvoteAnswerCreatesUpvoteWhenNotAlreadyUpvoted() {
+        CourseQuestion question = CourseQuestion.builder()
+                .courseId("course-1")
+                .userId("owner-1")
+                .title("Question title")
+                .content("Question content")
+                .build();
+        question.setId("question-1");
+        CourseAnswer answer = answer("answer-1", "question-1", null, "owner-2");
+        answer.setUpvoteCount(2);
+
+        when(answerRepository.findById("answer-1")).thenReturn(Optional.of(answer));
+        when(questionRepository.findById("question-1")).thenReturn(Optional.of(question));
+        when(enrollmentClient.checkEnrollmentStatus(List.of("course-1")))
+                .thenReturn(new ApiResponse<>(true, "ok", List.of(new CheckEnrollmentStatus("course-1", true))));
+        when(answerUpvoteRepository.findByAnswerIdAndUserId("answer-1", "user-1")).thenReturn(Optional.empty());
+
+        courseQnAService.upvoteAnswer("user-1", "answer-1");
+
+        verify(answerUpvoteRepository).save(argThat(upvote ->
+                "answer-1".equals(upvote.getAnswerId()) && "user-1".equals(upvote.getUserId())));
+        verify(answerRepository).save(argThat(savedAnswer -> savedAnswer.getUpvoteCount() == 3));
+    }
+
+    @Test
+    void upvoteAnswerRemovesUpvoteWhenAlreadyUpvoted() {
+        CourseQuestion question = CourseQuestion.builder()
+                .courseId("course-1")
+                .userId("owner-1")
+                .title("Question title")
+                .content("Question content")
+                .build();
+        question.setId("question-1");
+        CourseAnswer answer = answer("answer-1", "question-1", null, "owner-2");
+        answer.setUpvoteCount(2);
+        AnswerUpvote existingUpvote = AnswerUpvote.builder()
+                .answerId("answer-1")
+                .userId("user-1")
+                .build();
+
+        when(answerRepository.findById("answer-1")).thenReturn(Optional.of(answer));
+        when(questionRepository.findById("question-1")).thenReturn(Optional.of(question));
+        when(enrollmentClient.checkEnrollmentStatus(List.of("course-1")))
+                .thenReturn(new ApiResponse<>(true, "ok", List.of(new CheckEnrollmentStatus("course-1", true))));
+        when(answerUpvoteRepository.findByAnswerIdAndUserId("answer-1", "user-1")).thenReturn(Optional.of(existingUpvote));
+
+        courseQnAService.upvoteAnswer("user-1", "answer-1");
+
+        verify(answerUpvoteRepository).delete(existingUpvote);
+        verify(answerUpvoteRepository, never()).save(any());
+        verify(answerRepository).save(argThat(savedAnswer -> savedAnswer.getUpvoteCount() == 1));
     }
 
     private CourseAnswer answer(String id, String questionId, String parentAnswerId, String userId) {

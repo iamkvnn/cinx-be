@@ -1,6 +1,5 @@
 package com.cinx.social.service.impl;
 
-import com.cinx.common.exception.AlreadyExistException;
 import com.cinx.common.exception.ErrorCode;
 import com.cinx.common.exception.ForbiddenException;
 import com.cinx.common.exception.NotFoundException;
@@ -206,8 +205,13 @@ public class CourseQnAService implements ICourseQnAService {
         
         verifyEnrollment(userId, question.getCourseId());
 
-        if (questionUpvoteRepository.existsByQuestionIdAndUserId(questionId, userId)) {
-            throw new AlreadyExistException(ErrorCode.ALREADY_UPVOTED, "Already upvoted");
+        QuestionUpvote existingUpvote = questionUpvoteRepository.findByQuestionIdAndUserId(questionId, userId)
+                .orElse(null);
+        if (existingUpvote != null) {
+            questionUpvoteRepository.delete(existingUpvote);
+            question.setUpvoteCount(Math.max(0, defaultCount(question.getUpvoteCount()) - 1));
+            questionRepository.save(question);
+            return;
         }
 
         QuestionUpvote upvote = QuestionUpvote.builder()
@@ -349,8 +353,13 @@ public class CourseQnAService implements ICourseQnAService {
         
         verifyEnrollment(userId, question.getCourseId());
 
-        if (answerUpvoteRepository.existsByAnswerIdAndUserId(answerId, userId)) {
-            throw new AlreadyExistException(ErrorCode.ALREADY_UPVOTED, "Already upvoted");
+        AnswerUpvote existingUpvote = answerUpvoteRepository.findByAnswerIdAndUserId(answerId, userId)
+                .orElse(null);
+        if (existingUpvote != null) {
+            answerUpvoteRepository.delete(existingUpvote);
+            answer.setUpvoteCount(Math.max(0, defaultCount(answer.getUpvoteCount()) - 1));
+            answerRepository.save(answer);
+            return;
         }
 
         AnswerUpvote upvote = AnswerUpvote.builder()
